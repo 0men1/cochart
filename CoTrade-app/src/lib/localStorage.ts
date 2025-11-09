@@ -1,4 +1,4 @@
-import { AppState } from "@/components/chart/Context";
+import { AppState } from "@/components/chart/context";
 
 export class LocalStorage {
     static setItem(key: string, value: any) {

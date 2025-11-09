@@ -52,6 +52,14 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
         return this._id
     }
 
+    async delete(): Promise<void> {
+        if (this._isDestroyed) return;
+        this._isDestroyed = true;
+        this._series.detachPrimitive(this)
+        this._series.applyOptions(this._series.options())
+        this.updateAllViews();
+    }
+
     attached(param: SeriesAttachedParameter<Time>) {
         this._chart = param.chart;
         this._series = param.series;
@@ -64,9 +72,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
         this.updateAllViews();
     }
 
-    /*
     detached() {
-        this._isDestroyed = true
         this._requestUpdate = null;
 
         if (this._visibleRangeUpdateHandler) {
@@ -74,7 +80,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
             this._visibleRangeUpdateHandler = null;
         }
     }
-     * */
 
     hitTest(x: number, y: number): PrimitiveHoveredItem | null {
         if (this.isPointOnDrawing(x, y)) {
@@ -150,8 +155,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
     }
 
     updateAllViews(): void {
-        if (this._isDestroyed || !this._requestUpdate) return;
-
         const updateData = { selected: this._isSelected, points: this._points, options: this._options };
         this._paneViews.forEach(view => view.update(updateData))
         this._requestUpdate?.();
