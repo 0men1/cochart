@@ -23,7 +23,7 @@ func main() {
 	// UpdateEnvVars(".env")
 	http.Handle("/rooms/create", WithCORS(http.HandlerFunc(CreateRoom)))
 	http.Handle("/rooms/join", WithCORS(http.HandlerFunc(JoinRoom)))
-	// http.Handle("/candles", WithCORS(http.HandlerFunc(GetCandles)))
+	http.Handle("/candles", WithCORS(http.HandlerFunc(GetCandles)))
 	log.Println("Server listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

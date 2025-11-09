@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from "next/navigation";
-import { useApp } from "./Context"
+import { useApp } from "@/components/chart/context"
 
 export default function CollabStatus() {
     const { state, action } = useApp();

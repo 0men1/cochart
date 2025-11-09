@@ -11,7 +11,7 @@ import {
 } from "lightweight-charts";
 import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVALMs, TickData } from "@/core/chart/market-data/types";
-import { useApp } from "@/components/chart/Context";
+import { useApp } from "@/components/chart/context";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
 
 

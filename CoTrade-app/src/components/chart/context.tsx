@@ -6,7 +6,7 @@ import { DrawingTool, BaseDrawingHandler, SerializedDrawing } from "@/core/chart
 import { ConnectionState, ConnectionStatus, ExchangeType, IntervalKey } from "@/core/chart/market-data/types";
 import { CrosshairMode, IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 import { saveAppState } from "@/lib/localStorage";
-import { Action, deepMerge, Reducer } from "./Reducer";
+import { Action, deepMerge, Reducer } from "@/components/chart/reducer";
 
 
 export interface ChartSettings {

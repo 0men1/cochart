@@ -2,7 +2,7 @@ import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { TrendLine } from "@/core/chart/drawings/primitives/TrendLine";
 import { VertLine } from "@/core/chart/drawings/primitives/VertLine";
 import { SerializedDrawing } from "@/core/chart/drawings/types";
-import { useApp } from "../Context";
+import { useApp } from "@/components/chart/context";
 import { useCallback, useEffect, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
 import { MouseEventParams } from "lightweight-charts";

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useCandleChart } from './hooks/useCandleChart';
-import { AppProvider, AppState, useApp } from './Context';
+import { AppProvider, AppState, useApp } from '@/components/chart/context';
 import ChartHeader from './ChartHeader';
 import Toolbox from './ToolBox';
 import CollabStatus from './CollabStatus';

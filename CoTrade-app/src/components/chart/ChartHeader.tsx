@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
-import { useApp } from "./Context";
+import { useApp } from "@/components/chart/context";
 
 
 function getStatusDiv(status: ConnectionStatus) {

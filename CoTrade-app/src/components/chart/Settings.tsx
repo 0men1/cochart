@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { ChartSettings, useApp } from './Context';
+import { ChartSettings, useApp } from '@/components/chart/context';
 
 export default function Settings() {
     const { state, action } = useApp();

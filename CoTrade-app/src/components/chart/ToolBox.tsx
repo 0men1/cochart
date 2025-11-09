@@ -5,7 +5,7 @@ import { MoveDiagonal, MoveUp } from "lucide-react";
 import { DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFactory";
 import { Button } from "../ui/button";
 import { DrawingTool } from "@/core/chart/drawings/types";
-import { useApp } from "./Context";
+import { useApp } from "@/components/chart/context";
 
 function Toolbox() {
     const { state, action } = useApp();

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Trash, Type } from 'lucide-react';
-import { useApp } from './Context';
+import { useApp } from '@/components/chart/context';
 
 export const DrawingEditor: React.FC = () => {
     const [values, setValues] = useState<Record<string, any>>({});
