@@ -1,7 +1,7 @@
 import { BaseDrawingHandler, DrawingTool, SerializedDrawing } from "@/core/chart/drawings/types";
 import { ConnectionState, ConnectionStatus, ExchangeType, IntervalKey } from "@/core/chart/market-data/types";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
-import { AppState, ChartSettings } from "./Context";
+import { AppState, ChartSettings } from "@/components/chart/context";
 import { IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 
 export type Action =

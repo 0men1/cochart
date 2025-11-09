@@ -18,6 +18,7 @@ export const DrawingEditor: React.FC = () => {
 
     const handleDelete = async () => {
         if (!selected) return;
+        selected.delete()
         action.deleteDrawing(selected)
     }
 
@@ -31,7 +32,7 @@ export const DrawingEditor: React.FC = () => {
 
             const textOption = selected.getEditableOptions().find(o => o.key === 'labelText');
             if (textOption) {
-                setTextInput(textOption.currentValue || '');
+                setTextInput(textOption.currentValue?.toString() || '');
             }
         }
     }, [selected]);

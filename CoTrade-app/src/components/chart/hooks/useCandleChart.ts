@@ -113,8 +113,6 @@ export function useCandleChart(
         candleCache.current.clear();
     }, [symbol, exchange, timeframe])
 
-
-
     const loadHistoricalCandles = useCallback(async (numBars: number) => {
         try {
             const candles = await fetchHistoricalCandles(symbol, timeframe, numBars)
