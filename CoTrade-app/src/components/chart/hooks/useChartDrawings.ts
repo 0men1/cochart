@@ -60,7 +60,6 @@ export function useChartDrawings() {
         })().catch(console.error);
 
         return () => { active = false; };
-
     }, [state.chart.id, seriesApi, action]);
 
     // persist when collection changes, only after initialization for this id

@@ -1,15 +1,16 @@
 CURRENT TASK:
-- Fix collaboration (All of it lol)
+- Fix drawing functionality when being shared across websockets.
 
 Requirements
 - The drawing system is terrible and can be greatly improved. I am planning on forking LWC and creating my own implementation that opens the door to dragging drawings and their control points instead of declaring it here. So the drawing is very very temporary just to make sure everything works.
 - Handle errors gracefully and retry when failing
 
 PROBLEM DISCOVERY:
-- Drawings stick to the chart and do not get detached when deleted. Though, they are removed from the context and database
-- Collaborations disconnect when someone refreshes and they don't try to reconnect
-- Switching to a nodejs websocket implementation would be better?
-
+- When drawing functinality does not work correctly when shares across websocket. 
+   - Example:
+      - Adding drawing on one collaborator's chart does not update the other collaborators' charts until we change timeframes/charts
+      - When deleting a drawing it also does not update on other charts right away
+      - Everything works correctly for individual charts though.
 
 ===THIS IS AI GENERATED===
 # 📈 CoTrade - Collaborative Financial Charting Platform
