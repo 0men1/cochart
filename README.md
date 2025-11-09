@@ -1,7 +1,5 @@
 CURRENT TASK:
-- Fix sticky drawing issue 
-   - Fixed sticky drawing issue but brought back object is disposed but now object isnt getting disposed so idk what is disposed that is being invoked...
-
+- Fix collaboration (All of it lol)
 
 Requirements
 - The drawing system is terrible and can be greatly improved. I am planning on forking LWC and creating my own implementation that opens the door to dragging drawings and their control points instead of declaring it here. So the drawing is very very temporary just to make sure everything works.
