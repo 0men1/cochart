@@ -62,6 +62,31 @@ export function useChartDrawings() {
         return () => { active = false; };
     }, [state.chart.id, seriesApi, action]);
 
+    useEffect(() => {
+
+        // if drawingsRef aka. attached drawings
+        // dont match the collection
+        // Make some adjustments
+        console.log("Colllection useEffect");
+
+        const currentDrawings = drawingsRef.current;
+        const collectionDrawings = state.chart.drawings.collection;
+
+        console.log("Current Drawings: ", currentDrawings);
+        console.log("Collection drawings: ", collectionDrawings);
+
+        // Attach drawings that do appear in collection but not in drawingsRef
+        collectionDrawings.forEach(drawing => {
+            if (!currentDrawings.has(drawing.id)) {
+                const restoredDrawing = restoreDrawing(drawing);
+                if (restoredDrawing) {
+                    console.log("Attached drawing");
+                    seriesApi?.attachPrimitive(restoredDrawing);
+                }
+            }
+        })
+    }, [state.chart.drawings.collection])
+
     // persist when collection changes, only after initialization for this id
     useEffect(() => {
         const currentId = state.chart.id;
