@@ -64,18 +64,16 @@ export function useChartDrawings() {
     useEffect(() => {
         if (!seriesRef.current) return;
 
-        console.log("Colllection useEffect");
-
         const currentDrawings = drawingsRef.current;
         const collectionDrawings = state.chart.drawings.collection;
 
-        // Attach drawings that do appear in collection but not in drawingsRef
         collectionDrawings.forEach(drawing => {
             if (!currentDrawings.has(drawing.id)) {
                 const restoredDrawing = restoreDrawing(drawing);
                 if (restoredDrawing) {
                     console.log("Attached drawing");
                     seriesRef.current?.attachPrimitive(restoredDrawing);
+                    currentDrawings.set(restoredDrawing.id, restoredDrawing)
                 }
             }
         })
@@ -84,6 +82,7 @@ export function useChartDrawings() {
             if (!collectionDrawings.some(d => d.id === id)) {
                 const drawing = currentDrawings.get(id);
                 if (drawing) {
+                    console.log("Detached drawing")
                     seriesRef.current.detachPrimitive(drawing);
                 }
                 currentDrawings.delete(id);
