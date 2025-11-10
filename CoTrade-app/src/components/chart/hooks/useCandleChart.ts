@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import {
-    IChartApi,
     createChart,
     CandlestickSeries,
-    ISeriesApi,
-    SeriesType,
     UTCTimestamp,
 } from "lightweight-charts";
 import { ThemeConfig } from "@/constants/theme";
@@ -26,10 +23,8 @@ export async function fetchHistoricalCandles(ticker: string, timeframe: string, 
 export function useCandleChart(
     containerRef: React.RefObject<HTMLDivElement | null>,
 ) {
-    const { state, action } = useApp();
+    const { state, action, chartRef, seriesRef } = useApp();
     const { symbol, exchange, timeframe } = state.chart.data
-    const chartRef = useRef<IChartApi | null>(null);
-    const seriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
     const [chartInitialized, setChartInitialized] = useState(false);
 
