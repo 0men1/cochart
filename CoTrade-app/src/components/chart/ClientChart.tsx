@@ -11,74 +11,48 @@ import Settings from './Settings';
 import { useChartDrawings } from './hooks/useChartDrawings';
 
 export interface ClientProps {
-    roomId?: string;
     initialState?: Partial<AppState>;
 }
 
-export default function ClientChart({ roomId, initialState }: ClientProps) {
+export default function ClientChart({ initialState }: ClientProps) {
     return (
         <AppProvider initialState={initialState}>
-            <ProvideConsumer roomId={roomId} />
+            <ProvideConsumer />
         </AppProvider>
     );
 }
 
-function ProvideConsumer({ roomId }: { roomId?: string }) {
+function ProvideConsumer() {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const { chart, series } = useCandleChart(chartContainerRef);
     const { state, action } = useApp();
 
-
+    // Initialize chart API when chart is ready
     useEffect(() => {
         if (chart && series && chartContainerRef.current) {
+            console.log("Initializing chart API");
             action.initializeApi(chart, series, chartContainerRef.current);
         }
-    }, [chart, series, chartContainerRef.current])
+    }, [chart, series, action]);
 
-    if (roomId != null) {
-        action.joinCollabRoom(roomId)
-    }
-
-    // useChartInteractions()
+    // Use chart drawings
     useChartDrawings();
-    const { isLoading, id } = state.collaboration.room;
 
+    // Cleanup on unmount
     useEffect(() => {
         const cleanup = () => {
             action.cleanupState();
         };
+
         window.addEventListener('beforeunload', cleanup);
+
         return () => {
             window.removeEventListener('beforeunload', cleanup);
+            cleanup(); // Also cleanup on unmount
         };
     }, []);
 
-    // Show loading UI for collaborative mode
-    //
-    if (isLoading && id) {
-        return (
-            <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-800 justify-center items-center">
-                <div className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-                    Loading chart state...
-                </div>
-                <div className="mt-4">
-                    {/* Replace with your preferred spinner component */}
-                    <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-                </div>
-            </div>
-        );
-    }
-
-    // if (!state.chart.chartApi || !state.chart.seriesApi || !state.chart.container) {
-    //     console.log(chart, series, chartContainerRef)
-    //     return (
-    //         <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-800 justify-center items-center">
-    //             <div className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-    //                 Initializing chart...
-    //             </div>
-    //         </div>
-    //     );
-    // }
+    const { isLoading, id } = state.collaboration.room;
 
     return (
         <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-800">
@@ -89,7 +63,22 @@ function ProvideConsumer({ roomId }: { roomId?: string }) {
                 <div className="flex flex-1 w-full overflow-hidden relative">
                     <Toolbox />
                     <div className="flex-1 relative">
+                        {/* Always render chart container - don't conditionally unmount */}
                         <div ref={chartContainerRef} className="w-full h-full" />
+
+                        {/* Show loading overlay on top if needed */}
+                        {isLoading && id && (
+                            <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-20">
+                                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                                    <div className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">
+                                        Connecting to room...
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="absolute top-4 right-4 z-10">
                         <DrawingEditor />
@@ -101,3 +90,4 @@ function ProvideConsumer({ roomId }: { roomId?: string }) {
         </div>
     );
 }
+

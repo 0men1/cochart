@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -17,7 +19,6 @@ type Room struct {
 	Clients    map[*Client]bool
 	Register   chan *Client
 	Unregister chan *Client
-	// State      RoomState
 }
 
 type Client struct {
@@ -32,11 +33,41 @@ type Action struct {
 	Payload any    `json:"payload"`
 }
 
-var rooms = make(map[string]*Room)
+type RoomManager struct {
+	rooms map[string]*Room
+	mu    sync.RWMutex
+}
+
+var roomManager = &RoomManager{
+	rooms: make(map[string]*Room),
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true // TODO: Restrict in production
+	},
+}
+
+// Thread-safe room operations
+func (rm *RoomManager) GetRoom(roomId string) (*Room, bool) {
+	rm.mu.RLock()
+	defer rm.mu.RUnlock()
+	room, ok := rm.rooms[roomId]
+	return room, ok
+}
+
+func (rm *RoomManager) AddRoom(room *Room) {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+	rm.rooms[room.ID] = room
+}
+
+func (rm *RoomManager) RemoveRoom(roomId string) {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+	delete(rm.rooms, roomId)
 }
 
 func (c *Client) startRead() {
@@ -45,9 +76,20 @@ func (c *Client) startRead() {
 		c.Conn.Close()
 	}()
 
+	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.Conn.SetPongHandler(func(string) error {
+		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
+
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway,
+				websocket.CloseAbnormalClosure) {
+				log.Printf("Read error: %v", err)
+			}
 			break
 		}
 
@@ -57,14 +99,17 @@ func (c *Client) startRead() {
 }
 
 func (c *Client) startWrite() {
+	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
+		ticker.Stop()
 		c.Conn.Close()
-		c.Room.Unregister <- c
 	}()
 
 	for {
 		select {
 		case message, ok := <-c.Send:
+			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+
 			if !ok {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -74,10 +119,15 @@ func (c *Client) startWrite() {
 			if err != nil {
 				return
 			}
-
 			w.Write(message)
 
 			if err := w.Close(); err != nil {
+				return
+			}
+
+		case <-ticker.C:
+			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}
@@ -89,7 +139,6 @@ func (r *Room) start() {
 		select {
 		case client := <-r.Register:
 			r.Clients[client] = true
-			client.Room = r
 			activeUsers := len(r.Clients)
 
 			go client.startRead()
@@ -104,15 +153,16 @@ func (r *Room) start() {
 			}
 
 			action, err := json.Marshal(a)
-
 			if err != nil {
-				fmt.Printf("There was an error marshaling the action: %v\n", err)
+				log.Printf("Error marshaling USER_JOINED: %v\n", err)
 				continue
 			}
 
-			fmt.Printf("New user joined: %s (Room: %s, Active users: %d)\n", client.DisplayName, r.ID, activeUsers)
+			log.Printf("User joined: %s (Room: %s, Total: %d)\n",
+				client.DisplayName, r.ID, activeUsers)
 
-			r.broadcastToAll(action, client)
+			// Broadcast to others, NOT the joiner
+			r.broadcastToOthers(action, client)
 
 		case client := <-r.Unregister:
 			if _, ok := r.Clients[client]; ok {
@@ -126,13 +176,15 @@ func (r *Room) start() {
 					},
 				}
 
-				action, err := json.Marshal(a)
+				action, _ := json.Marshal(a)
+				r.broadcastToAll(action)
 
-				if err != nil {
+				// Clean up empty rooms
+				if len(r.Clients) == 0 {
+					log.Printf("Room %s empty, cleaning up\n", r.ID)
+					roomManager.RemoveRoom(r.ID)
 					return
 				}
-
-				r.broadcastToAll(action, client)
 			}
 
 		case message := <-r.Broadcast:
@@ -141,9 +193,21 @@ func (r *Room) start() {
 	}
 }
 
-func (r *Room) broadcastToAll(message []byte, excluding ...*Client) {
+func (r *Room) broadcastToAll(message []byte) {
 	for client := range r.Clients {
-		if len(excluding) > 0 && client == excluding[0] {
+		select {
+		case client.Send <- message:
+		default:
+			log.Printf("Removing unresponsive client: %s\n", client.DisplayName)
+			close(client.Send)
+			delete(r.Clients, client)
+		}
+	}
+}
+
+func (r *Room) broadcastToOthers(message []byte, sender *Client) {
+	for client := range r.Clients {
+		if client == sender {
 			continue
 		}
 
@@ -153,14 +217,7 @@ func (r *Room) broadcastToAll(message []byte, excluding ...*Client) {
 			log.Printf("Removing unresponsive client: %s\n", client.DisplayName)
 			close(client.Send)
 			delete(r.Clients, client)
-			client.Conn.Close()
 		}
-	}
-}
-
-func (c *Client) handleSocketClose(code int, text string) {
-	if c.Room != nil {
-		c.Room.Unregister <- c
 	}
 }
 
@@ -168,68 +225,50 @@ func JoinRoom(w http.ResponseWriter, r *http.Request) {
 	roomId := r.URL.Query().Get("roomId")
 	displayName := r.URL.Query().Get("displayName")
 
-	fmt.Println(rooms)
-
-	room, ok := rooms[roomId]
+	room, ok := roomManager.GetRoom(roomId)
 	if !ok {
-		log.Printf("Room not found for ID: %q", roomId)
-		http.Error(w, "error: could not find room", http.StatusNotFound)
+		log.Printf("Room not found: %s", roomId)
+		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
 
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-
-	Conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("error upgrading: %v", err)
+		log.Printf("Upgrade error: %v", err)
 		return
 	}
 
 	client := &Client{
-		Conn:        Conn,
+		Conn:        conn,
 		Send:        make(chan []byte, 256),
 		DisplayName: displayName,
 		Room:        room,
 	}
 
-	Conn.SetCloseHandler(
-		func(code int, text string) error {
-			client.handleSocketClose(code, text)
-			return nil
-		},
-	)
-	fmt.Printf("Connecting user to room: %s", roomId)
 	room.Register <- client
 }
 
 func CreateRoom(w http.ResponseWriter, r *http.Request) {
 	roomId := uuid.New().String()
 
-	_, ok := rooms[roomId]
-	if ok {
-		return
-	}
-
 	room := &Room{
 		ID:         roomId,
-		Broadcast:  make(chan []byte),
+		Broadcast:  make(chan []byte, 256),
 		Clients:    make(map[*Client]bool),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		// State:      roomState,
 	}
 
-	rooms[room.ID] = room
+	roomManager.AddRoom(room)
 	go room.start()
 
 	response := map[string]string{
-		"roomId": room.ID,
-		"url":    fmt.Sprintf("/chart/room/%s", room.ID),
+		"roomId": roomId,
+		"url":    fmt.Sprintf("/chart/room/%s", roomId),
 	}
 
-	fmt.Printf("NEW ROOM CREATED: %s\n", response["roomId"])
+	log.Printf("Created room: %s\n", roomId)
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }

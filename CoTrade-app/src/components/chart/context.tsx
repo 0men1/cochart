@@ -1,12 +1,13 @@
 'use client'
 
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { DrawingTool, BaseDrawingHandler, SerializedDrawing } from "@/core/chart/drawings/types";
 import { ConnectionState, ConnectionStatus, ExchangeType, IntervalKey } from "@/core/chart/market-data/types";
 import { CrosshairMode, IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 import { saveAppState } from "@/lib/localStorage";
 import { Action, deepMerge, Reducer } from "@/components/chart/reducer";
+import { CollabSocket } from "@/core/chart/collaboration/collabSocket";
 
 
 export interface ChartSettings {
@@ -139,8 +140,6 @@ interface AppContextType {
         createCollabRoom: (roomId: string) => void;
         joinCollabRoom: (roomId: string) => void;
         exitCollabRoom: () => void;
-        userJoined: (displayName: string) => void;
-        userLeft: (displayName: string) => void;
         sendFullState: () => void;
         handleIncomingAction: (incomingAction: Action) => void;
         toggleCollabWindow: (state: boolean) => void;
@@ -167,251 +166,289 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{
     children: React.ReactNode;
     initialState?: Partial<AppState>;
-}> = ({
-    children,
-    initialState,
-}) => {
-        const mergedInitial = deepMerge(defaultAppState, initialState || {}) as AppState;
-        const [state, dispatch] = useReducer(Reducer, mergedInitial);
-        const wsRef = useRef<WebSocket | null>(null);
+}> = ({ children, initialState }) => {
+    const mergedInitial = deepMerge(defaultAppState, initialState || {}) as AppState;
+    const [state, dispatch] = useReducer(Reducer, mergedInitial);
 
-        useEffect(() => {
-            if (state.chart.tools.activeTool || state.chart.tools.activeHandler || state.chart.drawings.selected) {
-                return;
-            }
-            saveAppState(state);
-        }, [state])
+    // Keep a ref that always has current state
+    const stateRef = useRef(state);
+    const collabSocketRef = useRef<CollabSocket | null>(null);
 
-        useEffect(() => {
-            const { id } = state.collaboration.room
+    // Update ref whenever state changes
+    useEffect(() => {
+        stateRef.current = state;
+    }, [state]);
 
-            if (id && !wsRef.current) {
+    // Initialize socket once
+    useEffect(() => {
+        collabSocketRef.current = new CollabSocket();
+        return () => {
+            collabSocketRef.current?.disconnect();
+        };
+    }, []);
 
-                // Link to the room to connect
-                const roomUrl = `localhost:8080/rooms/join?roomId=${id}`
+    // All action functions using useCallback with proper dependencies
+    const sendFullState = useCallback(() => {
+        const currentState = stateRef.current;
 
-                wsRef.current = new WebSocket(`ws://${roomUrl}`);
-
-                console.log(`Connecting to room ${id}`)
-
-                wsRef.current.onopen = () => {
-                    console.log("Socket connection open")
-                    action.joinCollabRoom(id)
-                    action.setCollabConnectionStatus(ConnectionStatus.CONNECTED)
-                    dispatch({ type: "END_LOADING", payload: null })
-                }
-
-                wsRef.current.onmessage = (event: MessageEvent) => {
-                    const incomingAction = JSON.parse(event.data)
-                    console.log(`Received action: `, incomingAction.type)
-                    action.handleIncomingAction(incomingAction);
-                }
-
-                wsRef.current.onclose = () => {
-                    action.exitCollabRoom()
-                    action.setCollabConnectionStatus(ConnectionStatus.DISCONNECTED)
-                    console.log("Socket connection closed")
-                    dispatch({ type: "END_LOADING", payload: null })
-                }
-
-                wsRef.current.onerror = (error: Event) => {
-                    action.setCollabConnectionStatus(ConnectionStatus.ERROR)
-                    console.log("socket connection error: ", error)
-                    dispatch({ type: "END_LOADING", payload: null })
+        const act: Action = {
+            type: "SYNC_FULL_STATE",
+            payload: {
+                state: {
+                    ...currentState,
+                    chart: {
+                        ...currentState.chart,
+                        chartApi: null,
+                        seriesApi: null,
+                        container: null
+                    }
                 }
             }
+        };
 
-            return () => {
-                if (wsRef.current) {
-                    wsRef.current.close();
-                    wsRef.current = null;
-                }
+        console.log("Sending full state with symbol:", currentState.chart.data.symbol);
+        collabSocketRef.current?.send(JSON.stringify(act));
+    }, []);
+
+    const handleIncomingAction = useCallback((incomingAction: Action) => {
+        if (!incomingAction || !incomingAction.type) {
+            console.error("Invalid action received:", incomingAction);
+            return;
+        }
+
+        console.log("Handling incoming action:", incomingAction.type);
+        dispatch(incomingAction);
+
+        // Check if we should send full state
+        if (incomingAction.type === "USER_JOINED") {
+            const currentState = stateRef.current; // Read from ref!
+            console.log("User joined, isHost:", currentState.collaboration.room.isHost);
+
+            if (currentState.collaboration.room.isHost) {
+                console.log("Sending full state as host");
+                setTimeout(() => sendFullState(), 100);
             }
-        }, [state.collaboration.room.id])
+        }
+    }, [sendFullState]);
 
-        const action = useMemo(() => ({
+    // Drawing actions
+    const addDrawing = useCallback((drawing: BaseDrawing) => {
+        const act: Action = {
+            type: "ADD_DRAWING",
+            payload: { drawing: drawing.serialize() }
+        };
+        dispatch(act);
+        collabSocketRef.current?.send(JSON.stringify(act));
+    }, []);
 
-            // ----------------DRAWING FUNCTIONS-------------------
-            addDrawing: (drawing: BaseDrawing) => {
-                const act: Action = {
-                    type: "ADD_DRAWING",
-                    payload: {
-                        drawing: drawing.serialize()
+    const deleteDrawing = useCallback((drawing: BaseDrawing) => {
+        const act: Action = {
+            type: "DELETE_DRAWING",
+            payload: { drawing: drawing.serialize() }
+        };
+        dispatch(act);
+        collabSocketRef.current?.send(JSON.stringify(act));
+    }, []);
+
+    const selectDrawing = useCallback((drawing: BaseDrawing | null) => {
+        dispatch({ type: "SELECT_DRAWING", payload: { drawing } });
+    }, []);
+
+    const startTool = useCallback((tool: DrawingTool, handler: BaseDrawingHandler) => {
+        dispatch({ type: "START_TOOL", payload: { tool, handler } });
+    }, []);
+
+    const cancelTool = useCallback(() => {
+        dispatch({ type: "CANCEL_TOOL", payload: null });
+    }, []);
+
+    // Collab actions
+    const createCollabRoom = useCallback((roomId: string) => {
+        dispatch({ type: "CREATE_COLLAB_ROOM", payload: { roomId } });
+    }, []);
+
+    const toggleCollabWindow = useCallback((state: boolean) => {
+        dispatch({ type: "TOGGLE_COLLAB_WINDOW", payload: { state } });
+    }, []);
+
+    const joinCollabRoom = useCallback((roomId: string) => {
+        dispatch({ type: "JOIN_COLLAB_ROOM", payload: { roomId } });
+    }, []);
+
+    const exitCollabRoom = useCallback(() => {
+        dispatch({ type: "LEAVE_COLLAB_ROOM", payload: null });
+        collabSocketRef.current?.disconnect();
+    }, []);
+
+    const setCollabConnectionStatus = useCallback((status: ConnectionStatus) => {
+        dispatch({ type: "SET_CONNECTION_STATUS_COLLAB", payload: { status } });
+    }, []);
+
+    // Chart actions
+    const selectChart = useCallback((symbol: string, timeframe: IntervalKey, exchange: string) => {
+        const act: Action = {
+            type: "SELECT_CHART",
+            payload: { symbol, timeframe, exchange }
+        };
+        console.log("Selecting chart:", symbol, timeframe, exchange);
+        dispatch(act);
+        collabSocketRef.current?.send(JSON.stringify(act));
+    }, []);
+
+    const setChartConnectionState = useCallback((state: ConnectionState) => {
+        dispatch({ type: "SET_CONNECTION_STATE_CHART", payload: { state } });
+    }, []);
+
+    const initializeApi = useCallback((
+        chartApi: IChartApi,
+        seriesApi: ISeriesApi<SeriesType>,
+        container: HTMLDivElement
+    ) => {
+        dispatch({ type: "INITIALIZE_API", payload: { chartApi, seriesApi, container } });
+    }, []);
+
+    const initializeDrawings = useCallback((drawings: SerializedDrawing[]) => {
+        dispatch({ type: "INTIALIZE_DRAWINGS", payload: { drawings } });
+    }, []);
+
+    const toggleSettings = useCallback((state: boolean) => {
+        dispatch({ type: "TOGGLE_SETTINGS", payload: { state } });
+    }, []);
+
+    const updateSettings = useCallback((settings: ChartSettings) => {
+        dispatch({ type: "UPDATE_SETTINGS", payload: { settings } });
+    }, []);
+
+    const cleanupState = useCallback(() => {
+        dispatch({ type: "CLEANUP_STATE", payload: null });
+    }, []);
+
+    // Connection effect
+    useEffect(() => {
+        const { id } = state.collaboration.room;
+
+        if (id && collabSocketRef.current) {
+            dispatch({
+                type: "SET_CONNECTION_STATUS_COLLAB",
+                payload: { status: ConnectionStatus.CONNECTING }
+            });
+
+            collabSocketRef.current.connect(id, {
+                onOpen: () => {
+                    console.log(`Connected to room ${id}`);
+                    dispatch({
+                        type: "SET_CONNECTION_STATUS_COLLAB",
+                        payload: { status: ConnectionStatus.CONNECTED }
+                    });
+                    dispatch({ type: "END_LOADING", payload: null });
+
+                    // If joining as guest, the server will broadcast USER_JOINED
+                    // which the host will receive and respond to
+                },
+
+                onMessage: (data) => {
+                    try {
+                        const incomingAction = typeof data === 'string'
+                            ? JSON.parse(data)
+                            : data;
+
+                        console.log(`Received: ${incomingAction?.type || 'INVALID'}`);
+                        handleIncomingAction(incomingAction);
+                    } catch (error) {
+                        console.error("Error parsing message:", error, data);
                     }
+                },
+
+                onClose: () => {
+                    console.log("Connection closed");
+                    dispatch({
+                        type: "SET_CONNECTION_STATUS_COLLAB",
+                        payload: { status: ConnectionStatus.DISCONNECTED }
+                    });
+                    dispatch({ type: "END_LOADING", payload: null });
+                },
+
+                onError: (error) => {
+                    console.error("Connection error:", error);
+                    dispatch({
+                        type: "SET_CONNECTION_STATUS_COLLAB",
+                        payload: { status: ConnectionStatus.ERROR }
+                    });
+                    dispatch({ type: "END_LOADING", payload: null });
                 }
-                dispatch(act);
-                wsRef.current?.send(JSON.stringify(act));
+            });
+        }
 
+        return () => {
+            if (id && collabSocketRef.current) {
+                collabSocketRef.current.disconnect();
+            }
+        };
+    }, [state.collaboration.room.id, handleIncomingAction]);
 
-            },
+    useEffect(() => {
+        if (state.chart.tools.activeTool || state.chart.tools.activeHandler || state.chart.drawings.selected) {
+            return;
+        }
+        saveAppState(state);
+    }, [state]);
 
-            deleteDrawing: (drawing: BaseDrawing) => {
-                const act: Action = {
-                    type: "DELETE_DRAWING",
-                    payload: {
-                        drawing:
-                            drawing.serialize()
-                    }
-                }
-                dispatch(act);
-                wsRef.current?.send(JSON.stringify(act));
-            },
+    const action = useMemo(() => ({
+        addDrawing,
+        deleteDrawing,
+        selectDrawing,
+        startTool,
+        cancelTool,
+        createCollabRoom,
+        joinCollabRoom,
+        exitCollabRoom,
+        sendFullState,
+        handleIncomingAction,
+        toggleCollabWindow,
+        setCollabConnectionStatus,
+        selectChart,
+        setChartConnectionState,
+        initializeApi,
+        initializeDrawings,
+        toggleSettings,
+        updateSettings,
+        cleanupState,
+    }), [
+        addDrawing,
+        deleteDrawing,
+        selectDrawing,
+        startTool,
+        cancelTool,
+        createCollabRoom,
+        joinCollabRoom,
+        exitCollabRoom,
+        sendFullState,
+        handleIncomingAction,
+        toggleCollabWindow,
+        setCollabConnectionStatus,
+        selectChart,
+        setChartConnectionState,
+        initializeApi,
+        initializeDrawings,
+        toggleSettings,
+        updateSettings,
+        cleanupState,
+    ]);
 
-            selectDrawing: (drawing: BaseDrawing | null) => {
-                dispatch({ type: "SELECT_DRAWING", payload: { drawing } })
-            },
-
-            startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => {
-                dispatch({ type: "START_TOOL", payload: { tool, handler } })
-            },
-
-            cancelTool: () => {
-                dispatch({ type: "CANCEL_TOOL", payload: null })
-            },
-
-
-            // ----------------COLLAB FUNCTIONS-------------------
-            createCollabRoom: (roomId: string) => {
-                const act: Action = {
-                    type: "CREATE_COLLAB_ROOM",
-                    payload: {
-                        roomId
-                    }
-                }
-                dispatch(act)
-            },
-
-            userJoined: (displayName: string) => {
-                const act: Action = {
-                    type: "USER_JOINED",
-                    payload: {
-                        displayName
-                    }
-                }
-                action.handleIncomingAction(act);
-            },
-
-            userLeft: (displayName: string) => {
-                const act: Action = {
-                    type: "USER_LEFT",
-                    payload: {
-                        displayName
-                    }
-                }
-                action.handleIncomingAction(act);
-            },
-
-            toggleCollabWindow: (state: boolean) => {
-                dispatch({ type: "TOGGLE_COLLAB_WINDOW", payload: { state } })
-            },
-
-            joinCollabRoom: (roomId: string) => {
-                dispatch({ type: "JOIN_COLLAB_ROOM", payload: { roomId } })
-            },
-
-            exitCollabRoom: () => {
-                dispatch({ type: "LEAVE_COLLAB_ROOM", payload: null })
-                wsRef.current?.close()
-            },
-
-            sendFullState: () => {
-                const act: Action = {
-                    type: "SYNC_FULL_STATE",
-                    payload: {
-                        state: {
-                            ...state,
-                            chart: {
-                                ...state.chart,
-                                chartApi: null,
-                                seriesApi: null,
-                                container: null
-                            }
-                        }
-                    }
-                }
-                wsRef.current?.send(JSON.stringify(act))
-            },
-
-            handleIncomingAction: (incomingAction: Action) => {
-                if (incomingAction.type === "USER_JOINED") {
-                    dispatch(incomingAction);
-                    action.sendFullState();
-                } else if (incomingAction.type === "SYNC_FULL_STATE") {
-                    dispatch(incomingAction);
-                } else if (incomingAction.type === "USER_LEFT") {
-                    dispatch(incomingAction);
-                } else {
-                    dispatch(incomingAction);
-                }
-            },
-
-            setCollabConnectionStatus: (status: ConnectionStatus) => {
-                const act: Action = {
-                    type: "SET_CONNECTION_STATUS_COLLAB",
-                    payload: { status }
-                }
-                dispatch(act);
-            },
-
-
-            // ----------------CHART FUNCTIONS-------------------
-            selectChart: (symbol: string, timeframe: IntervalKey, exchange: string) => {
-                const act: Action = {
-                    type: "SELECT_CHART",
-                    payload: {
-                        symbol,
-                        timeframe,
-                        exchange
-                    }
-                }
-                dispatch(act)
-                wsRef.current?.send(JSON.stringify(act))
-            },
-
-            setChartConnectionState: (state: ConnectionState) => {
-                const act: Action = {
-                    type: "SET_CONNECTION_STATE_CHART",
-                    payload: { state }
-                }
-                dispatch(act);
-            },
-
-
-            initializeApi: (chartApi: IChartApi, seriesApi: ISeriesApi<SeriesType>, container: HTMLDivElement) => {
-                dispatch({ type: "INITIALIZE_API", payload: { chartApi, seriesApi, container } })
-            },
-
-            initializeDrawings: (drawings: SerializedDrawing[]) => {
-                dispatch({ type: "INTIALIZE_DRAWINGS", payload: { drawings } })
-            },
-
-            toggleSettings: (state: boolean) => {
-                dispatch({ type: "TOGGLE_SETTINGS", payload: { state } })
-            },
-
-            updateSettings: (settings: ChartSettings) => {
-                dispatch({ type: "UPDATE_SETTINGS", payload: { settings } })
-            },
-
-            cleanupState: () => {
-                dispatch({ type: "CLEANUP_STATE", payload: null })
-            },
-
-
-        }), [state])
-
-        return (
-            <AppContext.Provider value={{ state, action }}>
-                {children}
-            </AppContext.Provider>
-        );
-    };
+    return (
+        <AppContext.Provider value={{ state, action }}>
+            {children}
+        </AppContext.Provider>
+    );
+};
 
 export const useApp = () => {
-    const Context = useContext(AppContext);
+    const context = useContext(AppContext);
 
-    if (!Context) {
+    if (!context) {
         throw new Error("useApp must be used within AppProvider");
     }
-    return Context;
-}
+
+    return context;
+};
+
