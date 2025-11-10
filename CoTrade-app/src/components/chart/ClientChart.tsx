@@ -24,31 +24,20 @@ export default function ClientChart({ initialState }: ClientProps) {
 
 function ProvideConsumer() {
     const chartContainerRef = useRef<HTMLDivElement>(null);
-    const { chart, series } = useCandleChart(chartContainerRef);
     const { state, action } = useApp();
 
-    // Initialize chart API when chart is ready
-    useEffect(() => {
-        if (chart && series && chartContainerRef.current) {
-            console.log("Initializing chart API");
-            action.initializeApi(chart, series, chartContainerRef.current);
-        }
-    }, [chart, series, action]);
+    useCandleChart(chartContainerRef);
 
-    // Use chart drawings
     useChartDrawings();
 
-    // Cleanup on unmount
     useEffect(() => {
         const cleanup = () => {
             action.cleanupState();
         };
-
         window.addEventListener('beforeunload', cleanup);
-
         return () => {
             window.removeEventListener('beforeunload', cleanup);
-            cleanup(); // Also cleanup on unmount
+            cleanup();
         };
     }, []);
 

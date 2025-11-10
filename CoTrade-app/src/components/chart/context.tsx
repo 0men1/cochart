@@ -47,9 +47,6 @@ export interface AppState {
     };
     chart: {
         id: string;
-        chartApi: IChartApi | null,
-        seriesApi: ISeriesApi<SeriesType> | null,
-        container: HTMLDivElement | null,
         tools: {
             activeTool: DrawingTool | null,
             activeHandler: BaseDrawingHandler | null,
@@ -87,9 +84,6 @@ export const defaultAppState: AppState = {
     },
     chart: {
         id: "SOL-USD:coinbase",
-        chartApi: null,
-        seriesApi: null,
-        container: null,
         drawings: {
             collection: [],
             selected: null
@@ -133,10 +127,16 @@ export const defaultAppState: AppState = {
 interface AppContextType {
     state: AppState;
     action: {
+
+        // ======== Drawing Operations ========
+        initializeDrawings: (drawings: SerializedDrawing[]) => void;
         addDrawing: (drawing: BaseDrawing) => void;
         deleteDrawing: (drawing: BaseDrawing) => void;
         selectDrawing: (drawing: BaseDrawing | null) => void;
+        startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => void;
+        cancelTool: () => void;
 
+        // ======== Collab Operations ========
         createCollabRoom: (roomId: string) => void;
         joinCollabRoom: (roomId: string) => void;
         exitCollabRoom: () => void;
@@ -145,20 +145,18 @@ interface AppContextType {
         toggleCollabWindow: (state: boolean) => void;
         setCollabConnectionStatus: (status: ConnectionStatus) => void;
 
-        startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => void;
-        cancelTool: () => void;
-
+        // ======== Chart Operations ========
         selectChart: (symbol: string, timeframe: IntervalKey, exchange: string) => void;
         setChartConnectionState: (state: ConnectionState) => void;
 
-        initializeApi: (chartApi: IChartApi, seriesApi: ISeriesApi<SeriesType>, container: HTMLDivElement) => void;
-        initializeDrawings: (drawings: SerializedDrawing[]) => void;
-
+        // ======== Settings Operations ========
         toggleSettings: (state: boolean) => void;
         updateSettings: (settings: ChartSettings) => void;
 
         cleanupState: () => void;
     };
+    chartRef: React.RefObject<IChartApi | null>;
+    seriesRef: React.RefObject<ISeriesApi<SeriesType> | null>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -173,6 +171,10 @@ export const AppProvider: React.FC<{
     // Keep a ref that always has current state
     const stateRef = useRef(state);
     const collabSocketRef = useRef<CollabSocket | null>(null);
+
+    const chartRef = useRef<IChartApi | null>(null);
+    const seriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
+
 
     // Update ref whenever state changes
     useEffect(() => {
@@ -198,9 +200,6 @@ export const AppProvider: React.FC<{
                     ...currentState,
                     chart: {
                         ...currentState.chart,
-                        chartApi: null,
-                        seriesApi: null,
-                        container: null
                     }
                 }
             }
@@ -297,14 +296,6 @@ export const AppProvider: React.FC<{
 
     const setChartConnectionState = useCallback((state: ConnectionState) => {
         dispatch({ type: "SET_CONNECTION_STATE_CHART", payload: { state } });
-    }, []);
-
-    const initializeApi = useCallback((
-        chartApi: IChartApi,
-        seriesApi: ISeriesApi<SeriesType>,
-        container: HTMLDivElement
-    ) => {
-        dispatch({ type: "INITIALIZE_API", payload: { chartApi, seriesApi, container } });
     }, []);
 
     const initializeDrawings = useCallback((drawings: SerializedDrawing[]) => {
@@ -408,7 +399,6 @@ export const AppProvider: React.FC<{
         setCollabConnectionStatus,
         selectChart,
         setChartConnectionState,
-        initializeApi,
         initializeDrawings,
         toggleSettings,
         updateSettings,
@@ -428,7 +418,6 @@ export const AppProvider: React.FC<{
         setCollabConnectionStatus,
         selectChart,
         setChartConnectionState,
-        initializeApi,
         initializeDrawings,
         toggleSettings,
         updateSettings,
@@ -436,7 +425,7 @@ export const AppProvider: React.FC<{
     ]);
 
     return (
-        <AppContext.Provider value={{ state, action }}>
+        <AppContext.Provider value={{ state, action, chartRef, seriesRef }}>
             {children}
         </AppContext.Provider>
     );

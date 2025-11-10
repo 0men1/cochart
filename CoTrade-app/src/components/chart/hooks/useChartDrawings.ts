@@ -30,17 +30,16 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
     return null;
 }
 export function useChartDrawings() {
-    const { state, action } = useApp();
-    const { chartApi, seriesApi } = state.chart;
+    const { state, action, chartRef, seriesRef } = useApp();
     const drawingsRef = useRef<Map<string, BaseDrawing>>(new Map());
     const isInitializedRef = useRef<string | null>(null);
 
     useEffect(() => {
-        if (!seriesApi) return;
+        if (!seriesRef.current) return;
         let active = true;
         const currentId = state.chart.id;
         (async () => {
-            if (isInitializedRef.current === currentId) return;
+            if (!seriesRef.current || isInitializedRef.current === currentId) return;
             const recovered = await getDrawings(currentId);
             if (!active) return;
 
@@ -51,7 +50,7 @@ export function useChartDrawings() {
             for (const sd of recovered) {
                 const inst = restoreDrawing(sd);
                 if (!inst) continue;
-                seriesApi.attachPrimitive(inst);
+                seriesRef.current.attachPrimitive(inst);
                 drawingsRef.current.set(inst.id, inst);
             }
 
@@ -60,20 +59,15 @@ export function useChartDrawings() {
         })().catch(console.error);
 
         return () => { active = false; };
-    }, [state.chart.id, seriesApi, action]);
+    }, [state.chart.id, seriesRef.current, action]);
 
     useEffect(() => {
+        if (!seriesRef.current) return;
 
-        // if drawingsRef aka. attached drawings
-        // dont match the collection
-        // Make some adjustments
         console.log("Colllection useEffect");
 
         const currentDrawings = drawingsRef.current;
         const collectionDrawings = state.chart.drawings.collection;
-
-        console.log("Current Drawings: ", currentDrawings);
-        console.log("Collection drawings: ", collectionDrawings);
 
         // Attach drawings that do appear in collection but not in drawingsRef
         collectionDrawings.forEach(drawing => {
@@ -81,10 +75,20 @@ export function useChartDrawings() {
                 const restoredDrawing = restoreDrawing(drawing);
                 if (restoredDrawing) {
                     console.log("Attached drawing");
-                    seriesApi?.attachPrimitive(restoredDrawing);
+                    seriesRef.current?.attachPrimitive(restoredDrawing);
                 }
             }
         })
+
+        for (const id of currentDrawings.keys()) {
+            if (!collectionDrawings.some(d => d.id === id)) {
+                const drawing = currentDrawings.get(id);
+                if (drawing) {
+                    seriesRef.current.detachPrimitive(drawing);
+                }
+                currentDrawings.delete(id);
+            }
+        }
     }, [state.chart.drawings.collection])
 
     // persist when collection changes, only after initialization for this id
@@ -101,7 +105,7 @@ export function useChartDrawings() {
             drawingsRef.current.clear();
             isInitializedRef.current = null;
         };
-    }, [state.chart.id, seriesApi]);
+    }, [state.chart.id, seriesRef.current]);
 
 
     const mouseClickHandler = useCallback((param: MouseEventParams) => {
@@ -111,8 +115,8 @@ export function useChartDrawings() {
             if (tools.activeHandler) {
                 const inst = tools.activeHandler.onClick(param.point.x, param.point.y);
                 if (inst) {
-                    if (seriesApi) {
-                        seriesApi.attachPrimitive(inst);
+                    if (seriesRef.current) {
+                        seriesRef.current.attachPrimitive(inst);
                     }
                     drawingsRef.current.set(inst.id, inst);
                     action.addDrawing(inst); // reducer should serialize internally
@@ -132,7 +136,7 @@ export function useChartDrawings() {
                 action.selectDrawing(null);
             }
         } catch (e) { console.error(e); }
-    }, [state.chart.tools.activeHandler, state.chart.drawings, action, seriesApi]);
+    }, [state.chart.tools.activeHandler, state.chart.drawings, action, seriesRef.current]);
 
     const mouseMoveHandler = useCallback((param: MouseEventParams) => {
         try {
@@ -144,15 +148,15 @@ export function useChartDrawings() {
     }, []);
 
     useEffect(() => {
-        chartApi?.subscribeClick(mouseClickHandler);
-        chartApi?.subscribeCrosshairMove(mouseMoveHandler);
+        chartRef.current?.subscribeClick(mouseClickHandler);
+        chartRef.current?.subscribeCrosshairMove(mouseMoveHandler);
         return () => {
             try {
-                chartApi?.unsubscribeClick(mouseClickHandler);
-                chartApi?.unsubscribeCrosshairMove(mouseMoveHandler);
+                chartRef.current?.unsubscribeClick(mouseClickHandler);
+                chartRef.current?.unsubscribeCrosshairMove(mouseMoveHandler);
             } catch (error) {
                 console.error('Error during event cleanup (likely disposed chart):', error);
             }
         };
-    }, [chartApi, mouseClickHandler, mouseMoveHandler]);
+    }, [chartRef.current, mouseClickHandler, mouseMoveHandler]);
 }
