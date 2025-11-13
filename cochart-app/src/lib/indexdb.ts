@@ -1,6 +1,6 @@
 import { SerializedDrawing } from "@/core/chart/drawings/types";
 
-const DATABASE_NAME = "COTRADE_DRAWINGS";
+const DATABASE_NAME = "COCHART_DRAWINGS";
 const DATABASE_VERSION = 1;
 const STORE_NAME = "drawings";
 

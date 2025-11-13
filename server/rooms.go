@@ -15,10 +15,15 @@ import (
 
 type Room struct {
 	ID         string
-	Broadcast  chan []byte
+	Broadcast  chan *Message
 	Clients    map[*Client]bool
 	Register   chan *Client
 	Unregister chan *Client
+}
+
+type Message struct {
+	Data   []byte
+	Sender *Client
 }
 
 type Client struct {
@@ -50,7 +55,6 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// Thread-safe room operations
 func (rm *RoomManager) GetRoom(roomId string) (*Room, bool) {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
@@ -94,7 +98,10 @@ func (c *Client) startRead() {
 		}
 
 		message = bytes.TrimSpace(message)
-		c.Room.Broadcast <- message
+		c.Room.Broadcast <- &Message{
+			Data:   message,
+			Sender: c,
+		}
 	}
 }
 
@@ -161,7 +168,6 @@ func (r *Room) start() {
 			log.Printf("User joined: %s (Room: %s, Total: %d)\n",
 				client.DisplayName, r.ID, activeUsers)
 
-			// Broadcast to others, NOT the joiner
 			r.broadcastToOthers(action, client)
 
 		case client := <-r.Unregister:
@@ -179,7 +185,6 @@ func (r *Room) start() {
 				action, _ := json.Marshal(a)
 				r.broadcastToAll(action)
 
-				// Clean up empty rooms
 				if len(r.Clients) == 0 {
 					log.Printf("Room %s empty, cleaning up\n", r.ID)
 					roomManager.RemoveRoom(r.ID)
@@ -187,8 +192,8 @@ func (r *Room) start() {
 				}
 			}
 
-		case message := <-r.Broadcast:
-			r.broadcastToAll(message)
+		case msg := <-r.Broadcast:
+			r.broadcastToOthers(msg.Data, msg.Sender)
 		}
 	}
 }
@@ -253,7 +258,7 @@ func CreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	room := &Room{
 		ID:         roomId,
-		Broadcast:  make(chan []byte, 256),
+		Broadcast:  make(chan *Message, 256),
 		Clients:    make(map[*Client]bool),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),

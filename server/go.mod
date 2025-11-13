@@ -1,4 +1,4 @@
-module github.com/0men1/CoTrade-Backend
+module github.com/0men1/cochart
 
 go 1.22.0
 

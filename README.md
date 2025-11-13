@@ -1,19 +1,15 @@
 CURRENT TASK:
-- Fix drawing functionality when being shared across websockets.
+- Separate Shared state from per-user state
+- Build test regression test suite
 
 Requirements
 - The drawing system is terrible and can be greatly improved. I am planning on forking LWC and creating my own implementation that opens the door to dragging drawings and their control points instead of declaring it here. So the drawing is very very temporary just to make sure everything works.
 - Handle errors gracefully and retry when failing
 
 PROBLEM DISCOVERY:
-- When drawing functinality does not work correctly when shares across websocket. 
-   - Example:
-      - Adding drawing on one collaborator's chart does not update the other collaborators' charts until we change timeframes/charts
-      - When deleting a drawing it also does not update on other charts right away
-      - Everything works correctly for individual charts though.
 
 ===THIS IS AI GENERATED===
-# 📈 CoTrade - Collaborative Financial Charting Platform
+# 📈 CoChart - Collaborative Financial Charting Platform
 
 <div align="center">
 
@@ -29,7 +25,7 @@ PROBLEM DISCOVERY:
 
 ## ✨ Overview
 
-CoTrade is a **production-grade collaborative trading platform** that enables multiple users to analyze financial markets together in real-time. Built with modern web technologies, it combines the power of **WebSocket-based real-time collaboration**, **professional-grade charting**, and **live market data integration**.
+CoChart is a **production-grade collaborative trading platform** that enables multiple users to analyze financial markets together in real-time. Built with modern web technologies, it combines the power of **WebSocket-based real-time collaboration**, **professional-grade charting**, and **live market data integration**.
 
 ### 🎯 Key Highlights
 - **Real-time Collaboration**: Multiple users can draw, annotate, and analyze charts simultaneously
@@ -43,7 +39,7 @@ CoTrade is a **production-grade collaborative trading platform** that enables mu
 
 ### Frontend (Next.js 15 + TypeScript)
 ```
-📁 CoTrade-app/
+📁 cochart-app/
 ├── 🎨 Modern UI Components (Radix UI + Tailwind CSS)
 ├── 📊 Advanced Charting Engine (Lightweight Charts)
 ├── 🔄 Real-time State Management (Custom Context + Reducers)
@@ -98,8 +94,8 @@ CoTrade is a **production-grade collaborative trading platform** that enables mu
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/CoTrade.git
-   cd CoTrade
+   git clone https://github.com/your-username/cochart.git
+   cd cochart 
    ```
 
 2. **Start the backend server**
@@ -112,7 +108,7 @@ CoTrade is a **production-grade collaborative trading platform** that enables mu
 
 3. **Launch the frontend**
    ```bash
-   cd CoTrade-app
+   cd cochart-app
    npm install
    npm run dev
    # App running on http://localhost:3000
