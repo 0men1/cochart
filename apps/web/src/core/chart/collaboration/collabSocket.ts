@@ -1,4 +1,4 @@
-import { getBaseIP } from "@/lib/utils";
+import { getBaseIP, getBaseSocketUrl } from "@/lib/utils";
 
 export class CollabSocket {
     private ws: WebSocket | null = null;
@@ -13,8 +13,7 @@ export class CollabSocket {
         onClose: () => void;
         onError: (error: Event) => void;
     }) {
-        const websocket_prefix = process.env.NODE_ENV === 'development' ? 'ws' : 'wss'
-        this.ws = new WebSocket(`${websocket_prefix}://${getBaseIP()}/rooms/join?roomId=${roomId}`)
+        this.ws = new WebSocket(`${getBaseSocketUrl()}/rooms/join?roomId=${roomId}`)
         this.roomId = roomId;
 
         this.ws.onopen = () => {

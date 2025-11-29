@@ -11,6 +11,8 @@ services:
       build:
         context: ./apps/web
         dockerfile: Dockerfile.dev
+      environment:
+          - SERVER_URL=http://server:8080
       volumes:
         - ./apps/web:/app
         - /app/node_modules

@@ -5,16 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const getBaseUrl = () => {
+export const getBaseSocketUrl = () => {
   if (process.env.NODE_ENV === 'development') {
-    return process.env.NEXT_PUBLIC_SERVER_DEV_URL
+    return 'ws://localhost:8080'
   }
-  return process.env.NEXT_PUBLIC_SERVER_URL
-};
-
-export const getBaseIP = () => {
-  if (process.env.NODE_ENV === 'development') {
-    return process.env.NEXT_PUBLIC_SERVER_DEV_IP
-  }
-  return process.env.NEXT_PUBLIC_SERVER_IP
+  return 'wss://api.cochart.com'
 };

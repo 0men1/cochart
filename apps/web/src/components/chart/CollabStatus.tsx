@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/chart/context"
-import { getBaseUrl } from "@/lib/utils";
 
 export default function CollabStatus() {
     const { state, action } = useApp();
@@ -13,7 +12,7 @@ export default function CollabStatus() {
 
     async function handleCollabStart() {
         try {
-            const response = await fetch(`${getBaseUrl()}/rooms/create`, {
+            const response = await fetch(`/api/rooms/create`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
