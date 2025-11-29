@@ -43,9 +43,6 @@ export function useChartDrawings() {
             const recovered = await getDrawings(currentId);
             if (!active) return;
 
-
-            console.log("Recovered drawings: ", recovered);
-
             // 1) put serialized snapshots into state (for persistence/UI)
             action.initializeDrawings(recovered);
 
@@ -66,9 +63,6 @@ export function useChartDrawings() {
 
     useEffect(() => {
         if (!seriesRef.current) return;
-
-        console.log("Colllection useEffect");
-
         if (isInitializedRef.current !== state.chart.id) return;
 
         const currentDrawings = drawingsRef.current;
@@ -79,7 +73,6 @@ export function useChartDrawings() {
             if (!currentDrawings.has(drawing.id)) {
                 const restoredDrawing = restoreDrawing(drawing);
                 if (restoredDrawing) {
-                    console.log("Attached drawing");
                     seriesRef.current?.attachPrimitive(restoredDrawing);
                     currentDrawings.set(restoredDrawing.id, restoredDrawing);
                 }
@@ -90,7 +83,6 @@ export function useChartDrawings() {
             if (!collectionDrawings.some(d => d.id === id)) {
                 const drawing = currentDrawings.get(id);
                 if (drawing) {
-                    console.log("Detaching drawing");
                     seriesRef.current.detachPrimitive(drawing);
                     currentDrawings.delete(id)
                 }

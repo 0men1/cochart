@@ -1,3 +1,5 @@
+import { getBaseIP } from "@/lib/utils";
+
 export class CollabSocket {
     private ws: WebSocket | null = null;
     private roomId: string | null = null;
@@ -11,11 +13,11 @@ export class CollabSocket {
         onClose: () => void;
         onError: (error: Event) => void;
     }) {
-        this.ws = new WebSocket(`wss://${process.env.NEXT_PUBLIC_SERVER_IP}/rooms/join?roomId=${roomId}`)
+        const websocket_prefix = process.env.NODE_ENV === 'development' ? 'ws' : 'wss'
+        this.ws = new WebSocket(`${websocket_prefix}://${getBaseIP()}/rooms/join?roomId=${roomId}`)
         this.roomId = roomId;
 
         this.ws.onopen = () => {
-            console.log(`Connected to room ${this.roomId}`)
             this.reconnectAttempts = 0;
             callbacks.onOpen();
         }
@@ -26,12 +28,10 @@ export class CollabSocket {
         }
 
         this.ws.onclose = () => {
-            console.log("Connection closed")
             callbacks.onClose();
         }
 
         this.ws.onerror = (error: Event) => {
-            console.log(`Connection ran into an error: ${error}`)
             callbacks.onError(error);
 
             // Auto-reconnect with exponential backoff

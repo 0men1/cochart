@@ -73,7 +73,6 @@ export async function setDrawings(chartId: string, drawings: SerializedDrawing[]
             const request = store.put(data)
 
             request.onsuccess = () => {
-                console.log("Successfully set drawings")
                 resolve();
             }
 
@@ -149,7 +148,6 @@ export async function setCandles(chartId: string, candles: Candlestick[]): Promi
             const request = store.put(data)
 
             request.onsuccess = () => {
-                console.log("Successfully set drawings")
                 resolve();
             }
 

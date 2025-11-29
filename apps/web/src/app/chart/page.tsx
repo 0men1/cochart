@@ -11,7 +11,6 @@ export default function SoloChart() {
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        console.log("Starting solo chart")
         setInitialState(getInitialState());
         setIsLoaded(true);
     }, []);

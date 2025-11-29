@@ -1,4 +1,3 @@
-// app/chart/room/[roomId]/page.tsx
 'use client'
 
 import ClientChart from "@/components/chart/ClientChart";
@@ -20,22 +19,16 @@ export default function ChartCollabRoom({
             console.error("Missing roomId");
             return;
         }
-
-        console.log(`Joining collaboration room: ${roomId}`);
-
-        // Get base state from localStorage
         const baseState = getInitialState();
-
-        // Override with room connection info
         const collabState: AppState = {
             ...baseState,
             collaboration: {
                 ...baseState.collaboration,
                 room: {
                     ...baseState.collaboration.room,
-                    id: roomId,              // Set the room ID
-                    isHost: false,           // Joiners are not hosts
-                    isLoading: true,         // Show loading state
+                    id: roomId,
+                    isHost: false,
+                    isLoading: true,
                     status: ConnectionStatus.CONNECTING
                 }
             }
@@ -44,7 +37,6 @@ export default function ChartCollabRoom({
         setInitialState(collabState);
     }, [roomId]);
 
-    // Error state
     if (!roomId) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -53,7 +45,6 @@ export default function ChartCollabRoom({
         );
     }
 
-    // Loading state
     if (!initialState) {
         return (
             <div className="flex items-center justify-center h-screen">

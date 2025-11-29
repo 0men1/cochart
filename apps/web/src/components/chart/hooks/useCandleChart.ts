@@ -10,12 +10,13 @@ import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVALMs, TickData } from "@/core/chart/market-data/types";
 import { useApp } from "@/components/chart/context";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
+import { getBaseUrl } from "@/lib/utils";
 
 
 export async function fetchHistoricalCandles(ticker: string, timeframe: string, numBars: number): Promise<Candlestick[]> {
     const now = Math.floor(Date.now() / 1000);
     const start = now - numBars * INTERVALMs[timeframe];
-    const url = `${process.env.NEXT_PUBLIC_SERVER_URL}/candles?symbol=${ticker}&timeframe=${timeframe}&start=${start}&end=${now}`;
+    const url = `${getBaseUrl()}/candles?symbol=${ticker}&timeframe=${timeframe}&start=${start}&end=${now}`;
     const raw: number[][] = await fetch(url).then(res => res.json());
     return raw.map(([time, low, high, open, close, volume]) => ({ time: time as UTCTimestamp, open, high, low, close, volume }));
 }

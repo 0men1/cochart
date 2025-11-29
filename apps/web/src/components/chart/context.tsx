@@ -205,7 +205,6 @@ export const AppProvider: React.FC<{
             }
         };
 
-        console.log("Sending full state with symbol:", currentState.chart.data.symbol);
         collabSocketRef.current?.send(JSON.stringify(act));
     }, []);
 
@@ -215,16 +214,12 @@ export const AppProvider: React.FC<{
             return;
         }
 
-        console.log("Handling incoming action:", incomingAction.type);
         dispatch(incomingAction);
 
         // Check if we should send full state
         if (incomingAction.type === "USER_JOINED") {
             const currentState = stateRef.current; // Read from ref!
-            console.log("User joined, isHost:", currentState.collaboration.room.isHost);
-
             if (currentState.collaboration.room.isHost) {
-                console.log("Sending full state as host");
                 setTimeout(() => sendFullState(), 100);
             }
         }
@@ -289,7 +284,6 @@ export const AppProvider: React.FC<{
             type: "SELECT_CHART",
             payload: { symbol, timeframe, exchange }
         };
-        console.log("Selecting chart:", symbol, timeframe, exchange);
         dispatch(act);
         collabSocketRef.current?.send(JSON.stringify(act));
     }, []);
@@ -326,7 +320,6 @@ export const AppProvider: React.FC<{
 
             collabSocketRef.current.connect(id, {
                 onOpen: () => {
-                    console.log(`Connected to room ${id}`);
                     dispatch({
                         type: "SET_CONNECTION_STATUS_COLLAB",
                         payload: { status: ConnectionStatus.CONNECTED }
@@ -343,7 +336,6 @@ export const AppProvider: React.FC<{
                             ? JSON.parse(data)
                             : data;
 
-                        console.log(`Received: ${incomingAction?.type || 'INVALID'}`);
                         handleIncomingAction(incomingAction);
                     } catch (error) {
                         console.error("Error parsing message:", error, data);
@@ -351,7 +343,6 @@ export const AppProvider: React.FC<{
                 },
 
                 onClose: () => {
-                    console.log("Connection closed");
                     dispatch({
                         type: "SET_CONNECTION_STATUS_COLLAB",
                         payload: { status: ConnectionStatus.DISCONNECTED }

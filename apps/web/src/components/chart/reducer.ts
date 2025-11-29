@@ -211,11 +211,7 @@ export function Reducer(state: AppState, action: Action): AppState {
         }
 
         case "SELECT_CHART": {
-            try {
-                state.chart.tools.activeHandler?.onCancel()
-            } catch (e) {
-                console.log(e)
-            }
+            state.chart.tools.activeHandler?.onCancel()
             return {
                 ...state,
                 chart: {
