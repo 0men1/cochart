@@ -111,7 +111,8 @@ export function useChartDrawings() {
     const mouseClickHandler = useCallback((param: MouseEventParams) => {
         try {
             if (!param.point || !param.logical) return;
-            const { tools, drawings } = state.chart;
+            const { drawings } = state.chart;
+            const { tools } = state
             if (tools.activeHandler) {
                 const inst = tools.activeHandler.onClick(param.point.x, param.point.y);
                 if (inst) {
@@ -136,7 +137,7 @@ export function useChartDrawings() {
                 action.selectDrawing(null);
             }
         } catch (e) { console.error(e); }
-    }, [state.chart.tools.activeHandler, state.chart.drawings, action, seriesRef.current]);
+    }, [state.tools.activeHandler, state.chart.drawings, action, seriesRef.current]);
 
     const mouseMoveHandler = useCallback((param: MouseEventParams) => {
         try {

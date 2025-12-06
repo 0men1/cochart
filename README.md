@@ -6,17 +6,22 @@ Run this command in the root directory:
 ``` make dev ```
 
 
-TASKS:
-- Separate shared state from per-user state?
-- Add more chart interactions (easier chart paging, open/close tabs, drawings hotbar, reset chart, clear cache)
+TASKS (ordered by priority):
+- Separate shared state from per-user state
+- Cache candles (shoudlve done this long time ago)
+- Regression tests
+- Add more chart interactions
+   - easier chart paging, 
+   - tool hotbar, 
+   - list of drawing objects
 
 Requirements
-- Get a better drawing system
+- Get a better drawing system (provide more tool options)
    - The drawing system can be greatly improved. fork LWC and extend to drag drawings and their control points.
 
 
 PROBLEM DISCOVERY:
-
+- Issues on mobile (Connections are established but deltas are not visibly updating the state)
 
 
 

@@ -154,13 +154,13 @@ export function Reducer(state: AppState, action: Action): AppState {
         case "ADD_DRAWING": {
             return {
                 ...state,
+                tools: {
+                    ...state.tools,
+                    activeTool: null,
+                    activeHandler: null
+                },
                 chart: {
                     ...state.chart,
-                    tools: {
-                        ...state.chart.tools,
-                        activeTool: null,
-                        activeHandler: null
-                    },
                     drawings: {
                         ...state.chart.drawings,
                         collection: [...state.chart.drawings.collection, action.payload.drawing]
@@ -185,13 +185,13 @@ export function Reducer(state: AppState, action: Action): AppState {
         case "START_TOOL": {
             return {
                 ...state,
+                tools: {
+                    ...state.tools,
+                    activeTool: action.payload.tool,
+                    activeHandler: action.payload.handler
+                },
                 chart: {
                     ...state.chart,
-                    tools: {
-                        ...state.chart.tools,
-                        activeTool: action.payload.tool,
-                        activeHandler: action.payload.handler
-                    }
                 }
             }
         }
@@ -199,19 +199,19 @@ export function Reducer(state: AppState, action: Action): AppState {
         case "CANCEL_TOOL": {
             return {
                 ...state,
+                tools: {
+                    ...state.tools,
+                    activeTool: null,
+                    activeHandler: null,
+                },
                 chart: {
                     ...state.chart,
-                    tools: {
-                        ...state.chart.tools,
-                        activeTool: null,
-                        activeHandler: null,
-                    }
                 }
             }
         }
 
         case "SELECT_CHART": {
-            state.chart.tools.activeHandler?.onCancel()
+            state.tools.activeHandler?.onCancel()
             return {
                 ...state,
                 chart: {
@@ -247,12 +247,12 @@ export function Reducer(state: AppState, action: Action): AppState {
         case "TOGGLE_SETTINGS": {
             return {
                 ...state,
+                settings: {
+                    ...state.settings,
+                    isOpen: action.payload.state
+                },
                 chart: {
                     ...state.chart,
-                    settings: {
-                        ...state.chart.settings,
-                        isOpen: action.payload.state
-                    }
                 }
             }
         }
@@ -311,11 +311,11 @@ export function Reducer(state: AppState, action: Action): AppState {
         case "UPDATE_SETTINGS": {
             return {
                 ...state,
+                settings: {
+                    ...action.payload.settings
+                },
                 chart: {
                     ...state.chart,
-                    settings: {
-                        ...action.payload.settings
-                    }
                 }
             }
         }
@@ -346,16 +346,16 @@ export function Reducer(state: AppState, action: Action): AppState {
                         isHost: false,
                     }
                 },
+                tools: {
+                    activeTool: null,
+                    activeHandler: null
+                },
+                settings: {
+                    ...state.settings,
+                    isOpen: false
+                },
                 chart: {
                     ...state.chart,
-                    tools: {
-                        activeTool: null,
-                        activeHandler: null
-                    },
-                    settings: {
-                        ...state.chart.settings,
-                        isOpen: false
-                    },
                     drawings: {
                         ...state.chart.drawings,
                         selected: null,
