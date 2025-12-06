@@ -1,4 +1,4 @@
-import { getBaseIP, getBaseSocketUrl } from "@/lib/utils";
+import { getBaseSocketUrl } from "@/lib/utils";
 
 export class CollabSocket {
     private ws: WebSocket | null = null;

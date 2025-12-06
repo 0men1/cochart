@@ -167,11 +167,11 @@ export function useCandleChart(
             const chart = createChart(containerRef.current, {
                 width: containerRef.current.clientWidth,
                 height: containerRef.current.clientHeight,
-                layout: state.chart.settings.background.theme === 'light' ? ThemeConfig.light : ThemeConfig.dark,
-                crosshair: { mode: state.chart.cursor },
+                layout: state.settings.background.theme === 'light' ? ThemeConfig.light : ThemeConfig.dark,
+                crosshair: { mode: state.settings.cursor },
                 grid: {
-                    vertLines: state.chart.settings.background.grid.vertLines,
-                    horzLines: state.chart.settings.background.grid.horzLines
+                    vertLines: state.settings.background.grid.vertLines,
+                    horzLines: state.settings.background.grid.horzLines
                 },
                 timeScale: {
                     timeVisible: true,
@@ -195,11 +195,11 @@ export function useCandleChart(
             });
 
             const series = chart.addSeries(CandlestickSeries, {
-                upColor: state.chart.settings.candles.upColor,
-                downColor: state.chart.settings.candles.downColor,
-                borderVisible: state.chart.settings.candles.borderVisible,
-                wickUpColor: state.chart.settings.candles.wickupColor,
-                wickDownColor: state.chart.settings.candles.wickDownColor,
+                upColor: state.settings.candles.upColor,
+                downColor: state.settings.candles.downColor,
+                borderVisible: state.settings.candles.borderVisible,
+                wickUpColor: state.settings.candles.wickupColor,
+                wickDownColor: state.settings.candles.wickDownColor,
             });
 
             chartRef.current = chart;
@@ -247,32 +247,32 @@ export function useCandleChart(
         if (!chartRef.current) return;
         try {
             chartRef.current.applyOptions({
-                layout: state.chart.settings.background.theme === 'light' ? ThemeConfig.light : ThemeConfig.dark,
-                crosshair: { mode: state.chart.cursor },
+                layout: state.settings.background.theme === 'light' ? ThemeConfig.light : ThemeConfig.dark,
+                crosshair: { mode: state.settings.cursor },
                 grid: {
-                    vertLines: state.chart.settings.background.grid.vertLines,
-                    horzLines: state.chart.settings.background.grid.horzLines
+                    vertLines: state.settings.background.grid.vertLines,
+                    horzLines: state.settings.background.grid.horzLines
                 }
             });
         } catch (error) {
             console.error('Error applying chart options:', error);
         }
-    }, [state.chart.cursor, state.chart.settings.background.grid, state.chart.settings.background.theme]);
+    }, [state.settings.cursor, state.settings.background.grid, state.settings.background.theme]);
 
     useEffect(() => {
         if (!seriesRef.current) return;
         try {
             seriesRef.current.applyOptions({
-                upColor: state.chart.settings.candles.upColor,
-                downColor: state.chart.settings.candles.downColor,
-                borderVisible: state.chart.settings.candles.borderVisible,
-                wickUpColor: state.chart.settings.candles.wickupColor,
-                wickDownColor: state.chart.settings.candles.wickDownColor,
+                upColor: state.settings.candles.upColor,
+                downColor: state.settings.candles.downColor,
+                borderVisible: state.settings.candles.borderVisible,
+                wickUpColor: state.settings.candles.wickupColor,
+                wickDownColor: state.settings.candles.wickDownColor,
             });
         } catch (error) {
             console.error('Error applying series options:', error);
         }
-    }, [state.chart.settings.candles]);
+    }, [state.settings.candles]);
 
     return {
         chart: chartRef.current,

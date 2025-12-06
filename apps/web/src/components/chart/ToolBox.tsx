@@ -20,7 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 function Toolbox() {
     const { state, action, chartRef, seriesRef } = useApp();
-    const { activeTool } = state.chart.tools
+    const { activeTool } = state.tools
 
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {

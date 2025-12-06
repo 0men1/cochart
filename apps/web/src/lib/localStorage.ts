@@ -57,13 +57,13 @@ export function saveAppState(state: AppState) {
                 ...state.collaboration.room
             }
         },
+        tools: state.tools,
+        settings: {
+            ...state.settings
+        },
+        cursor: state.settings.cursor,
         chart: {
             id: state.chart.id,
-            tools: state.chart.tools,
-            settings: {
-                ...state.chart.settings
-            },
-            cursor: state.chart.cursor,
             data: {
                 ...state.chart.data,
             },

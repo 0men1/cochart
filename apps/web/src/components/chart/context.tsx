@@ -12,6 +12,7 @@ import { CollabSocket } from "@/core/chart/collaboration/collabSocket";
 
 export interface ChartSettings {
     isOpen: boolean
+    cursor: CrosshairMode;
     background: {
         theme: "dark" | "light";
         grid: {
@@ -45,18 +46,17 @@ export interface AppState {
             status: ConnectionStatus;
         }
     };
+    settings: ChartSettings;
+    tools: {
+        activeTool: DrawingTool | null,
+        activeHandler: BaseDrawingHandler | null,
+    }
     chart: {
         id: string;
-        tools: {
-            activeTool: DrawingTool | null,
-            activeHandler: BaseDrawingHandler | null,
-        }
         drawings: {
             collection: SerializedDrawing[];
             selected: BaseDrawing | null;
         };
-        settings: ChartSettings;
-        cursor: CrosshairMode;
         data: {
             style: string;
             symbol: string;
@@ -67,8 +67,6 @@ export interface AppState {
     }
 }
 
-// export interface CollabAppState {
-// }
 
 export const defaultAppState: AppState = {
     lastSaved: "",
@@ -82,36 +80,37 @@ export const defaultAppState: AppState = {
             status: ConnectionStatus.DISCONNECTED
         }
     },
+    settings: {
+        isOpen: false,
+        cursor: CrosshairMode.Normal,
+        background: {
+            theme: "dark",
+            grid: {
+                vertLines: {
+                    visible: true
+                },
+                horzLines: {
+                    visible: true
+                }
+            },
+        },
+        candles: {
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderVisible: false,
+            wickupColor: '#26a69a',
+            wickDownColor: '#ef5350'
+        },
+    },
+    tools: {
+        activeTool: null,
+        activeHandler: null
+    },
     chart: {
         id: "SOL-USD:coinbase",
         drawings: {
             collection: [],
             selected: null
-        },
-        tools: {
-            activeTool: null,
-            activeHandler: null
-        },
-        settings: {
-            isOpen: false,
-            background: {
-                theme: "dark",
-                grid: {
-                    vertLines: {
-                        visible: true
-                    },
-                    horzLines: {
-                        visible: true
-                    }
-                },
-            },
-            candles: {
-                upColor: '#26a69a',
-                downColor: '#ef5350',
-                borderVisible: false,
-                wickupColor: '#26a69a',
-                wickDownColor: '#ef5350'
-            },
         },
         data: {
             style: 'candle',
@@ -120,7 +119,6 @@ export const defaultAppState: AppState = {
             exchange: "coinbase",
             state: { status: ConnectionStatus.DISCONNECTED, reconnectAttempts: 0 },
         },
-        cursor: CrosshairMode.Normal,
     }
 };
 
@@ -369,7 +367,7 @@ export const AppProvider: React.FC<{
     }, [state.collaboration.room.id, handleIncomingAction]);
 
     useEffect(() => {
-        if (state.chart.tools.activeTool || state.chart.tools.activeHandler || state.chart.drawings.selected) {
+        if (state.tools.activeTool || state.tools.activeHandler || state.chart.drawings.selected) {
             return;
         }
         saveAppState(state);

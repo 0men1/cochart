@@ -27,7 +27,7 @@ const SETTINGS_TABS: SettingsTab[] = [
 
 export default function Settings() {
     const { state, action } = useApp();
-    const { settings } = state.chart;
+    const { settings } = state;
 
     const [localSettings, setLocalSettings] = useState<ChartSettings | null>(null);
     const [activeTab, setActiveTab] = useState<string>('appearance');
