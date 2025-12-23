@@ -9,6 +9,7 @@ import CollabStatus from './CollabStatus';
 import { DrawingEditor } from './DrawingEditor';
 import Settings from './Settings';
 import { useChartDrawings } from './hooks/useChartDrawings';
+import { useChartInteraction } from './hooks/useChartInteractions';
 
 export interface ClientProps {
     initialState?: Partial<AppState>;
@@ -27,7 +28,7 @@ function ProvideConsumer() {
     const { state, action } = useApp();
 
     useCandleChart(chartContainerRef);
-
+    useChartInteraction(chartContainerRef)
     useChartDrawings();
 
     useEffect(() => {

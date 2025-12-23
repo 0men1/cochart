@@ -72,6 +72,15 @@ export function useCandleChart(
     }, [interval]);
 
 
+    // Every few minutes we store atleast 1000 of current candles to cache
+    //
+    // Always fecth all candles from the most recent stored candle to the time.now() candle to fill in the gap
+    // Load new fetched candles with old cached (new first then cached)
+    //
+    // How to set up timed function?
+    //
+
+
     useEffect(() => {
         const setupTickConnection = async () => {
             try {
