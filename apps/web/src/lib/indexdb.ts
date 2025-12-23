@@ -28,18 +28,20 @@ function initDatabase(): Promise<IDBDatabase> {
         }
 
         request.onupgradeneeded = () => {
-            const database = request.result;
+            const db = request.result;
 
+            if (db.objectStoreNames.contains(CANDLES_STORENAME)) {
+                db.deleteObjectStore(CANDLES_STORENAME);
+            }
 
-            const drawingStore = database.createObjectStore(DRAWINGS_STORENAME, {
+            const drawingStore = db.createObjectStore(DRAWINGS_STORENAME, {
                 keyPath: "chartId"
             });
             drawingStore.createIndex("chartId", "chartId", { unique: true })
 
-            const candleStore = database.createObjectStore(CANDLES_STORENAME, {
+            const candleStore = db.createObjectStore(CANDLES_STORENAME, {
                 keyPath: ["chartId", "time"]
             });
-
             candleStore.createIndex("chartId", "chartId", { unique: false })
         }
 
