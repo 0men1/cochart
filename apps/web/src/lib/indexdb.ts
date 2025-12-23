@@ -30,6 +30,7 @@ function initDatabase(): Promise<IDBDatabase> {
         request.onupgradeneeded = () => {
             const database = request.result;
 
+
             const drawingStore = database.createObjectStore(DRAWINGS_STORENAME, {
                 keyPath: "chartId"
             });
