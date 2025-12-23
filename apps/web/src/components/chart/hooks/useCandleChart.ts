@@ -7,15 +7,31 @@ import {
     UTCTimestamp,
 } from "lightweight-charts";
 import { ThemeConfig } from "@/constants/theme";
-import { Candlestick, ConnectionState, ConnectionStatus, INTERVALMs, TickData } from "@/core/chart/market-data/types";
+import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
 import { useApp } from "@/components/chart/context";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
 
 
-export async function fetchHistoricalCandles(ticker: string, timeframe: string, numBars: number): Promise<Candlestick[]> {
-    const now = Math.floor(Date.now() / 1000);
-    const start = now - numBars * INTERVALMs[timeframe];
-    const raw: number[][] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&start=${start}&end=${now}`).then(res => res.json());
+/**
+ * start - the oldest time
+ * end - the most recent time
+ */
+export async function fetchHistoricalCandles(ticker: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
+    const s = Math.floor(start);
+    const e = Math.floor(end);
+
+    if (s > e) { // Invalid
+        console.error("Invalid start/end time: ", s, e);
+        return [];
+    }
+
+    const raw: number[][] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&start=${s}&end=${e}`
+    ).then(res => {
+        if (!res.ok) {
+            console.error("Failed to fetch candles: ", res.statusText);
+        }
+        return res.json();
+    });
     return raw.map(([time, low, high, open, close, volume]) => ({ time: time as UTCTimestamp, open, high, low, close, volume }));
 }
 
@@ -27,7 +43,7 @@ export function useCandleChart(
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
     const [chartInitialized, setChartInitialized] = useState(false);
 
-    const candleCache = useRef<Map<number, Candlestick>>(new Map());
+    const currentCandles = useRef<Map<number, Candlestick>>(new Map());
     const currentCandle = useRef<Candlestick>(null);
     const lastTime = useRef<number>(0);
 
@@ -36,13 +52,13 @@ export function useCandleChart(
     const unsubscribeTickData = useRef<(() => void)>(null);
     const unsubscribeStatusListener = useRef<(() => void)>(null);
 
-    const interval = INTERVALMs[timeframe];
+    const interval = INTERVAL_SECONDS[timeframe];
 
     const updateChart = useCallback((tick: TickData) => {
         if (!seriesRef.current) return;
 
         const rounded = Math.floor(tick.timestamp / interval) * interval;
-        const existingCandle = candleCache.current.get(rounded);
+        const existingCandle = currentCandles.current.get(rounded);
 
         if (existingCandle) {
             existingCandle.high = Math.max(existingCandle.high, tick.price);
@@ -64,11 +80,8 @@ export function useCandleChart(
             lastTime.current = rounded;
         }
 
-        candleCache.current.set(currentCandle.current.time, currentCandle.current);
-        seriesRef.current.update({
-            ...currentCandle.current,
-            // time: currentCandle.current.time as UTCTimestamp
-        });
+        currentCandles.current.set(currentCandle.current.time, currentCandle.current);
+        seriesRef.current.update({ ...currentCandle.current, });
     }, [interval]);
 
 
@@ -104,18 +117,21 @@ export function useCandleChart(
     }, [symbol, exchange, updateChart])
 
     useEffect(() => {
-        candleCache.current.clear();
+        currentCandles.current.clear();
     }, [symbol, exchange, timeframe])
 
-    const loadHistoricalCandles = useCallback(async (numBars: number) => {
+
+    /*
+     *
+     * Loads historical candles
+     *
+     */
+    const loadHistoricalCandles = useCallback(async (start: number, end: number) => {
         try {
-            const candles = await fetchHistoricalCandles(symbol, timeframe, numBars)
+            const candles = await fetchHistoricalCandles(symbol, timeframe, start, end)
+            candles.forEach(candle => { currentCandles.current.set(candle.time, candle) });
 
-            candles.forEach(candle => {
-                candleCache.current.set(candle.time, candle);
-            });
-
-            const sortedCandles = Array.from(candleCache.current.values())
+            const sortedCandles = Array.from(currentCandles.current.values())
                 .sort((a, b) => (a.time) - (b.time));
 
             if (seriesRef.current) {
@@ -147,8 +163,8 @@ export function useCandleChart(
                 unsubscribeStatusListener.current();
                 unsubscribeStatusListener.current = null;
             }
-            if (candleCache.current) {
-                candleCache.current.clear();
+            if (currentCandles.current) {
+                currentCandles.current.clear();
             }
         } catch (error) {
             console.error('Error during chart cleanup:', error);
@@ -205,15 +221,6 @@ export function useCandleChart(
             chartRef.current = chart;
             seriesRef.current = series;
 
-            chart.timeScale().subscribeVisibleLogicalRangeChange(logicalRange => {
-                if (!logicalRange) return;
-
-                if (logicalRange?.from < 10) {
-                    const additionalBars = 50;
-                    loadHistoricalCandles(candleCache.current.size + additionalBars)
-                }
-            })
-
             const resizeObserver = new ResizeObserver(() => {
                 if (!chartRef.current || !containerRef.current) return;
                 chartRef.current.applyOptions({
@@ -225,7 +232,8 @@ export function useCandleChart(
             resizeObserverRef.current = resizeObserver;
             resizeObserver.observe(containerRef.current);
 
-            loadHistoricalCandles(200);
+            const now = Math.floor(Date.now() / 1000);
+            loadHistoricalCandles(now - (500 * interval), now);
 
             return () => {
                 safeCleanup();
