@@ -10,26 +10,8 @@ import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
 import { useApp } from "@/components/chart/context";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
-
-export async function fetchHistoricalCandles(ticker: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
-    const s = Math.floor(start);
-    const e = Math.floor(end);
-
-    if (s > e) {
-        console.error("Invalid start/end time: ", s, e);
-        return [];
-    }
-
-    const raw: number[][] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&start=${s}&end=${e}`)
-        .then(res => {
-            if (!res.ok) console.error("Failed to fetch candles: ", res.statusText);
-            return res.json();
-        });
-
-    return raw.map(([time, low, high, open, close, volume]) => ({
-        time: time as UTCTimestamp, open, high, low, close, volume
-    }));
-}
+import { getCandlesRange, getLastCandleTime } from "@/lib/indexdb";
+import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
     const { state, action, chartRef, seriesRef } = useApp();
@@ -81,9 +63,9 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 
     // HISTORICAL FETCH LOGIC
     // Add cache logic here. If we have a batch of request candles already cached, we can use that instead of fetching
-    const loadHistoricalCandles = useCallback(async (start: number, end: number) => {
+    const loadHistoricalCandles = useCallback(async (anchor: number, end: number) => {
         try {
-            const candles = await fetchHistoricalCandles(symbol, timeframe, start, end);
+            const candles = await fetchHistoricalCandles(symbol, timeframe, anchor, end);
 
             // mrge new candles into map
             candles.forEach(candle => { currentCandles.current.set(candle.time as number, candle); });
