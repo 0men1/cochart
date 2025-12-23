@@ -61,7 +61,7 @@ export type ExchangeType = "coinbase" | "binance" | "kraken"
 
 export type IntervalKey = '1m' | '5m' | '15m' | '1H' | '4H' | '1D' | '1W';
 
-export const INTERVALMs: Record<string, number> = {
+export const INTERVAL_SECONDS: Record<string, number> = {
     "1m": 60,
     '5m': 5 * 60,
     '15m': 15 * 60,
