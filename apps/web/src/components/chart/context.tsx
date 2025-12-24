@@ -50,7 +50,10 @@ export interface AppState {
     tools: {
         activeTool: DrawingTool | null,
         activeHandler: BaseDrawingHandler | null,
-    }
+    };
+    tickerSearchBox: {
+        isOpen: boolean;
+    };
     chart: {
         id: string;
         drawings: {
@@ -106,6 +109,9 @@ export const defaultAppState: AppState = {
         activeTool: null,
         activeHandler: null
     },
+    tickerSearchBox: {
+        isOpen: false
+    },
     chart: {
         id: "SOL-USD:coinbase",
         drawings: {
@@ -150,6 +156,8 @@ interface AppContextType {
         // ======== Settings Operations ========
         toggleSettings: (state: boolean) => void;
         updateSettings: (settings: ChartSettings) => void;
+
+        toggleTickerSearchBox: (state: boolean) => void;
 
         cleanupState: () => void;
     };
@@ -298,6 +306,10 @@ export const AppProvider: React.FC<{
         dispatch({ type: "TOGGLE_SETTINGS", payload: { state } });
     }, []);
 
+    const toggleTickerSearchBox = useCallback((state: boolean) => {
+        dispatch({ type: "TOGGLE_TICKER_SEARCH_BOX", payload: { state } });
+    }, []);
+
     const updateSettings = useCallback((settings: ChartSettings) => {
         dispatch({ type: "UPDATE_SETTINGS", payload: { settings } });
     }, []);
@@ -390,6 +402,7 @@ export const AppProvider: React.FC<{
         setChartConnectionState,
         initializeDrawings,
         toggleSettings,
+        toggleTickerSearchBox,
         updateSettings,
         cleanupState,
     }), [
@@ -409,6 +422,7 @@ export const AppProvider: React.FC<{
         setChartConnectionState,
         initializeDrawings,
         toggleSettings,
+        toggleTickerSearchBox,
         updateSettings,
         cleanupState,
     ]);
