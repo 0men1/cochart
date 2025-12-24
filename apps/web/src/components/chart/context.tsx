@@ -110,7 +110,7 @@ export const defaultAppState: AppState = {
         activeHandler: null
     },
     tickerSearchBox: {
-        isOpen: true
+        isOpen: false
     },
     chart: {
         id: "SOL-USD:coinbase",
