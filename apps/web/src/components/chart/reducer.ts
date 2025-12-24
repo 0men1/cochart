@@ -25,6 +25,7 @@ export type Action =
     // -----------CHART LOGIC----------
     | { type: "SELECT_CHART", payload: { symbol: string, timeframe: IntervalKey, exchange: string } }
     | { type: "TOGGLE_SETTINGS", payload: { state: boolean } }
+    | { type: "TOGGLE_TICKER_SEARCH_BOX", payload: { state: boolean } }
     | { type: "TOGGLE_COLLAB_WINDOW", payload: { state: boolean } }
     | { type: "UPDATE_SETTINGS", payload: { settings: ChartSettings } }
     | { type: "CLEANUP_STATE", payload: null }
@@ -254,6 +255,15 @@ export function Reducer(state: AppState, action: Action): AppState {
                 chart: {
                     ...state.chart,
                 }
+            }
+        }
+
+        case "TOGGLE_TICKER_SEARCH_BOX": {
+            return {
+                ...state,
+                tickerSearchBox: {
+                    isOpen: action.payload.state
+                },
             }
         }
 

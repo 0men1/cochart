@@ -1,5 +1,5 @@
 'use client'
-import { useEffect } from "react";
+
 import { MoveDiagonal, MoveUp } from "lucide-react";
 import { DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFactory";
 import { Button } from "../ui/button";
@@ -21,18 +21,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 function Toolbox() {
     const { state, action, chartRef, seriesRef } = useApp();
     const { activeTool } = state.tools
-
-    useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && activeTool) {
-                action.cancelTool()
-            }
-        };
-        window.addEventListener("keydown", handleEscape);
-        return () => {
-            window.removeEventListener("keydown", handleEscape);
-        }
-    }, [activeTool, action]);
 
     function setTool(tool: DrawingTool) {
         if (!chartRef.current || !seriesRef.current) return;

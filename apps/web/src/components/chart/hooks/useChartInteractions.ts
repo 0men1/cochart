@@ -1,17 +1,21 @@
 'use client'
 
 import { useCallback, useEffect } from "react";
-import { useApp } from "../context"
+import { useApp } from "../context";
 
-export function useChartInteraction(
-    containerRef: React.RefObject<HTMLDivElement | null>,
-) {
+export function useChartInteraction() {
+    const { action } = useApp();
 
-    const { state, action, chartRef, seriesRef } = useApp();
+    const keyDownHandler = useCallback((event: KeyboardEvent) => {
+        if (/^[a-zA-Z]$/.test(event.key)) {
+            action.toggleTickerSearchBox(true);
+        }
 
-    const keyPressHandler = useCallback((event: KeyboardEvent) => {
         switch (event.key) {
-            case '':
+            case 'Escape':
+                action.toggleTickerSearchBox(false);
+                action.toggleCollabWindow(false);
+                action.cancelTool();
                 break;
             default:
                 break;
@@ -19,6 +23,9 @@ export function useChartInteraction(
     }, [])
 
     useEffect(() => {
-        containerRef.current?.addEventListener('keypress', keyPressHandler)
-    }, [])
+        window.addEventListener('keydown', keyDownHandler)
+        return () => {
+            window.removeEventListener('keydown', keyDownHandler)
+        }
+    }, [keyDownHandler])
 }
