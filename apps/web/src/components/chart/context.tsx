@@ -224,7 +224,7 @@ export const AppProvider: React.FC<{
 
         // Check if we should send full state
         if (incomingAction.type === "USER_JOINED") {
-            const currentState = stateRef.current; // Read from ref!
+            const currentState = stateRef.current;
             if (currentState.collaboration.room.isHost) {
                 setTimeout(() => sendFullState(), 100);
             }

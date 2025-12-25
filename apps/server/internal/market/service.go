@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"sort"
 	"sync"
@@ -44,41 +45,56 @@ func NewService() *Service {
 
 func (s *Service) FetchCandles(ctx context.Context, symbol string, start, end, granularity int64) ([][]float64, error) {
 	candlesNeeded := (end - start) / granularity
-
-	if candlesNeeded <= maxCandlesPerRequest {
-		return s.fetchSingleBatch(ctx, symbol, start, end, granularity)
-	}
-
 	return s.fetchMultipleBatches(ctx, symbol, start, end, granularity, candlesNeeded)
 }
 
-func (s *Service) fetchSingleBatch(ctx context.Context, symbol string, start, end, granularity int64) ([][]float64, error) {
-	candles, err := s.fetchFromCoinbase(ctx, symbol, start, end, granularity)
-	if err != nil {
-		return nil, err
-	}
-	return convertToResponse(candles), nil
-}
+var maxConcurrentRquests = 10
 
 func (s *Service) fetchMultipleBatches(ctx context.Context, symbol string, start, end, granularity, candlesNeeded int64) ([][]float64, error) {
 	batchCount := int((candlesNeeded + maxCandlesPerRequest - 1) / maxCandlesPerRequest)
 	responseChan := make(chan candleResponse, batchCount)
 
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	sem := make(chan struct{}, maxConcurrentRquests)
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	var wg sync.WaitGroup
 	wg.Add(batchCount)
 
-	for i := 0; i < batchCount; i++ {
+	for i := range batchCount {
 		go func(index int) {
 			defer wg.Done()
 
-			// Calculate time window for this specific batch
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
 			batchStart := start + int64(index)*granularity*maxCandlesPerRequest
 			batchEnd := min(batchStart+(granularity*maxCandlesPerRequest), end)
 
-			candles, err := s.fetchFromCoinbase(ctx, symbol, batchStart, batchEnd, granularity)
+			var candles []Candlestick
+			var err error
+
+			for attempt := range 3 {
+				candles, err = s.fetchFromCoinbase(ctx, symbol, batchStart, batchEnd, granularity)
+
+				if err == nil {
+					break
+				}
+
+				backoff := time.Duration(200*(1<<attempt)) * time.Millisecond
+				jitter := time.Duration(rand.Intn(50)) * time.Millisecond
+
+				select {
+				case <-ctx.Done():
+					responseChan <- candleResponse{Index: index, Error: ctx.Err()}
+					return
+				case <-time.After(backoff + jitter):
+					// Retry
+					fmt.Println("retrying")
+					continue
+				}
+			}
 			responseChan <- candleResponse{Data: candles, Index: index, Error: err}
 		}(i)
 	}

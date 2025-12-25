@@ -10,7 +10,6 @@ import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
 import { useApp } from "@/components/chart/context";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
-import { getCandlesRange, getLastCandleTime } from "@/lib/indexdb";
 import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
