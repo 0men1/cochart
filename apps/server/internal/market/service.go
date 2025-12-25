@@ -10,6 +10,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/0men1/cochart/internal/market/exchange"
 )
 
 type Service struct {
@@ -43,14 +45,17 @@ func NewService() *Service {
 	}
 }
 
-func (s *Service) FetchCandles(ctx context.Context, symbol string, start, end, granularity int64) ([][]float64, error) {
-	candlesNeeded := (end - start) / granularity
-	return s.fetchMultipleBatches(ctx, symbol, start, end, granularity, candlesNeeded)
-}
-
 var maxConcurrentRquests = 10
 
-func (s *Service) fetchMultipleBatches(ctx context.Context, symbol string, start, end, granularity, candlesNeeded int64) ([][]float64, error) {
+func (s *Service) FetchCandles(ctx context.Context, symbol, provider string, start, end, granularity int64) ([][]float64, error) {
+	candlesNeeded := (end - start) / granularity
+
+	exchange, err := exchange.GetExchangeInfo(provider, "crypto")
+	if err != nil {
+		return nil, err
+		// TODO: handle error
+	}
+
 	batchCount := int((candlesNeeded + maxCandlesPerRequest - 1) / maxCandlesPerRequest)
 	responseChan := make(chan candleResponse, batchCount)
 
@@ -76,7 +81,7 @@ func (s *Service) fetchMultipleBatches(ctx context.Context, symbol string, start
 			var err error
 
 			for attempt := range 3 {
-				candles, err = s.fetchFromCoinbase(ctx, symbol, batchStart, batchEnd, granularity)
+				candles, err = s.fetchFromExchange(ctx, symbol, exchange.URL, batchStart, batchEnd, granularity)
 
 				if err == nil {
 					break
@@ -91,7 +96,6 @@ func (s *Service) fetchMultipleBatches(ctx context.Context, symbol string, start
 					return
 				case <-time.After(backoff + jitter):
 					// Retry
-					fmt.Println("retrying")
 					continue
 				}
 			}
@@ -137,9 +141,8 @@ func (s *Service) collectResponses(responseChan <-chan candleResponse, expected 
 	return convertToResponse(result), nil
 }
 
-func (s *Service) fetchFromCoinbase(ctx context.Context, symbol string, start, end, granularity int64) ([]Candlestick, error) {
-	url := fmt.Sprintf("https://api.exchange.coinbase.com/products/%s/candles?granularity=%d&start=%d&end=%d",
-		symbol, granularity, start, end)
+func (s *Service) fetchFromExchange(ctx context.Context, symbol, rawURL string, start, end, granularity int64) ([]Candlestick, error) {
+	url := fmt.Sprintf(rawURL, symbol, granularity, start, end)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {

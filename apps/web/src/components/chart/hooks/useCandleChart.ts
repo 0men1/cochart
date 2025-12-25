@@ -64,7 +64,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // Add cache logic here. If we have a batch of request candles already cached, we can use that instead of fetching
     const loadHistoricalCandles = useCallback(async (anchor: number, end: number) => {
         try {
-            const candles = await fetchHistoricalCandles(symbol, timeframe, anchor, end);
+            const candles = await fetchHistoricalCandles(symbol, state.chart.data.exchange, timeframe, anchor, end);
 
             // mrge new candles into map
             candles.forEach(candle => { currentCandles.current.set(candle.time as number, candle); });

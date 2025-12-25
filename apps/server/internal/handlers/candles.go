@@ -51,6 +51,7 @@ func parseTimeRange(r *http.Request) (int64, int64, error) {
 func (h *MarketHandler) GetCandles(w http.ResponseWriter, r *http.Request) {
 	symbol := r.URL.Query().Get("symbol")
 	timeframe := r.URL.Query().Get("timeframe")
+	provider := r.URL.Query().Get("provider")
 
 	if symbol == "" || timeframe == "" {
 		http.Error(w, "Must include symbol/timeframe", http.StatusBadRequest)
@@ -69,7 +70,7 @@ func (h *MarketHandler) GetCandles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	candles, err := h.Service.FetchCandles(r.Context(), symbol, start, end, granularity)
+	candles, err := h.Service.FetchCandles(r.Context(), symbol, provider, start, end, granularity)
 	if err != nil {
 		log.Printf("Fetch error: %v", err)
 		http.Error(w, "Failed to fetch candles", http.StatusInternalServerError)

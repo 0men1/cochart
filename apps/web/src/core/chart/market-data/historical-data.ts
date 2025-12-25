@@ -1,7 +1,7 @@
 import { UTCTimestamp } from "lightweight-charts";
 import { Candlestick } from "./types";
 
-export async function fetchHistoricalCandles(ticker: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
+export async function fetchHistoricalCandles(ticker: string, provider: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
     const s = Math.floor(start);
     const e = Math.floor(end);
 
@@ -10,7 +10,7 @@ export async function fetchHistoricalCandles(ticker: string, timeframe: string, 
         return [];
     }
 
-    const raw: number[][] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&start=${s}&end=${e}`)
+    const raw: number[][] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&provider=${provider}&start=${s}&end=${e}`)
         .then(res => {
             if (!res.ok) console.error("Failed to fetch candles: ", res.statusText);
             return res.json();

@@ -1,0 +1,18 @@
+{
+    "stocks": {},
+    "crypto": {
+        "coinbase": {
+            "url": "https://api.exchange.coinbase.com/products/%v/candles?granularity=%v&start=%v&end=%v",
+            "requires": {
+                "requestSizeCap": 300
+            }
+        },
+        "binance": {
+            "url": "https://binance.com",
+            "requires": {
+                "apiKey": true,
+                "requestSizeCap": 500
+            }
+        }
+    }
+}
