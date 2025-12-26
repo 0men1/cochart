@@ -14,6 +14,10 @@ type MarketHandler struct {
 	Service *market.Service
 }
 
+func NewMarketHandler(service *market.Service) *MarketHandler {
+	return &MarketHandler{Service: service}
+}
+
 func getInterval(timeframe string) (int64, error) {
 	intervals := map[string]int64{
 		"1m":  60,
@@ -70,7 +74,7 @@ func (h *MarketHandler) GetCandles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	candles, err := h.Service.FetchCandles(r.Context(), symbol, provider, start, end, granularity)
+	candles, err := h.Service.FetchCandles(r.Context(), provider, symbol, start, end, granularity)
 	if err != nil {
 		log.Printf("Fetch error: %v", err)
 		http.Error(w, "Failed to fetch candles", http.StatusInternalServerError)

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/0men1/cochart/internal/handlers"
 	"github.com/0men1/cochart/internal/market"
@@ -27,17 +28,33 @@ func WithCORS(h http.Handler) http.Handler {
 func main() {
 	// UpdateEnvVars(".env")
 
+	httpClient := http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	// Setup Providers
+	providers := map[string]market.ExchangeProvider{
+		"coinbase": &market.CoinbaseProvider{
+			Client:  &httpClient,
+			BaseURL: "https://api.exchange.coinbase.com",
+		},
+	}
+
+	// Setup Services
+	marketService := market.NewService(providers)
 	roomManager := rooms.NewManager()
-	marketService := market.NewService()
 
+	// Setup Handlers
 	wsHandler := handlers.NewWSHandler(roomManager)
-	marketHandler := handlers.MarketHandler{Service: marketService}
+	marketHandler := handlers.NewMarketHandler(marketService)
 
+	// Routes
 	http.Handle("/rooms/create", WithCORS(http.HandlerFunc(wsHandler.CreateRoom)))
 	http.Handle("/rooms/join", WithCORS(http.HandlerFunc(wsHandler.JoinRoom)))
 	http.Handle("/candles", WithCORS(http.HandlerFunc(marketHandler.GetCandles)))
 
 	env := os.Getenv("APP_ENV")
+
 	if env == "production" {
 		certFile := "/etc/letsencrypt/live/api.cochart.app/fullchain.pem"
 		keyFile := "/etc/letsencrypt/live/api.cochart.app/privkey.pem"

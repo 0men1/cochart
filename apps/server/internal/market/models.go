@@ -1,12 +1,12 @@
 package market
 
 type Candlestick struct {
-	Timestamp int64
-	Low       float64
-	High      float64
-	Open      float64
-	Close     float64
-	Volume    float64
+	Timestamp int64   `json:"time"`
+	Open      float64 `json:"open"`
+	High      float64 `json:"high"`
+	Low       float64 `json:"low"`
+	Close     float64 `json:"close"`
+	Volume    float64 `json:"volume,omitempty"`
 }
 
 type CandleResponse struct {
