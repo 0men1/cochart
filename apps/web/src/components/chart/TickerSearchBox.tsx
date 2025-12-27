@@ -1,54 +1,134 @@
 "use client"
 
+import { useState, useEffect } from "react";
 import { useApp } from "./context"
 import TickerSearchItem from "./TickerSearchItem";
 
-const DUMMY_TICKERS = [
-    { symbol: "BTC-USD", provider: "coinbase", name: "Bitcoin" },
-    { symbol: "SOL-USD", provider: "coinbase", name: "Solana" },
-    { symbol: "ETH-USD", provider: "coinbase", name: "Ethereum" },
-];
+const SearchIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+    </svg>
+)
+
+const LoaderIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+)
+
+interface SearchResult {
+    ID: string;
+    Name: string;
+    Exchange: string;
+    Type: string;
+}
 
 export default function TickerSearchBox() {
     const { state, action } = useApp();
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState<SearchResult[]>([]);
+    const [loading, setLoading] = useState(false);
 
-    if (!state.tickerSearchBox.isOpen) {
-        return null;
-    }
+    // Reset on open/close
+    useEffect(() => {
+        if (!state.tickerSearchBox.isOpen) {
+            setQuery("");
+            setResults([]);
+        }
+    }, [state.tickerSearchBox.isOpen]);
 
-    const handleClose = () => {
-        action.toggleTickerSearchBox(false);
-    }
+    // Handle ESC
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === "Escape") action.toggleTickerSearchBox(false);
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => window.removeEventListener("keydown", handleEsc);
+    }, [action]);
+
+    // Search Logic
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (!query.trim()) {
+                setResults([]);
+                return;
+            }
+
+            setLoading(true);
+            try {
+                const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&l=20`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setResults(data || []);
+                }
+            } catch (error) {
+                console.error("Search failed", error);
+            } finally {
+                setLoading(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    if (!state.tickerSearchBox.isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="absolute inset-0" onClick={handleClose}></div>
-            <div className="relative z-10 w-96 h-[36rem] max-h-[90vh] flex flex-col bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden">
-                <div className="p-4 border-b border-zinc-700 bg-zinc-900">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/80 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={() => action.toggleTickerSearchBox(false)}></div>
+
+            <div className="relative z-50 w-full max-w-lg overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+
+                <div className="flex items-center border-b border-zinc-800 px-3">
+                    <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50 text-zinc-400" />
                     <input
-                        type="text"
-                        placeholder="Search ticker..."
-                        className="w-full bg-zinc-800 text-white px-4 py-2 rounded border border-zinc-600 focus:outline-none focus:border-blue-500"
+                        className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-zinc-500 text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Search ticker (e.g. BTC)..."
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
                         autoFocus
                     />
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {DUMMY_TICKERS.map((ticker) => (
-                        <TickerSearchItem
-                            key={ticker.symbol}
-                            symbol={ticker.symbol}
-                            name={ticker.name}
-                            provider={ticker.provider}
-                        />
+                <div className="max-h-[300px] overflow-y-auto overflow-x-hidden py-2 custom-scrollbar">
+                    {loading && (
+                        <div className="py-6 text-center text-sm text-zinc-500 flex items-center justify-center gap-2">
+                            <LoaderIcon className="h-4 w-4 animate-spin" />
+                            Searching...
+                        </div>
+                    )}
+
+                    {!loading && results.length === 0 && query && (
+                        <div className="py-6 text-center text-sm text-zinc-500">
+                            No results found.
+                        </div>
+                    )}
+
+                    {!loading && results.map((ticker) => (
+                        <div
+                            key={`${ticker.ID}/${ticker.Exchange}`}
+                            className="px-2"
+                            onClick={() => {
+                                // Add selection logic here
+                                action.toggleTickerSearchBox(false);
+                            }}
+                        >
+                            <TickerSearchItem
+                                symbol={ticker.ID}
+                                name={ticker.Name}
+                                provider={ticker.Exchange}
+                            />
+                        </div>
                     ))}
-                    <div className="h-4"></div>
                 </div>
 
-                <div className="p-2 bg-zinc-950 border-t border-zinc-800 text-center">
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
-                        Press ESC to close
-                    </span>
+                <div className="border-t border-zinc-800 bg-zinc-900/50 p-2 px-4">
+                    <div className="flex justify-end gap-2">
+                        <span className="text-[10px] text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 font-medium">
+                            ESC
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

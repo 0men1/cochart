@@ -1,14 +1,11 @@
 -------------DEVS-------------
 
-This project has been containerized so it is possible to run both server & web with just one command.
-
-Run this command in the root directory:
+To run both server & web:
 ``` make dev ```
 
 
 TASKS (ordered by priority):
 - Separate shared state from per-user state
-- Cache candles (shoudlve done this long time ago)
 - Regression tests
 - Add more chart interactions
    - easier chart paging, 
@@ -21,7 +18,7 @@ Requirements
 
 
 PROBLEM DISCOVERY:
-- Issues on mobile (Connections are established but deltas are not visibly updating the state)
+- Issues on mobile (Connections are established but deltas are not visibly updating the state (indexdb issue))
 
 
 

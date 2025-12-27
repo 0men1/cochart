@@ -10,7 +10,6 @@ import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
 import { useApp } from "@/components/chart/context";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
-import { getCandlesRange, getLastCandleTime } from "@/lib/indexdb";
 import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
@@ -65,7 +64,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // Add cache logic here. If we have a batch of request candles already cached, we can use that instead of fetching
     const loadHistoricalCandles = useCallback(async (anchor: number, end: number) => {
         try {
-            const candles = await fetchHistoricalCandles(symbol, timeframe, anchor, end);
+            const candles = await fetchHistoricalCandles(symbol, state.chart.data.exchange, timeframe, anchor, end);
 
             // mrge new candles into map
             candles.forEach(candle => { currentCandles.current.set(candle.time as number, candle); });

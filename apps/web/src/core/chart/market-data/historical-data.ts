@@ -1,7 +1,7 @@
 import { UTCTimestamp } from "lightweight-charts";
 import { Candlestick } from "./types";
 
-export async function fetchHistoricalCandles(ticker: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
+export async function fetchHistoricalCandles(ticker: string, provider: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
     const s = Math.floor(start);
     const e = Math.floor(end);
 
@@ -10,14 +10,18 @@ export async function fetchHistoricalCandles(ticker: string, timeframe: string, 
         return [];
     }
 
-    const raw: number[][] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&start=${s}&end=${e}`)
+    const raw: Candlestick[] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&provider=${provider}&start=${s}&end=${e}`)
         .then(res => {
             if (!res.ok) console.error("Failed to fetch candles: ", res.statusText);
             return res.json();
         });
 
-    return raw.map(([time, low, high, open, close, volume]) => ({
-        time: time as UTCTimestamp, open, high, low, close, volume
+    return raw.map((c) => ({
+        time: c.time as UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+        volume: c.volume
     }));
 }
-
