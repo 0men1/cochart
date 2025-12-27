@@ -36,6 +36,12 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     const updateChart = useCallback((tick: TickData) => {
         if (!seriesRef.current) return;
 
+        if (currentCandle.current) {
+            if ((tick.timestamp - currentCandle.current?.time) > interval) {
+                loadHistoricalCandles(currentCandle.current.time, tick.timestamp);
+            }
+        }
+
         const rounded = Math.floor(tick.timestamp / interval) * interval;
         const existingCandle = currentCandles.current.get(rounded);
 
