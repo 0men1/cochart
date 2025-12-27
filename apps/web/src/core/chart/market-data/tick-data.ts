@@ -1,12 +1,12 @@
 import { ExchangeAdapter } from "@/core/chart/market-data/ExchangeAdapter";
-import { ConnectionState, ExchangeType, TickData } from "@/core/chart/market-data/types";
+import { ConnectionState, TickData } from "@/core/chart/market-data/types";
 
 // CACHE
-const adaptersCache: Map<ExchangeType, ExchangeAdapter> = new Map();
-const statusListeners: Map<ExchangeType, Set<(state: ConnectionState) => void>> = new Map();
+const adaptersCache: Map<string, ExchangeAdapter> = new Map();
+const statusListeners: Map<string, Set<(state: ConnectionState) => void>> = new Map();
 
 // REGISTRY
-const exchangeRegistry: Partial<Record<ExchangeType, () => Promise<ExchangeAdapter>>> = {
+const exchangeRegistry: Partial<Record<string, () => Promise<ExchangeAdapter>>> = {
     "coinbase": async () => {
         const mod = await import("@/core/chart/market-data/exchanges/CoinbaseExchange")
         return new mod.CoinbaseExchange();
@@ -18,7 +18,7 @@ const exchangeRegistry: Partial<Record<ExchangeType, () => Promise<ExchangeAdapt
     // },
 };
 
-async function loadAndCacheAdapter(exchange: ExchangeType): Promise<ExchangeAdapter | null> {
+async function loadAndCacheAdapter(exchange: string): Promise<ExchangeAdapter | null> {
     if (!exchangeRegistry[exchange]) {
         console.error("(DNE) failed to load exchange")
         return null;
@@ -50,7 +50,7 @@ async function loadAndCacheAdapter(exchange: ExchangeType): Promise<ExchangeAdap
 
 export async function subscribeToTicks(
     symbol: string,
-    exchange: ExchangeType,
+    exchange: string,
     onTick: (t: TickData) => void
 ): Promise<() => void> {
     const exchangeAdapter = await loadAndCacheAdapter(exchange);
@@ -62,7 +62,7 @@ export async function subscribeToTicks(
 }
 
 export async function subscribeToStatus(
-    exchange: ExchangeType,
+    exchange: string,
     onState: (state: ConnectionState) => void
 ) {
     await loadAndCacheAdapter(exchange);

@@ -8,7 +8,7 @@ export function useChartInteraction() {
 
     const keyDownHandler = useCallback((event: KeyboardEvent) => {
         if (/^[a-zA-Z]$/.test(event.key)) {
-            action.toggleTickerSearchBox(true);
+            action.toggleTickerSearchBoxAndSetTerm("");
         }
 
         switch (event.key) {

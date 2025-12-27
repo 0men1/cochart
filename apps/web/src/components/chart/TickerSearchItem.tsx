@@ -10,7 +10,7 @@ export default function TickerSearchItem({ symbol, name, provider }: TickerSearc
     const { state, action } = useApp()
 
     const onItemClick = () => {
-        action.selectChart(symbol, state.chart.data.timeframe, provider);
+        action.selectChart({ symbol, name, exchange: provider }, state.chart.data.timeframe);
         action.toggleTickerSearchBox(false);
     }
 

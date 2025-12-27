@@ -1,9 +1,9 @@
-import { ChevronDown, Settings, Wifi, Share2, Users, TrendingUp } from "lucide-react";
+import { ChevronDown, Settings, Wifi, Share2, Users } from "lucide-react";
 import { Button } from "../ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
-import { useApp } from "@/components/chart/context";
+import { Product, useApp } from "@/components/chart/context";
 
 
 function getStatusDiv(status: ConnectionStatus) {
@@ -24,11 +24,10 @@ function getStatusDiv(status: ConnectionStatus) {
 export default function ChartHeader() {
     const { state, action } = useApp();
 
-    const tickers: string[] = ["SOL-USD", "BTC-USD", "ETH-USD"];
     const timeframes: string[] = ["1m", "5m", "15m", "1H", "4H", "1D"];
 
-    const handleChartUpdate = (symbol: string, timeframe: IntervalKey, exchange: string) => {
-        action.selectChart(symbol, timeframe, exchange);
+    const handleChartUpdate = (product: Product, timeframe: IntervalKey) => {
+        action.selectChart(product, timeframe);
     };
 
     const isInRoom = state.collaboration.room.id != null;
@@ -38,8 +37,6 @@ export default function ChartHeader() {
             {/* Left side components */}
             <div className="flex items-center space-x-2">
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50">
-                    <TrendingUp size={16} className="text-blue-600 dark:text-blue-400" />
-
                     {/* Ticker selector */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -47,22 +44,11 @@ export default function ChartHeader() {
                                 variant="ghost"
                                 size="sm"
                                 className="font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 h-7 px-2"
+                                onClick={() => action.toggleTickerSearchBoxAndSetTerm(state.chart.data.product.name)}
                             >
-                                {state.chart.data.symbol} <ChevronDown size={14} className="ml-1" />
+                                {state.chart.data.product.name}
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-48">
-                            {tickers.map((symbol) => (
-                                <DropdownMenuItem
-                                    key={symbol}
-                                    onClick={() => handleChartUpdate(symbol, state.chart.data.timeframe, state.chart.data.exchange)}
-                                    className={`cursor-pointer ${symbol === state.chart.data.symbol ? 'bg-blue-50 dark:bg-blue-950' : ''}`}
-                                >
-                                    <TrendingUp size={14} className="mr-2 text-blue-500" />
-                                    {symbol}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
                     </DropdownMenu>
 
                     <div className="w-px h-5 bg-blue-200 dark:bg-blue-800" />
@@ -82,7 +68,7 @@ export default function ChartHeader() {
                             {timeframes.map((time) => (
                                 <DropdownMenuItem
                                     key={time}
-                                    onClick={() => handleChartUpdate(state.chart.data.symbol, time as IntervalKey, state.chart.data.exchange)}
+                                    onClick={() => handleChartUpdate(state.chart.data.product, time as IntervalKey)}
                                     className={`cursor-pointer justify-center ${time === state.chart.data.timeframe ? 'bg-blue-50 dark:bg-blue-950 font-semibold' : ''}`}
                                 >
                                     {time}

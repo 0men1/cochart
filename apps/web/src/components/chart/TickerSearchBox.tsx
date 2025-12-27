@@ -26,7 +26,7 @@ interface SearchResult {
 
 export default function TickerSearchBox() {
     const { state, action } = useApp();
-    const [query, setQuery] = useState("");
+    const [query, setQuery] = useState(state.tickerSearchBox.searchTerm);
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -35,6 +35,8 @@ export default function TickerSearchBox() {
         if (!state.tickerSearchBox.isOpen) {
             setQuery("");
             setResults([]);
+        } else {
+            setQuery(state.tickerSearchBox.searchTerm);
         }
     }, [state.tickerSearchBox.isOpen]);
 
