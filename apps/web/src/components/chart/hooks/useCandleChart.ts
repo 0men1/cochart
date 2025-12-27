@@ -14,7 +14,7 @@ import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
     const { state, action, chartRef, seriesRef } = useApp();
-    const { symbol, exchange, timeframe } = state.chart.data;
+    const { product, timeframe } = state.chart.data;
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
     const [chartInitialized, setChartInitialized] = useState(false);
 
@@ -64,7 +64,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // Add cache logic here. If we have a batch of request candles already cached, we can use that instead of fetching
     const loadHistoricalCandles = useCallback(async (anchor: number, end: number) => {
         try {
-            const candles = await fetchHistoricalCandles(symbol, state.chart.data.exchange, timeframe, anchor, end);
+            const candles = await fetchHistoricalCandles(product.symbol, state.chart.data.product.exchange, timeframe, anchor, end);
 
             // mrge new candles into map
             candles.forEach(candle => { currentCandles.current.set(candle.time as number, candle); });
@@ -85,7 +85,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
         } catch (error) {
             console.error(`Error fetching candles: `, error);
         }
-    }, [symbol, timeframe, seriesRef]);
+    }, [product.symbol, timeframe, seriesRef]);
 
     // CHART SETUP & SCROLL LISTENER
     useEffect(() => {
@@ -178,15 +178,15 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
             seriesRef.current = null;
         };
 
-    }, [symbol, timeframe, state.settings.timezone, loadHistoricalCandles, interval, containerRef]);
+    }, [product.symbol, timeframe, state.settings.timezone, loadHistoricalCandles, interval, containerRef]);
 
     // WEBSOCKET SETUP
     useEffect(() => {
         const setupTickConnection = async () => {
             try {
                 if (connectionState?.status !== ConnectionStatus.CONNECTED) {
-                    unsubscribeTickData.current = await subscribeToTicks(symbol, exchange, updateChart);
-                    unsubscribeStatusListener.current = await subscribeToStatus(exchange, action.setChartConnectionState);
+                    unsubscribeTickData.current = await subscribeToTicks(product.symbol, product.exchange, updateChart);
+                    unsubscribeStatusListener.current = await subscribeToStatus(product.exchange, action.setChartConnectionState);
                     action.setChartConnectionState({ status: ConnectionStatus.CONNECTED, reconnectAttempts: 0 });
                 }
             } catch (error) {
@@ -202,7 +202,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
             if (unsubscribeTickData.current) unsubscribeTickData.current();
             setConnectionState(null);
         };
-    }, [symbol, exchange, updateChart]);
+    }, [product, updateChart]);
 
     // RESET DATA ON SYMBOL CHANGE
     useEffect(() => {
@@ -212,7 +212,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
         // Add cache logic here:
         const now = Math.floor(Date.now() / 1000);
         loadHistoricalCandles(now - (1000 * interval * 2), now);
-    }, [symbol, exchange, timeframe, loadHistoricalCandles, interval]);
+    }, [product, timeframe, loadHistoricalCandles, interval]);
 
     // STYLE UPDATES
     useEffect(() => {

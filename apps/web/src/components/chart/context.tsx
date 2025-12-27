@@ -3,12 +3,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from "react";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { DrawingTool, BaseDrawingHandler, SerializedDrawing } from "@/core/chart/drawings/types";
-import { ConnectionState, ConnectionStatus, ExchangeType, IntervalKey } from "@/core/chart/market-data/types";
+import { ConnectionState, ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { CrosshairMode, IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 import { saveAppState } from "@/lib/localStorage";
 import { Action, deepMerge, Reducer } from "@/components/chart/reducer";
 import { CollabSocket } from "@/core/chart/collaboration/collabSocket";
 
+
+export interface Product {
+    symbol: string;
+    name: string;
+    exchange: string;
+}
 
 export interface ChartSettings {
     isOpen: boolean
@@ -54,6 +60,7 @@ export interface AppState {
     };
     tickerSearchBox: {
         isOpen: boolean;
+        searchTerm: string
     };
     chart: {
         id: string;
@@ -62,10 +69,9 @@ export interface AppState {
             selected: BaseDrawing | null;
         };
         data: {
+            product: Product
             style: string;
-            symbol: string;
             timeframe: IntervalKey;
-            exchange: ExchangeType;
             state: ConnectionState;
         };
     }
@@ -112,7 +118,8 @@ export const defaultAppState: AppState = {
         activeHandler: null
     },
     tickerSearchBox: {
-        isOpen: false
+        isOpen: false,
+        searchTerm: ""
     },
     chart: {
         id: "SOL-USD:coinbase",
@@ -122,9 +129,12 @@ export const defaultAppState: AppState = {
         },
         data: {
             style: 'candle',
-            symbol: "SOL-USD",
+            product: {
+                symbol: "SOL-USD",
+                name: "SOLUSD",
+                exchange: "coinbase",
+            },
             timeframe: "1m",
-            exchange: "coinbase",
             state: { status: ConnectionStatus.DISCONNECTED, reconnectAttempts: 0 },
         },
     }
@@ -152,7 +162,7 @@ interface AppContextType {
         setCollabConnectionStatus: (status: ConnectionStatus) => void;
 
         // ======== Chart Operations ========
-        selectChart: (symbol: string, timeframe: IntervalKey, exchange: string) => void;
+        selectChart: (product: Product, timeframe: IntervalKey) => void;
         setChartConnectionState: (state: ConnectionState) => void;
 
         // ======== Settings Operations ========
@@ -161,6 +171,7 @@ interface AppContextType {
         setTimezone: (timezone: string) => void;
 
         toggleTickerSearchBox: (state: boolean) => void;
+        toggleTickerSearchBoxAndSetTerm: (term: string) => void;
 
         cleanupState: () => void;
     };
@@ -288,10 +299,10 @@ export const AppProvider: React.FC<{
     }, []);
 
     // Chart actions
-    const selectChart = useCallback((symbol: string, timeframe: IntervalKey, exchange: string) => {
+    const selectChart = useCallback((product: Product, timeframe: IntervalKey) => {
         const act: Action = {
             type: "SELECT_CHART",
-            payload: { symbol, timeframe, exchange }
+            payload: { product, timeframe }
         };
         dispatch(act);
         collabSocketRef.current?.send(JSON.stringify(act));
@@ -311,6 +322,10 @@ export const AppProvider: React.FC<{
 
     const toggleTickerSearchBox = useCallback((state: boolean) => {
         dispatch({ type: "TOGGLE_TICKER_SEARCH_BOX", payload: { state } });
+    }, []);
+
+    const toggleTickerSearchBoxAndSetTerm = useCallback((term: string) => {
+        dispatch({ type: "TOGGLE_TICKER_SEARCH_BOX_AND_SET_TERM", payload: term });
     }, []);
 
     const updateSettings = useCallback((settings: ChartSettings) => {
@@ -410,6 +425,7 @@ export const AppProvider: React.FC<{
         initializeDrawings,
         toggleSettings,
         toggleTickerSearchBox,
+        toggleTickerSearchBoxAndSetTerm,
         updateSettings,
         setTimezone,
         cleanupState,
@@ -431,6 +447,7 @@ export const AppProvider: React.FC<{
         initializeDrawings,
         toggleSettings,
         toggleTickerSearchBox,
+        toggleTickerSearchBoxAndSetTerm,
         updateSettings,
         setTimezone,
         cleanupState,

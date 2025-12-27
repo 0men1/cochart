@@ -1,7 +1,7 @@
 import { BaseDrawingHandler, DrawingTool, SerializedDrawing } from "@/core/chart/drawings/types";
-import { ConnectionState, ConnectionStatus, ExchangeType, IntervalKey } from "@/core/chart/market-data/types";
+import { ConnectionState, ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
-import { AppState, ChartSettings } from "@/components/chart/context";
+import { AppState, ChartSettings, Product } from "@/components/chart/context";
 
 export type Action =
     // -----------ROOM LOGIC----------
@@ -23,10 +23,11 @@ export type Action =
     | { type: "INTIALIZE_DRAWINGS", payload: { drawings: SerializedDrawing[] } }
 
     // -----------CHART LOGIC----------
-    | { type: "SELECT_CHART", payload: { symbol: string, timeframe: IntervalKey, exchange: string } }
+    | { type: "SELECT_CHART", payload: { product: Product, timeframe: IntervalKey } }
     | { type: "TOGGLE_SETTINGS", payload: { state: boolean } }
     | { type: "SET_TIMEZONE", payload: string }
     | { type: "TOGGLE_TICKER_SEARCH_BOX", payload: { state: boolean } }
+    | { type: "TOGGLE_TICKER_SEARCH_BOX_AND_SET_TERM", payload: string }
     | { type: "TOGGLE_COLLAB_WINDOW", payload: { state: boolean } }
     | { type: "UPDATE_SETTINGS", payload: { settings: ChartSettings } }
     | { type: "CLEANUP_STATE", payload: null }
@@ -218,16 +219,15 @@ export function Reducer(state: AppState, action: Action): AppState {
                 ...state,
                 chart: {
                     ...state.chart,
-                    id: `${action.payload.symbol.toLowerCase()}:${action.payload.exchange.toLowerCase()}`,
+                    id: `${action.payload.product.name.toLowerCase()}:${action.payload.product.exchange.toLowerCase()}`,
                     drawings: {
                         ...state.chart.drawings,
                         selected: null,
                     },
                     data: {
                         ...state.chart.data,
-                        symbol: action.payload.symbol,
+                        product: action.payload.product,
                         timeframe: action.payload.timeframe,
-                        exchange: action.payload.exchange as ExchangeType
                     }
                 }
             }
@@ -263,7 +263,18 @@ export function Reducer(state: AppState, action: Action): AppState {
             return {
                 ...state,
                 tickerSearchBox: {
+                    ...state.tickerSearchBox,
                     isOpen: action.payload.state
+                },
+            }
+        }
+
+        case "TOGGLE_TICKER_SEARCH_BOX_AND_SET_TERM": {
+            return {
+                ...state,
+                tickerSearchBox: {
+                    isOpen: true,
+                    searchTerm: action.payload
                 },
             }
         }
