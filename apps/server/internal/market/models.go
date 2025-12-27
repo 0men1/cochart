@@ -1,5 +1,7 @@
 package market
 
+import "context"
+
 type Candlestick struct {
 	Timestamp int64   `json:"time"`
 	Open      float64 `json:"open"`
@@ -21,4 +23,25 @@ type CandleRequest struct {
 	End         int64
 	Granularity int64
 	Index       int
+}
+
+type ExchangeProvider interface {
+	ID() string
+	FetchCandles(ctx context.Context, symbol string, start, end, granularity int64) ([]Candlestick, error)
+	GetProducts() ([]Product, error)
+}
+
+type Product struct {
+	ID       string
+	Name     string
+	Type     string
+	Exchange string
+}
+
+type Service struct {
+	Providers map[string]ExchangeProvider
+}
+
+func NewService(providers map[string]ExchangeProvider) *Service {
+	return &Service{Providers: providers}
 }

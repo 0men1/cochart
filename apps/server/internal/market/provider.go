@@ -9,19 +9,6 @@ import (
 	"time"
 )
 
-type ExchangeProvider interface {
-	ID() string
-	FetchCandlesFromExchange(ctx context.Context, symbol string, start, end, granularity int64) ([]Candlestick, error)
-}
-
-type Service struct {
-	Providers map[string]ExchangeProvider
-}
-
-func NewService(providers map[string]ExchangeProvider) *Service {
-	return &Service{Providers: providers}
-}
-
 func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string, start, end, granularity int64) ([]Candlestick, error) {
 	provider, exists := s.Providers[exchangeName]
 	if !exists {
@@ -65,7 +52,7 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 
 			// Retry Logic
 			for attempt := range 3 {
-				candles, err = provider.FetchCandlesFromExchange(ctx, symbol, batchStart, batchEnd, granularity)
+				candles, err = provider.FetchCandles(ctx, symbol, batchStart, batchEnd, granularity)
 				if err == nil {
 					break
 				}

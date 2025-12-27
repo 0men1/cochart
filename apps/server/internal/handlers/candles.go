@@ -6,17 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-
-	"github.com/0men1/cochart/internal/market"
 )
-
-type MarketHandler struct {
-	Service *market.Service
-}
-
-func NewMarketHandler(service *market.Service) *MarketHandler {
-	return &MarketHandler{Service: service}
-}
 
 func getInterval(timeframe string) (int64, error) {
 	intervals := map[string]int64{

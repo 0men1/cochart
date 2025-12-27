@@ -52,6 +52,7 @@ func main() {
 	http.Handle("/rooms/create", WithCORS(http.HandlerFunc(wsHandler.CreateRoom)))
 	http.Handle("/rooms/join", WithCORS(http.HandlerFunc(wsHandler.JoinRoom)))
 	http.Handle("/candles", WithCORS(http.HandlerFunc(marketHandler.GetCandles)))
+	http.Handle("/search", WithCORS(http.HandlerFunc(marketHandler.Search)))
 
 	env := os.Getenv("APP_ENV")
 
