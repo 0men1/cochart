@@ -100,7 +100,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
             width: containerRef.current.clientWidth,
             height: containerRef.current.clientHeight,
             layout: state.settings.background.theme === 'light' ? ThemeConfig.light : ThemeConfig.dark,
-            crosshair: { mode: state.settings.cursor },
+            crosshair: { mode: state.settings.cursor }, // Normal=0, Magnet=1, Hidden=2, MagentOHLC=3
             grid: {
                 vertLines: state.settings.background.grid.vertLines,
                 horzLines: state.settings.background.grid.horzLines
@@ -108,6 +108,22 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
             timeScale: {
                 timeVisible: true,
                 secondsVisible: timeframe === '1m',
+                tickMarkFormatter: (time: number) => {
+                    const date = new Date(time * 1000);
+                    return (timeframe === '1D' || timeframe === '1W')
+                        ? date.toLocaleDateString([], { timeZone: state.settings.timezone })
+                        : date.toLocaleTimeString([], { timeZone: state.settings.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
+                }
+            },
+            localization: {
+                timeFormatter: (time: number) => {
+                    const date = new Date(time * 1000);
+                    return date.toLocaleString([], {
+                        timeZone: state.settings.timezone,
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit', hour12: false
+                    });
+                }
             }
         });
 
@@ -129,9 +145,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
             // && we are not already fetching
             if (logicalRange.from < 0 && !isFetching.current) {
                 if (!firstCandle.current) return; // Anchocr
-
                 isFetching.current = true; // Lock fetch for this scroll
-
                 const anchorTime = firstCandle.current.time as number;
 
                 // determine how many bars we need to cover the gap + a buffer.
@@ -164,7 +178,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
             seriesRef.current = null;
         };
 
-    }, [symbol, timeframe, state.settings, loadHistoricalCandles, interval, containerRef]);
+    }, [symbol, timeframe, state.settings.timezone, loadHistoricalCandles, interval, containerRef]);
 
     // WEBSOCKET SETUP
     useEffect(() => {

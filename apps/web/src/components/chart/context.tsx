@@ -13,6 +13,7 @@ import { CollabSocket } from "@/core/chart/collaboration/collabSocket";
 export interface ChartSettings {
     isOpen: boolean
     cursor: CrosshairMode;
+    timezone: string;
     background: {
         theme: "dark" | "light";
         grid: {
@@ -86,6 +87,7 @@ export const defaultAppState: AppState = {
     settings: {
         isOpen: false,
         cursor: CrosshairMode.Normal,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         background: {
             theme: "dark",
             grid: {
@@ -156,6 +158,7 @@ interface AppContextType {
         // ======== Settings Operations ========
         toggleSettings: (state: boolean) => void;
         updateSettings: (settings: ChartSettings) => void;
+        setTimezone: (timezone: string) => void;
 
         toggleTickerSearchBox: (state: boolean) => void;
 
@@ -314,6 +317,10 @@ export const AppProvider: React.FC<{
         dispatch({ type: "UPDATE_SETTINGS", payload: { settings } });
     }, []);
 
+    const setTimezone = useCallback((timezone: string) => {
+        dispatch({ type: "SET_TIMEZONE", payload: timezone });
+    }, []);
+
     const cleanupState = useCallback(() => {
         dispatch({ type: "CLEANUP_STATE", payload: null });
     }, []);
@@ -404,6 +411,7 @@ export const AppProvider: React.FC<{
         toggleSettings,
         toggleTickerSearchBox,
         updateSettings,
+        setTimezone,
         cleanupState,
     }), [
         addDrawing,
@@ -424,6 +432,7 @@ export const AppProvider: React.FC<{
         toggleSettings,
         toggleTickerSearchBox,
         updateSettings,
+        setTimezone,
         cleanupState,
     ]);
 

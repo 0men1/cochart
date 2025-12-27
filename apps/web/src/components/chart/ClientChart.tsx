@@ -11,6 +11,7 @@ import Settings from './Settings';
 import { useChartDrawings } from './hooks/useChartDrawings';
 import { useChartInteraction } from './hooks/useChartInteractions';
 import TickerSearchBox from './TickerSearchBox';
+import ChartFooter from './ChartFooter';
 
 export interface ClientProps {
     initialState?: Partial<AppState>;
@@ -78,6 +79,7 @@ function ProvideConsumer() {
                 <TickerSearchBox />
                 <CollabStatus />
                 <Settings />
+                <ChartFooter />
             </main>
         </div>
     );
