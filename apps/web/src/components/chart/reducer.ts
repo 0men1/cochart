@@ -25,6 +25,7 @@ export type Action =
     // -----------CHART LOGIC----------
     | { type: "SELECT_CHART", payload: { symbol: string, timeframe: IntervalKey, exchange: string } }
     | { type: "TOGGLE_SETTINGS", payload: { state: boolean } }
+    | { type: "SET_TIMEZONE", payload: string }
     | { type: "TOGGLE_TICKER_SEARCH_BOX", payload: { state: boolean } }
     | { type: "TOGGLE_COLLAB_WINDOW", payload: { state: boolean } }
     | { type: "UPDATE_SETTINGS", payload: { settings: ChartSettings } }
@@ -327,6 +328,16 @@ export function Reducer(state: AppState, action: Action): AppState {
                 chart: {
                     ...state.chart,
                 }
+            }
+        }
+
+        case "SET_TIMEZONE": {
+            return {
+                ...state,
+                settings: {
+                    ...state.settings,
+                    timezone: action.payload
+                },
             }
         }
 
