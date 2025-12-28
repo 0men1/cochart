@@ -26,6 +26,11 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // FETCHING LOCK
     const isFetching = useRef(false);
 
+    const activeSymbolRef = useRef(product.symbol);
+    useEffect(() => {
+        activeSymbolRef.current = product.symbol;
+    }, [product.symbol]);
+
     const [connectionState, setConnectionState] = useState<ConnectionState | null>(null);
     const unsubscribeTickData = useRef<(() => void) | null>(null);
     const unsubscribeStatusListener = useRef<(() => void) | null>(null);
@@ -35,6 +40,8 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // LIVE UPDATE LOGIC
     const updateChart = useCallback((tick: TickData) => {
         if (!seriesRef.current) return;
+
+        if (activeSymbolRef.current !== product.symbol) return;
 
         if (currentCandle.current) {
             if ((tick.timestamp - currentCandle.current?.time) > interval) {
@@ -70,6 +77,10 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // Add cache logic here. If we have a batch of request candles already cached, we can use that instead of fetching
     const loadHistoricalCandles = useCallback(async (anchor: number, end: number) => {
         try {
+            if (product.symbol !== activeSymbolRef.current) {
+                return;
+            }
+
             const candles = await fetchHistoricalCandles(product.symbol, state.chart.data.product.exchange, timeframe, anchor, end);
 
             // mrge new candles into map
@@ -215,7 +226,6 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
         currentCandles.current.clear();
         firstCandle.current = null;
         setChartInitialized(false);
-        // Add cache logic here:
         const now = Math.floor(Date.now() / 1000);
         loadHistoricalCandles(now - (1000 * interval * 2), now);
     }, [product, timeframe, loadHistoricalCandles, interval]);

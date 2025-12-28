@@ -29,25 +29,61 @@ export default function TickerSearchBox() {
     const [query, setQuery] = useState(state.tickerSearchBox.searchTerm);
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
+    const [cursor, setCursor] = useState(0);
+
+    // Helper to handle selection
+    const handleSelect = (item: SearchResult) => {
+        action.toggleTickerSearchBox(false);
+        action.selectChart({
+            symbol: item.ID,
+            name: item.Name,
+            exchange: item.Exchange
+        }, state.chart.data.timeframe);
+    };
 
     // Reset on open/close
     useEffect(() => {
         if (!state.tickerSearchBox.isOpen) {
             setQuery("");
             setResults([]);
+            setCursor(0);
         } else {
             setQuery(state.tickerSearchBox.searchTerm);
         }
     }, [state.tickerSearchBox.isOpen]);
 
-    // Handle ESC
+    // Handle Keyboard Navigation
     useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === "Escape") action.toggleTickerSearchBox(false);
+        const handleKey = (e: KeyboardEvent) => {
+            // Prevent default behavior for navigation keys to keep cursor in input stable
+            if (["ArrowUp", "ArrowDown", "Enter"].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            switch (e.key) {
+                case "Escape":
+                    action.toggleTickerSearchBox(false);
+                    break;
+                case "Enter":
+                    if (results.length > 0) {
+                        handleSelect(results[cursor]);
+                    }
+                    break;
+                case "ArrowUp":
+                    if (results.length > 0) {
+                        setCursor((prev) => (prev - 1 + results.length) % results.length);
+                    }
+                    break;
+                case "ArrowDown":
+                    if (results.length > 0) {
+                        setCursor((prev) => (prev + 1) % results.length);
+                    }
+                    break;
+            }
         };
-        window.addEventListener("keydown", handleEsc);
-        return () => window.removeEventListener("keydown", handleEsc);
-    }, [action]);
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [action, cursor, results]); // Added results as dependency
 
     // Search Logic
     useEffect(() => {
@@ -56,20 +92,20 @@ export default function TickerSearchBox() {
                 setResults([]);
                 return;
             }
-
             setLoading(true);
             try {
                 const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&l=20`);
                 if (res.ok) {
                     const data = await res.json();
                     setResults(data || []);
+                    setCursor(0); // Reset cursor when results change
                 }
             } catch (error) {
                 console.error("Search failed", error);
             } finally {
                 setLoading(false);
             }
-        }, 300);
+        }, 150);
 
         return () => clearTimeout(timer);
     }, [query]);
@@ -107,14 +143,13 @@ export default function TickerSearchBox() {
                         </div>
                     )}
 
-                    {!loading && results.map((ticker) => (
+                    {!loading && results.map((ticker, index) => (
                         <div
                             key={`${ticker.ID}/${ticker.Exchange}`}
-                            className="px-2"
-                            onClick={() => {
-                                // Add selection logic here
-                                action.toggleTickerSearchBox(false);
-                            }}
+                            className={`px-2 py-1 mx-1 rounded cursor-pointer transition-colors duration-100 ${index === cursor ? "bg-zinc-800" : "hover:bg-zinc-800/50"
+                                }`}
+                            onMouseEnter={() => setCursor(index)}
+                            onClick={() => handleSelect(ticker)}
                         >
                             <TickerSearchItem
                                 symbol={ticker.ID}
@@ -129,6 +164,12 @@ export default function TickerSearchBox() {
                     <div className="flex justify-end gap-2">
                         <span className="text-[10px] text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 font-medium">
                             ESC
+                        </span>
+                        <span className="text-[10px] text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 font-medium">
+                            ↑↓ to navigate
+                        </span>
+                        <span className="text-[10px] text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 font-medium">
+                            ENTER
                         </span>
                     </div>
                 </div>
