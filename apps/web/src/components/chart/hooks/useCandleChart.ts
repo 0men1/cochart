@@ -40,9 +40,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // LIVE UPDATE LOGIC
     const updateChart = useCallback((tick: TickData) => {
         if (!seriesRef.current) return;
-
         if (activeSymbolRef.current !== product.symbol) return;
-
         if (currentCandle.current) {
             if ((tick.timestamp - currentCandle.current?.time) > interval) {
                 loadHistoricalCandles(currentCandle.current.time, tick.timestamp);
@@ -127,7 +125,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
                 secondsVisible: timeframe === '1m',
                 tickMarkFormatter: (time: number) => {
                     const date = new Date(time * 1000);
-                    return (timeframe === '1D' || timeframe === '1W')
+                    return (timeframe === '1D')
                         ? date.toLocaleDateString([], { timeZone: state.settings.timezone })
                         : date.toLocaleTimeString([], { timeZone: state.settings.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
                 }

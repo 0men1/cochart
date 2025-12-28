@@ -1,6 +1,5 @@
-import { ChevronDown, Settings, Wifi, Share2, Users } from "lucide-react";
+import { Settings, Wifi, Share2, Users } from "lucide-react";
 import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { Product, useApp } from "@/components/chart/context";
@@ -24,7 +23,7 @@ function getStatusDiv(status: ConnectionStatus) {
 export default function ChartHeader() {
     const { state, action } = useApp();
 
-    const timeframes: string[] = ["1m", "5m", "15m", "1H", "4H", "1D"];
+    const timeframes: string[] = ["1m", "5m", "15m", "1H", "6H", "1D"];
 
     const handleChartUpdate = (product: Product, timeframe: IntervalKey) => {
         action.selectChart(product, timeframe);
@@ -36,46 +35,38 @@ export default function ChartHeader() {
         <div className="flex justify-between items-center w-full h-12 px-4 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
             {/* Left side components */}
             <div className="flex items-center space-x-2">
-                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800/50">
+                {/* Container with background removed, just a flex wrapper now */}
+                <div className="flex items-center gap-1">
                     {/* Ticker selector */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 h-7 px-2"
-                                onClick={() => action.toggleTickerSearchBoxAndSetTerm(state.chart.data.product.name)}
-                            >
-                                {state.chart.data.product.name}
-                            </Button>
-                        </DropdownMenuTrigger>
-                    </DropdownMenu>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 h-8 px-2"
+                        onClick={() => action.toggleTickerSearchBoxAndSetTerm(state.chart.data.product.name)}
+                    >
+                        {state.chart.data.product.name}
+                    </Button>
 
-                    <div className="w-px h-5 bg-blue-200 dark:bg-blue-800" />
+                    <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2" />
 
                     {/* Timeframe selector */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 h-7 px-2"
-                            >
-                                {state.chart.data.timeframe} <ChevronDown size={14} className="ml-1" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-24">
-                            {timeframes.map((time) => (
-                                <DropdownMenuItem
-                                    key={time}
-                                    onClick={() => handleChartUpdate(state.chart.data.product, time as IntervalKey)}
-                                    className={`cursor-pointer justify-center ${time === state.chart.data.timeframe ? 'bg-blue-50 dark:bg-blue-950 font-semibold' : ''}`}
-                                >
-                                    {time}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {timeframes.map((time) => (
+                        <Button
+                            key={time}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleChartUpdate(state.chart.data.product, time as IntervalKey)}
+                            className={`
+                                h-8 px-3 text-xs font-medium transition-colors
+                                ${time === state.chart.data.timeframe
+                                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100' // Active: Gray background
+                                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-transparent' // Inactive: No bg, matches header
+                                }
+                            `}
+                        >
+                            {time}
+                        </Button>
+                    ))}
                 </div>
             </div>
             <div className="flex items-center gap-7">

@@ -13,8 +13,9 @@ func getInterval(timeframe string) (int64, error) {
 		"1m":  60,
 		"5m":  300,
 		"15m": 900,
-		"1h":  3600,
-		"1d":  86400,
+		"1H":  3600,
+		"6H":  21600,
+		"1D":  86400,
 	}
 
 	if interval, ok := intervals[timeframe]; ok {
