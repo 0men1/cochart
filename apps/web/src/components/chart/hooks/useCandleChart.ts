@@ -40,9 +40,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
     // LIVE UPDATE LOGIC
     const updateChart = useCallback((tick: TickData) => {
         if (!seriesRef.current) return;
-
         if (activeSymbolRef.current !== product.symbol) return;
-
         if (currentCandle.current) {
             if ((tick.timestamp - currentCandle.current?.time) > interval) {
                 loadHistoricalCandles(currentCandle.current.time, tick.timestamp);
