@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useApp } from "./context"
 import TickerSearchItem from "./TickerSearchItem";
 
@@ -31,7 +31,8 @@ export default function TickerSearchBox() {
     const [loading, setLoading] = useState(false);
     const [cursor, setCursor] = useState(0);
 
-    // Helper to handle selection
+    const inputRef = useRef<HTMLInputElement>(null);
+
     const handleSelect = (item: SearchResult) => {
         action.toggleTickerSearchBox(false);
         action.selectChart({
@@ -41,7 +42,6 @@ export default function TickerSearchBox() {
         }, state.chart.data.timeframe);
     };
 
-    // Reset on open/close
     useEffect(() => {
         if (!state.tickerSearchBox.isOpen) {
             setQuery("");
@@ -49,13 +49,18 @@ export default function TickerSearchBox() {
             setCursor(0);
         } else {
             setQuery(state.tickerSearchBox.searchTerm);
+
+            setTimeout(() => {
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                    inputRef.current.select();
+                }
+            }, 10);
         }
     }, [state.tickerSearchBox.isOpen]);
 
-    // Handle Keyboard Navigation
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
-            // Prevent default behavior for navigation keys to keep cursor in input stable
             if (["ArrowUp", "ArrowDown", "Enter"].includes(e.key)) {
                 e.preventDefault();
             }
@@ -85,7 +90,6 @@ export default function TickerSearchBox() {
         return () => window.removeEventListener("keydown", handleKey);
     }, [action, cursor, results]);
 
-    // Search Logic
     useEffect(() => {
         const timer = setTimeout(async () => {
             if (!query.trim()) {
@@ -98,7 +102,7 @@ export default function TickerSearchBox() {
                 if (res.ok) {
                     const data = await res.json();
                     setResults(data || []);
-                    setCursor(0); // Reset cursor when results change
+                    setCursor(0);
                 }
             } catch (error) {
                 console.error("Search failed", error);
@@ -120,13 +124,12 @@ export default function TickerSearchBox() {
 
                 <div className="flex items-center border-b border-zinc-800 px-3">
                     <SearchIcon className="mr-2 h-4 w-4 shrink-0 opacity-50 text-zinc-400" />
-                    {/* text-base on mobile prevents iOS zoom, text-sm on desktop */}
                     <input
+                        ref={inputRef}
                         className="flex h-11 w-full rounded-md bg-transparent py-3 text-base md:text-sm outline-none placeholder:text-zinc-500 text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
                         placeholder="Search ticker (e.g. BTC)..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        autoFocus
                     />
                 </div>
 
@@ -147,8 +150,7 @@ export default function TickerSearchBox() {
                     {!loading && results.map((ticker, index) => (
                         <div
                             key={`${ticker.ID}/${ticker.Exchange}`}
-                            className={`px-2 py-2 mx-1 rounded cursor-pointer transition-colors duration-100 ${index === cursor ? "bg-zinc-800" : "hover:bg-zinc-800/50"
-                                }`}
+                            className={`px-2 py-2 mx-1 rounded cursor-pointer transition-colors duration-100 ${index === cursor ? "bg-zinc-800" : "hover:bg-zinc-800/50"}`}
                             onMouseEnter={() => setCursor(index)}
                             onClick={() => handleSelect(ticker)}
                         >
@@ -161,7 +163,6 @@ export default function TickerSearchBox() {
                     ))}
                 </div>
 
-                {/* Hide footer instructions on mobile */}
                 <div className="hidden md:block border-t border-zinc-800 bg-zinc-900/50 p-2 px-4">
                     <div className="flex justify-end gap-2">
                         <span className="text-[10px] text-zinc-500 bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 font-medium">

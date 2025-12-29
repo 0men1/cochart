@@ -50,11 +50,6 @@ export default function Settings() {
         action.toggleSettings(false);
     };
 
-    /**
-     * Updates a nested setting value using dot notation path
-     * @param path - Dot notation path (e.g., 'background.theme' or 'candles.upColor')
-     * @param value - New value to set
-     */
     const updateLocal = (path: string, value: any) => {
         setLocalSettings(prev => {
             const copy = JSON.parse(JSON.stringify(prev));
@@ -73,20 +68,20 @@ export default function Settings() {
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center transition-opacity"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center transition-opacity p-4 md:p-0"
             onClick={cancel}
         >
             <div
-                className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl z-50 w-full max-w-3xl mx-4 h-[75vh] overflow-hidden flex flex-col"
+                className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl z-50 w-full md:w-full max-w-3xl h-[85vh] md:h-[75vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+                <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
+                        <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
                             <Palette size={18} className="text-white" />
                         </div>
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">Settings</h2>
+                        <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white">Settings</h2>
                     </div>
                     <Button
                         variant="ghost"
@@ -101,7 +96,7 @@ export default function Settings() {
                 {/* Content - Tabs + Panel */}
                 <div className="flex flex-1 overflow-hidden">
                     {/* Left Sidebar - Icon-only Tabs */}
-                    <div className="w-16 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-2 flex flex-col gap-2">
+                    <div className="w-14 md:w-16 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-2 flex flex-col gap-2 shrink-0 overflow-y-auto">
                         {SETTINGS_TABS.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
@@ -110,7 +105,7 @@ export default function Settings() {
                                     <TooltipTrigger asChild>
                                         <button
                                             onClick={() => setActiveTab(tab.id)}
-                                            className={`w-12 h-12 flex items-center justify-center rounded-lg transition-all ${isActive
+                                            className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg transition-all ${isActive
                                                 ? 'bg-blue-600 text-white shadow-lg'
                                                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                                 }`}
@@ -118,7 +113,7 @@ export default function Settings() {
                                             <Icon size={20} />
                                         </button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="right">
+                                    <TooltipContent side="right" className="hidden md:block">
                                         <p>{tab.label}</p>
                                     </TooltipContent>
                                 </Tooltip>
@@ -127,7 +122,7 @@ export default function Settings() {
                     </div>
 
                     {/* Right Panel - Content */}
-                    <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
                         {activeTab === 'appearance' && (
                             <AppearanceSection
                                 settings={localSettings}
@@ -151,7 +146,7 @@ export default function Settings() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex gap-3">
+                <div className="px-4 py-3 md:px-6 md:py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex gap-3 shrink-0">
                     <Button onClick={cancel} variant="outline" className="flex-1 h-10 font-medium">
                         Cancel
                     </Button>
@@ -164,17 +159,6 @@ export default function Settings() {
     );
 }
 
-/**
- * APPEARANCE SECTION
- * Controls overall chart appearance like theme mode
- * 
- * Settings Path: state.chart.settings.background.theme
- * 
- * To add new appearance settings:
- * 1. Add the setting to ChartSettings type in context
- * 2. Add UI control here
- * 3. Use updateLocal() with proper path notation
- */
 interface AppearanceSectionProps {
     settings: ChartSettings;
     isDark: boolean;
@@ -193,7 +177,7 @@ function AppearanceSection({ isDark, updateLocal }: AppearanceSectionProps) {
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isDark ? 'bg-slate-700' : 'bg-amber-100'}`}>
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isDark ? 'bg-slate-700' : 'bg-amber-100'}`}>
                         {isDark ? <Moon size={16} className="text-blue-400" /> : <Sun size={16} className="text-amber-600" />}
                     </div>
                     <div>
@@ -216,15 +200,6 @@ function AppearanceSection({ isDark, updateLocal }: AppearanceSectionProps) {
 /**
  * GRID SECTION
  * Controls grid line visibility and styling
- * 
- * Settings Path: 
- * - state.chart.settings.background.grid.vertLines
- * - state.chart.settings.background.grid.horzLines
- * 
- * To add new grid settings:
- * 1. Extend the grid object in ChartSettings type
- * 2. Add UI controls here (e.g., color pickers, width sliders)
- * 3. Use updateLocal() with paths like 'background.grid.vertLines.color'
  */
 interface GridSectionProps {
     settings: ChartSettings;
@@ -277,13 +252,6 @@ function GridSection({ settings, updateLocal }: GridSectionProps) {
 /**
  * CANDLES SECTION
  * Controls candlestick appearance and styling
- * 
- * Settings Path: state.chart.settings.candles
- * 
- * To add new candle settings:
- * 1. Add properties to candles object in ChartSettings type
- * 2. Add UI controls here (e.g., for hollow candles, bar charts)
- * 3. Use updateLocal() with paths like 'candles.upColor' or 'candles.borderVisible'
  */
 interface CandlesSectionProps {
     settings: ChartSettings;
@@ -301,7 +269,7 @@ function CandlesSection({ settings, updateLocal }: CandlesSectionProps) {
             </div>
 
             <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-2">
                         <Label htmlFor="up-color" className="text-xs font-medium">Bullish Color</Label>
                         <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
@@ -312,9 +280,9 @@ function CandlesSection({ settings, updateLocal }: CandlesSectionProps) {
                                 onChange={(e) =>
                                     updateLocal('candles.upColor', e.target.value)
                                 }
-                                className="w-10 h-10 p-1 cursor-pointer"
+                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
                             />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{settings.candles.upColor}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.upColor}</span>
                         </div>
                     </div>
 
@@ -328,9 +296,9 @@ function CandlesSection({ settings, updateLocal }: CandlesSectionProps) {
                                 onChange={(e) =>
                                     updateLocal('candles.downColor', e.target.value)
                                 }
-                                className="w-10 h-10 p-1 cursor-pointer"
+                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
                             />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{settings.candles.downColor}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.downColor}</span>
                         </div>
                     </div>
 
@@ -344,9 +312,9 @@ function CandlesSection({ settings, updateLocal }: CandlesSectionProps) {
                                 onChange={(e) =>
                                     updateLocal('candles.wickupColor', e.target.value)
                                 }
-                                className="w-10 h-10 p-1 cursor-pointer"
+                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
                             />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{settings.candles.wickupColor}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.wickupColor}</span>
                         </div>
                     </div>
 
@@ -360,9 +328,9 @@ function CandlesSection({ settings, updateLocal }: CandlesSectionProps) {
                                 onChange={(e) =>
                                     updateLocal('candles.wickDownColor', e.target.value)
                                 }
-                                className="w-10 h-10 p-1 cursor-pointer"
+                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
                             />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{settings.candles.wickDownColor}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.wickDownColor}</span>
                         </div>
                     </div>
                 </div>
