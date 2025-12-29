@@ -1,6 +1,9 @@
 package market
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 type Candlestick struct {
 	Timestamp int64   `json:"time"`
@@ -40,8 +43,13 @@ type Product struct {
 
 type Service struct {
 	Providers map[string]ExchangeProvider
+
+	cacheMx sync.RWMutex
+	// Cache ID: <symbol>-<exchange>-<granularity>-<startTime>
+	cache map[string][]Candlestick
 }
 
 func NewService(providers map[string]ExchangeProvider) *Service {
-	return &Service{Providers: providers}
+	cache := make(map[string][]Candlestick)
+	return &Service{Providers: providers, cache: cache}
 }

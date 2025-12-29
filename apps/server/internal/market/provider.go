@@ -9,42 +9,64 @@ import (
 	"time"
 )
 
+const maxCandlesPerRequest = 300
+const maxConcurrentRequests = 10
+
+func (s *Service) GetFromCache(ctx context.Context, symbol, exchange string, start, granularity int64) []Candlestick {
+	s.cacheMx.RLock()
+	cacheKey := fmt.Sprintf("%s-%s-%d-%d", symbol, exchange, granularity, start)
+	candles, exists := s.cache[cacheKey]
+	s.cacheMx.RUnlock()
+
+	if exists {
+		fmt.Printf("Cache hit: %s\n", cacheKey)
+		return candles
+	}
+	return []Candlestick{}
+}
+
+func (s *Service) SaveToCache(ctx context.Context, symbol, exchange string, start, granularity int64, candles []Candlestick) {
+	s.cacheMx.Lock()
+	cacheKey := fmt.Sprintf("%s-%s-%d-%d", symbol, exchange, granularity, start)
+	fmt.Printf("Cache miss: %s\n", cacheKey)
+	s.cache[cacheKey] = candles
+	s.cacheMx.Unlock()
+}
+
 func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string, start, end, granularity int64) ([]Candlestick, error) {
 	provider, exists := s.Providers[exchangeName]
 	if !exists {
 		return nil, fmt.Errorf("exchange %s not found", exchangeName)
 	}
 
-	const maxCandlesPerRequest = 300
-	const maxConcurrentRequests = 10
+	// Snap requset to grid
+	blockDuration := granularity * int64(maxCandlesPerRequest)
+	alignedStart := (start * blockDuration) / blockDuration
 
-	candlesNeeded := (end - start) / granularity
-	if candlesNeeded <= 0 {
-		return []Candlestick{}, nil
+	var batchStarts []int64
+	for t := alignedStart; t < end; t += blockDuration {
+		batchStarts = append(batchStarts, t)
 	}
 
-	batchCount := int((candlesNeeded + maxCandlesPerRequest - 1) / maxCandlesPerRequest)
-	responseChan := make(chan CandleResponse, batchCount)
+	responseChan := make(chan CandleResponse, len(batchStarts))
 	sem := make(chan struct{}, maxConcurrentRequests)
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-
 	var wg sync.WaitGroup
-	wg.Add(batchCount)
 
-	for i := range batchCount {
-		go func(index int) {
+	for i, batchStart := range batchStarts {
+		wg.Add(1)
+		go func(idx int, bStart int64) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			// Calculate time windows for this batch
-			batchStart := start + int64(index)*maxCandlesPerRequest*granularity
-			// Ensure we don't request past the end time
-			batchEnd := batchStart + (maxCandlesPerRequest * granularity)
-			if batchEnd > end {
-				batchEnd = end
+			bEnd := bStart + blockDuration
+			cachedCandles := s.GetFromCache(ctx, symbol, exchangeName, bStart, granularity)
+			if len(cachedCandles) > 0 {
+				responseChan <- CandleResponse{Data: cachedCandles, Index: idx, Error: nil}
+				return
 			}
 
 			var candles []Candlestick
@@ -52,7 +74,7 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 
 			// Retry Logic
 			for attempt := range 3 {
-				candles, err = provider.FetchCandles(ctx, symbol, batchStart, batchEnd, granularity)
+				candles, err = provider.FetchCandles(ctx, symbol, batchStart, bEnd, granularity)
 				if err == nil {
 					break
 				}
@@ -63,14 +85,16 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 
 				select {
 				case <-ctx.Done():
-					responseChan <- CandleResponse{Index: index, Error: ctx.Err()}
+					responseChan <- CandleResponse{Index: idx, Error: ctx.Err()}
 					return
 				case <-time.After(backoff + jitter):
 					continue
 				}
 			}
-			responseChan <- CandleResponse{Data: candles, Index: index, Error: err}
-		}(i)
+
+			s.SaveToCache(ctx, symbol, exchangeName, bStart, granularity, candles)
+			responseChan <- CandleResponse{Data: candles, Index: idx, Error: err}
+		}(i, batchStart)
 	}
 
 	go func() {
@@ -78,7 +102,12 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 		close(responseChan)
 	}()
 
-	return collectResponses(responseChan, batchCount)
+	fullData, err := collectResponses(responseChan, len(batchStarts))
+	if err != nil {
+		return []Candlestick{}, err
+	}
+
+	return fullData, nil
 }
 
 func collectResponses(responseChan <-chan CandleResponse, expected int) ([]Candlestick, error) {
