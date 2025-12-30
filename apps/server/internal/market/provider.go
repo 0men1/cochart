@@ -12,27 +12,6 @@ import (
 const maxCandlesPerRequest = 300
 const maxConcurrentRequests = 10
 
-func (s *Service) GetFromCache(ctx context.Context, symbol, exchange string, start, granularity int64) []Candlestick {
-	s.cacheMx.RLock()
-	cacheKey := fmt.Sprintf("%s-%s-%d-%d", symbol, exchange, granularity, start)
-	candles, exists := s.cache[cacheKey]
-	s.cacheMx.RUnlock()
-
-	if exists {
-		fmt.Printf("Cache hit: %s\n", cacheKey)
-		return candles
-	}
-	return []Candlestick{}
-}
-
-func (s *Service) SaveToCache(ctx context.Context, symbol, exchange string, start, granularity int64, candles []Candlestick) {
-	s.cacheMx.Lock()
-	cacheKey := fmt.Sprintf("%s-%s-%d-%d", symbol, exchange, granularity, start)
-	fmt.Printf("Cache miss: %s\n", cacheKey)
-	s.cache[cacheKey] = candles
-	s.cacheMx.Unlock()
-}
-
 func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string, start, end, granularity int64) ([]Candlestick, error) {
 	provider, exists := s.Providers[exchangeName]
 	if !exists {
@@ -41,7 +20,7 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 
 	// Snap requset to grid
 	blockDuration := granularity * int64(maxCandlesPerRequest)
-	alignedStart := (start * blockDuration) / blockDuration
+	alignedStart := (start / blockDuration) * blockDuration
 
 	var batchStarts []int64
 	for t := alignedStart; t < end; t += blockDuration {
