@@ -1,6 +1,10 @@
 package market
 
-import "context"
+import (
+	"context"
+	"sync"
+	"time"
+)
 
 type Candlestick struct {
 	Timestamp int64   `json:"time"`
@@ -38,10 +42,22 @@ type Product struct {
 	Exchange string
 }
 
+type CacheCandleBatch struct {
+	Data      []Candlestick
+	CreatedAt time.Time
+}
+
 type Service struct {
 	Providers map[string]ExchangeProvider
+
+	cacheMx sync.RWMutex
+	// Cache ID: <symbol>-<exchange>-<granularity>-<startTime>
+	cache map[string]CacheCandleBatch
 }
 
 func NewService(providers map[string]ExchangeProvider) *Service {
-	return &Service{Providers: providers}
+	cache := make(map[string]CacheCandleBatch)
+	service := &Service{Providers: providers, cache: cache}
+	service.StartCachePruner(context.Background(), 5*time.Minute)
+	return service
 }
