@@ -42,8 +42,10 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 			defer func() { <-sem }()
 
 			bEnd := bStart + blockDuration
+
+			expectedCount := int(blockDuration / granularity)
 			cachedCandles := s.GetFromCache(ctx, symbol, exchangeName, bStart, granularity)
-			if len(cachedCandles) > 0 {
+			if len(cachedCandles) == expectedCount {
 				responseChan <- CandleResponse{Data: cachedCandles, Index: idx, Error: nil}
 				return
 			}
@@ -53,7 +55,7 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 
 			// Retry Logic
 			for attempt := range 3 {
-				candles, err = provider.FetchCandles(ctx, symbol, batchStart, bEnd, granularity)
+				candles, err = provider.FetchCandles(ctx, symbol, bStart, bEnd, granularity)
 				if err == nil {
 					break
 				}
@@ -71,7 +73,12 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 				}
 			}
 
-			s.SaveToCache(ctx, symbol, exchangeName, bStart, granularity, candles)
+			isBlockComplete := time.Now().Unix() > bEnd
+
+			if isBlockComplete && len(candles) == expectedCount {
+				s.SaveToCache(ctx, symbol, exchangeName, bStart, granularity, candles)
+			}
+
 			responseChan <- CandleResponse{Data: candles, Index: idx, Error: err}
 		}(i, batchStart)
 	}
@@ -83,6 +90,7 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 
 	fullData, err := collectResponses(responseChan, len(batchStarts))
 	if err != nil {
+		cancel()
 		return []Candlestick{}, err
 	}
 
