@@ -1,11 +1,11 @@
 import { Coordinate, Time } from "lightweight-charts";
 
 export interface Point {
-    time: Time,
-    price: number
+	time: Time,
+	price: number
 }
 
 export interface ViewPoint {
-    x: Coordinate | null;
-    y: Coordinate | null;
+	x: Coordinate | null;
+	y: Coordinate | null;
 }

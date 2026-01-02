@@ -18,7 +18,6 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 		return nil, fmt.Errorf("exchange %s not found", exchangeName)
 	}
 
-	// Snap requset to grid
 	blockDuration := granularity * int64(maxCandlesPerRequest)
 	alignedStart := (start / blockDuration) * blockDuration
 
@@ -41,11 +40,21 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			bEnd := bStart + blockDuration
-			cachedCandles := s.GetFromCache(ctx, symbol, exchangeName, bStart, granularity)
-			if len(cachedCandles) > 0 {
-				responseChan <- CandleResponse{Data: cachedCandles, Index: idx, Error: nil}
-				return
+			gridEnd := bStart + blockDuration
+
+			reqEnd := gridEnd
+			if reqEnd > end {
+				reqEnd = end
+			}
+
+			isPartialBlock := reqEnd < gridEnd
+
+			if !isPartialBlock {
+				cachedCandles := s.GetFromCache(ctx, symbol, exchangeName, bStart, granularity)
+				if len(cachedCandles) > 0 {
+					responseChan <- CandleResponse{Data: cachedCandles, Index: idx, Error: nil}
+					return
+				}
 			}
 
 			var candles []Candlestick
@@ -53,12 +62,11 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 
 			// Retry Logic
 			for attempt := range 3 {
-				candles, err = provider.FetchCandles(ctx, symbol, batchStart, bEnd, granularity)
+				candles, err = provider.FetchCandles(ctx, symbol, bStart, reqEnd, granularity)
 				if err == nil {
 					break
 				}
 
-				// Exponential backoff
 				backoff := time.Duration(200*(1<<attempt)) * time.Millisecond
 				jitter := time.Duration(rand.Intn(50)) * time.Millisecond
 
@@ -71,7 +79,10 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 				}
 			}
 
-			s.SaveToCache(ctx, symbol, exchangeName, bStart, granularity, candles)
+			if err == nil && !isPartialBlock && len(candles) > 0 {
+				s.SaveToCache(ctx, symbol, exchangeName, bStart, granularity, candles)
+			}
+
 			responseChan <- CandleResponse{Data: candles, Index: idx, Error: err}
 		}(i, batchStart)
 	}
@@ -86,12 +97,18 @@ func (s *Service) FetchCandles(ctx context.Context, exchangeName, symbol string,
 		return []Candlestick{}, err
 	}
 
-	return fullData, nil
+	filteredData := make([]Candlestick, 0, len(fullData))
+	for _, c := range fullData {
+		if c.Timestamp >= start && c.Timestamp <= end {
+			filteredData = append(filteredData, c)
+		}
+	}
+
+	return filteredData, nil
 }
 
 func collectResponses(responseChan <-chan CandleResponse, expected int) ([]Candlestick, error) {
 	responses := make([]CandleResponse, expected)
-	// Default initialize to avoid nil panic on sort
 	for i := range responses {
 		responses[i].Data = []Candlestick{}
 	}
@@ -105,7 +122,6 @@ func collectResponses(responseChan <-chan CandleResponse, expected int) ([]Candl
 		}
 	}
 
-	// Merge
 	totalSize := 0
 	for _, r := range responses {
 		totalSize += len(r.Data)
