@@ -48,7 +48,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 		if (currentCandles.current.size > 0 && !currentCandles.current.has(previousInterval) && !isFetching.current) {
 			const latestTime = currentCandle.current?.time as number || (rounded - interval);
 			if (rounded > latestTime) {
-				loadHistoricalCandles(latestTime, rounded);
+				loadHistoricalCandles(latestTime - interval, rounded);
 			}
 		}
 
@@ -98,6 +98,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			// update the reference to the oldest candle
 			if (sortedCandles.length > 0) {
 				firstCandle.current = sortedCandles[0];
+				currentCandle.current = sortedCandles[sortedCandles.length - 1];
 			}
 		} catch (error) {
 			console.error(`Error fetching candles: `, error);
