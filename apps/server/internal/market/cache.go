@@ -14,7 +14,6 @@ func (s *Service) GetFromCache(ctx context.Context, symbol, exchange string, sta
 	s.cacheMx.RUnlock()
 
 	if exists {
-		log.Printf("Cache hit: %s\n", cacheKey)
 		return candles.Data
 	}
 	return []Candlestick{}
@@ -23,7 +22,6 @@ func (s *Service) GetFromCache(ctx context.Context, symbol, exchange string, sta
 func (s *Service) SaveToCache(ctx context.Context, symbol, exchange string, start, granularity int64, candles []Candlestick) {
 	s.cacheMx.Lock()
 	cacheKey := fmt.Sprintf("%s-%s-%d-%d", symbol, exchange, granularity, start)
-	log.Printf("Cache miss: %s\n", cacheKey)
 	s.cache[cacheKey] = CacheCandleBatch{candles, time.Now()}
 	s.cacheMx.Unlock()
 }

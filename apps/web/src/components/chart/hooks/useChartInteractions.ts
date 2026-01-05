@@ -4,28 +4,25 @@ import { useCallback, useEffect } from "react";
 import { useApp } from "../context";
 
 export function useChartInteraction() {
-    const { action } = useApp();
+	const { action } = useApp();
 
-    const keyDownHandler = useCallback((event: KeyboardEvent) => {
-        if (/^[a-zA-Z]$/.test(event.key)) {
-            action.toggleTickerSearchBoxAndSetTerm("");
-        }
+	const keyDownHandler = useCallback((event: KeyboardEvent) => {
+		if (/^[a-zA-Z]$/.test(event.key)) {
+			action.toggleTickerSearchBoxAndSetTerm("");
+		}
 
-        switch (event.key) {
-            case 'Escape':
-                action.toggleTickerSearchBox(false);
-                action.toggleCollabWindow(false);
-                action.cancelTool();
-                break;
-            default:
-                break;
-        }
-    }, [])
+		switch (event.key) {
+			case 'Escape':
+				break;
+			default:
+				break;
+		}
+	}, [])
 
-    useEffect(() => {
-        window.addEventListener('keydown', keyDownHandler)
-        return () => {
-            window.removeEventListener('keydown', keyDownHandler)
-        }
-    }, [keyDownHandler])
+	useEffect(() => {
+		window.addEventListener('keydown', keyDownHandler)
+		return () => {
+			window.removeEventListener('keydown', keyDownHandler)
+		}
+	}, [keyDownHandler])
 }

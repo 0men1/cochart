@@ -5,7 +5,6 @@ import { DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFacto
 import { Button } from "../ui/button";
 import { DrawingTool } from "@/core/chart/drawings/types";
 import { useApp } from "@/components/chart/context";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /**
  * TOOLBOX COMPONENT
@@ -19,62 +18,54 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
  */
 
 function Toolbox() {
-    const { state, action, chartRef, seriesRef } = useApp();
-    const { activeTool } = state.tools
+	const { state, action, chartRef, seriesRef } = useApp();
+	const { activeTool } = state.tools
 
-    function setTool(tool: DrawingTool) {
-        if (!chartRef.current || !seriesRef.current) return;
+	function setTool(tool: DrawingTool) {
+		if (!chartRef.current || !seriesRef.current) return;
 
-        if (tool === activeTool) {
-            action.cancelTool()
-            return;
-        }
+		if (tool === activeTool) {
+			action.cancelTool()
+			return;
+		}
 
-        const handlerFactory = new DrawingHandlerFactory(chartRef.current, seriesRef.current);
-        try {
-            const handler = handlerFactory.createHandler(tool);
-            if (handler) {
-                action.startTool(tool, handler)
-            }
-        } catch (error) {
-            console.error("failed to set tool: ", error);
-            action.cancelTool()
-        }
-    }
+		const handlerFactory = new DrawingHandlerFactory(chartRef.current, seriesRef.current);
+		try {
+			const handler = handlerFactory.createHandler(tool);
+			if (handler) {
+				action.startTool(tool, handler)
+			}
+		} catch (error) {
+			console.error("failed to set tool: ", error);
+			action.cancelTool()
+		}
+	}
 
-    const buttons = [
-        { tool: "verticalLine" as DrawingTool, icon: MoveUp, label: "Vertical Line" },
-        { tool: "trendline" as DrawingTool, icon: MoveDiagonal, label: "Trendline" },
-    ];
+	const buttons = [
+		{ tool: "verticalLine" as DrawingTool, icon: MoveUp, label: "Vertical Line" },
+		{ tool: "trendline" as DrawingTool, icon: MoveDiagonal, label: "Trendline" },
+	];
 
-    return (
-        <div className="flex flex-col gap-1 py-2 px-1 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700">
-            {buttons.map(({ tool, icon: Icon, label }) => {
-                const isActive = activeTool === tool;
-                return (
-                    <Tooltip key={tool}>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`h-11 w-11 rounded-lg transition-all ${isActive
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                    }`}
-                                onClick={() => setTool(tool)}
-                            >
-                                <Icon size={20} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                            <p className="font-medium">{label}</p>
-                            <p className="text-xs text-slate-400">ESC to cancel</p>
-                        </TooltipContent>
-                    </Tooltip>
-                );
-            })}
-        </div>
-    );
+	return (
+		<div className="flex flex-col gap-1 py-2 px-1 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700">
+			{buttons.map(({ tool, icon: Icon, label }) => {
+				const isActive = activeTool === tool;
+				return (
+					<Button key={tool}
+						variant="ghost"
+						size="icon"
+						className={`h-9 w-9 rounded-lg transition-all ${isActive
+							? 'bg-blue-600 text-white hover:bg-blue-700'
+							: 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+							}`}
+						onClick={() => setTool(tool)}
+					>
+						<Icon size={20} />
+					</Button>
+				);
+			})}
+		</div>
+	);
 };
 
 export default Toolbox;
