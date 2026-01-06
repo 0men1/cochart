@@ -1,354 +1,220 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Palette, Grid3x3, ChartCandlestick as CandleIcon, Moon, Sun, LucideIcon } from 'lucide-react';
+import { X, Palette, Grid3x3, ChartCandlestick, Moon, Sun } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
-import { Input } from "../ui/input";
 import { ChartSettings, useApp } from '@/components/chart/context';
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-/**
- * Settings tab configuration
- * Each tab represents a major settings category
- */
-interface SettingsTab {
-    id: string;
-    label: string;
-    icon: LucideIcon;
-}
+const SettingRow = ({ label, desc, children }: { label: string, desc?: string, children: React.ReactNode }) => (
+	<div className="flex items-center justify-between py-3">
+		<div className="space-y-0.5">
+			<Label className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{label}</Label>
+			{desc && <p className="text-[13px] text-zinc-500 dark:text-zinc-400">{desc}</p>}
+		</div>
+		{children}
+	</div>
+);
 
-const SETTINGS_TABS: SettingsTab[] = [
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'grid', label: 'Grid', icon: Grid3x3 },
-    { id: 'candles', label: 'Candles', icon: CandleIcon },
-];
+const ColorRow = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => (
+	<div className="flex items-center justify-between py-2">
+		<span className="text-sm text-zinc-600 dark:text-zinc-300">{label}</span>
+		<div className="flex items-center gap-2">
+			<span className="text-xs font-mono text-zinc-400 uppercase">{value}</span>
+			<div className="relative group">
+				<div
+					className="w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-700 shadow-sm cursor-pointer transition-transform group-hover:scale-105"
+					style={{ backgroundColor: value }}
+				/>
+				<input
+					type="color"
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+				/>
+			</div>
+		</div>
+	</div>
+);
+
+const TabButton = ({ active, onClick, icon: Icon, label }: any) => (
+	<button
+		onClick={onClick}
+		className={cn(
+			"flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all",
+			active
+				? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+				: "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50"
+		)}
+	>
+		<Icon size={16} />
+		{label}
+	</button>
+);
+
+// --- Main Component ---
 
 export default function Settings() {
-    const { state, action } = useApp();
-    const { settings } = state;
+	const { state, action } = useApp();
+	const { settings } = state;
+	const [localSettings, setLocalSettings] = useState<ChartSettings | null>(null);
+	const [activeTab, setActiveTab] = useState<'appearance' | 'grid' | 'candles'>('appearance');
 
-    const [localSettings, setLocalSettings] = useState<ChartSettings | null>(null);
-    const [activeTab, setActiveTab] = useState<string>('appearance');
+	useEffect(() => {
+		if (settings.isOpen) {
+			setLocalSettings(JSON.parse(JSON.stringify(settings)));
+		}
+	}, [settings.isOpen]);
 
-    useEffect(() => {
-        if (settings.isOpen) {
-            const copy = JSON.parse(JSON.stringify(settings));
-            setLocalSettings(copy);
-        }
-    }, [settings.isOpen, settings]);
+	if (!settings.isOpen || !localSettings) return null;
 
-    if (!settings.isOpen || !localSettings) return null;
+	const handleSave = () => {
+		action.updateSettings(localSettings);
+		action.toggleSettings(false);
+	};
 
-    const cancel = () => {
-        action.toggleSettings(false);
-    };
+	const updateLocal = (path: string, value: any) => {
+		setLocalSettings(prev => {
+			if (!prev) return null;
+			const copy = JSON.parse(JSON.stringify(prev));
+			const keys = path.split('.');
+			let target = copy;
+			while (keys.length > 1) target = target[keys.shift()!];
+			target[keys[0]] = value;
+			return copy;
+		});
+	};
 
-    const save = () => {
-        action.updateSettings(localSettings);
-        action.toggleSettings(false);
-    };
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+			<div
+				className="w-full max-w-md bg-white dark:bg-zinc-950 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]"
+				onClick={(e) => e.stopPropagation()}
+			>
+				{/* Header */}
+				<div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between shrink-0">
+					<div>
+						<h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Settings</h2>
+						<p className="text-sm text-zinc-500 dark:text-zinc-400">Manage your chart preferences</p>
+					</div>
+					<Button variant="ghost" size="icon" onClick={() => action.toggleSettings(false)} className="h-8 w-8 rounded-full">
+						<X size={18} />
+					</Button>
+				</div>
 
-    const updateLocal = (path: string, value: any) => {
-        setLocalSettings(prev => {
-            const copy = JSON.parse(JSON.stringify(prev));
-            let target = copy;
-            const keys = path.split('.');
-            while (keys.length > 1) {
-                const k = keys.shift()!;
-                target = target[k];
-            }
-            target[keys[0]] = value;
-            return copy;
-        });
-    };
+				{/* Tabs Navigation */}
+				<div className="flex items-center gap-1 px-4 py-2 border-b border-zinc-100 dark:border-zinc-900 overflow-x-auto shrink-0 no-scrollbar">
+					<TabButton
+						active={activeTab === 'appearance'}
+						onClick={() => setActiveTab('appearance')}
+						icon={Palette}
+						label="Appearance"
+					/>
+					<TabButton
+						active={activeTab === 'grid'}
+						onClick={() => setActiveTab('grid')}
+						icon={Grid3x3}
+						label="Grid"
+					/>
+					<TabButton
+						active={activeTab === 'candles'}
+						onClick={() => setActiveTab('candles')}
+						icon={ChartCandlestick}
+						label="Candles"
+					/>
+				</div>
 
-    const isDark = localSettings.background.theme === "dark";
+				{/* Scrollable Content */}
+				<div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
 
-    return (
-        <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center transition-opacity p-4 md:p-0"
-            onClick={cancel}
-        >
-            <div
-                className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl z-50 w-full md:w-full max-w-3xl h-[85vh] md:h-[75vh] overflow-hidden flex flex-col"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
-                            <Palette size={18} className="text-white" />
-                        </div>
-                        <h2 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white">Settings</h2>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={cancel}
-                        className="rounded-full h-8 w-8 p-0 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    >
-                        <X size={18} />
-                    </Button>
-                </div>
+					{activeTab === 'appearance' && (
+						<div className="space-y-1">
+							<SettingRow label="Theme Mode" desc="Toggle between light and dark mode">
+								<div className="flex items-center gap-3">
+									{localSettings.background.theme === 'dark'
+										? <Moon size={16} className="text-zinc-500" />
+										: <Sun size={16} className="text-zinc-500" />
+									}
+									<Switch
+										checked={localSettings.background.theme === 'dark'}
+										onCheckedChange={(c) => updateLocal('background.theme', c ? 'dark' : 'light')}
+									/>
+								</div>
+							</SettingRow>
+						</div>
+					)}
 
-                {/* Content - Tabs + Panel */}
-                <div className="flex flex-1 overflow-hidden">
-                    {/* Left Sidebar - Icon-only Tabs */}
-                    <div className="w-14 md:w-16 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-2 flex flex-col gap-2 shrink-0 overflow-y-auto">
-                        {SETTINGS_TABS.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <Tooltip key={tab.id}>
-                                    <TooltipTrigger asChild>
-                                        <button
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-lg transition-all ${isActive
-                                                ? 'bg-blue-600 text-white shadow-lg'
-                                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                                }`}
-                                        >
-                                            <Icon size={20} />
-                                        </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="right" className="hidden md:block">
-                                        <p>{tab.label}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            );
-                        })}
-                    </div>
+					{activeTab === 'grid' && (
+						<div className="space-y-1">
+							<SettingRow label="Vertical Lines" desc="Show vertical time dividers">
+								<Switch
+									checked={localSettings.background.grid.vertLines.visible}
+									onCheckedChange={(c) => updateLocal('background.grid.vertLines.visible', c)}
+								/>
+							</SettingRow>
+							<div className="my-2 border-t border-zinc-100 dark:border-zinc-900" />
+							<SettingRow label="Horizontal Lines" desc="Show horizontal price dividers">
+								<Switch
+									checked={localSettings.background.grid.horzLines.visible}
+									onCheckedChange={(c) => updateLocal('background.grid.horzLines.visible', c)}
+								/>
+							</SettingRow>
+						</div>
+					)}
 
-                    {/* Right Panel - Content */}
-                    <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                        {activeTab === 'appearance' && (
-                            <AppearanceSection
-                                settings={localSettings}
-                                isDark={isDark}
-                                updateLocal={updateLocal}
-                            />
-                        )}
-                        {activeTab === 'grid' && (
-                            <GridSection
-                                settings={localSettings}
-                                updateLocal={updateLocal}
-                            />
-                        )}
-                        {activeTab === 'candles' && (
-                            <CandlesSection
-                                settings={localSettings}
-                                updateLocal={updateLocal}
-                            />
-                        )}
-                    </div>
-                </div>
+					{activeTab === 'candles' && (
+						<div className="space-y-4">
+							<div className="space-y-1">
+								<h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Colors</h3>
+								<ColorRow
+									label="Bullish Body"
+									value={localSettings.candles.upColor}
+									onChange={(v) => updateLocal('candles.upColor', v)}
+								/>
+								<ColorRow
+									label="Bearish Body"
+									value={localSettings.candles.downColor}
+									onChange={(v) => updateLocal('candles.downColor', v)}
+								/>
+								<ColorRow
+									label="Bullish Wick"
+									value={localSettings.candles.wickupColor}
+									onChange={(v) => updateLocal('candles.wickupColor', v)}
+								/>
+								<ColorRow
+									label="Bearish Wick"
+									value={localSettings.candles.wickDownColor}
+									onChange={(v) => updateLocal('candles.wickDownColor', v)}
+								/>
+							</div>
 
-                {/* Footer */}
-                <div className="px-4 py-3 md:px-6 md:py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex gap-3 shrink-0">
-                    <Button onClick={cancel} variant="outline" className="flex-1 h-10 font-medium">
-                        Cancel
-                    </Button>
-                    <Button onClick={save} className="flex-1 h-10 font-medium bg-blue-600 hover:bg-blue-700">
-                        Save
-                    </Button>
-                </div>
-            </div>
-        </div>
-    );
-}
+							<div className="my-4 border-t border-zinc-100 dark:border-zinc-900" />
 
-interface AppearanceSectionProps {
-    settings: ChartSettings;
-    isDark: boolean;
-    updateLocal: (path: string, value: any) => void;
-}
+							<div className="space-y-1">
+								<h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Style</h3>
+								<SettingRow label="Candle Borders" desc="Draw borders around candle bodies">
+									<Switch
+										checked={localSettings.candles.borderVisible}
+										onCheckedChange={(c) => updateLocal('candles.borderVisible', c)}
+									/>
+								</SettingRow>
+							</div>
+						</div>
+					)}
+				</div>
 
-function AppearanceSection({ isDark, updateLocal }: AppearanceSectionProps) {
-    return (
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-1">Appearance</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Customize the overall look and feel of your chart
-                </p>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isDark ? 'bg-slate-700' : 'bg-amber-100'}`}>
-                        {isDark ? <Moon size={16} className="text-blue-400" /> : <Sun size={16} className="text-amber-600" />}
-                    </div>
-                    <div>
-                        <Label htmlFor="theme-toggle" className="text-sm font-medium cursor-pointer">Theme Mode</Label>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{isDark ? 'Dark' : 'Light'} theme active</p>
-                    </div>
-                </div>
-                <Switch
-                    id="theme-toggle"
-                    checked={isDark}
-                    onCheckedChange={(checked) =>
-                        updateLocal('background.theme', checked ? "dark" : "light")
-                    }
-                />
-            </div>
-        </div>
-    );
-}
-
-/**
- * GRID SECTION
- * Controls grid line visibility and styling
- */
-interface GridSectionProps {
-    settings: ChartSettings;
-    updateLocal: (path: string, value: any) => void;
-}
-
-function GridSection({ settings, updateLocal }: GridSectionProps) {
-    return (
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-1">Grid Options</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Configure grid lines and background elements
-                </p>
-            </div>
-
-            <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <div>
-                        <Label htmlFor="vert-lines" className="text-sm font-medium cursor-pointer">Vertical Lines</Label>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Show vertical grid lines</p>
-                    </div>
-                    <Switch
-                        id="vert-lines"
-                        checked={settings.background.grid.vertLines.visible}
-                        onCheckedChange={(checked) =>
-                            updateLocal('background.grid.vertLines.visible', checked)
-                        }
-                    />
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <div>
-                        <Label htmlFor="horz-lines" className="text-sm font-medium cursor-pointer">Horizontal Lines</Label>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Show horizontal grid lines</p>
-                    </div>
-                    <Switch
-                        id="horz-lines"
-                        checked={settings.background.grid.horzLines.visible}
-                        onCheckedChange={(checked) =>
-                            updateLocal('background.grid.horzLines.visible', checked)
-                        }
-                    />
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/**
- * CANDLES SECTION
- * Controls candlestick appearance and styling
- */
-interface CandlesSectionProps {
-    settings: ChartSettings;
-    updateLocal: (path: string, value: any) => void;
-}
-
-function CandlesSection({ settings, updateLocal }: CandlesSectionProps) {
-    return (
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-1">Candle Styles</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Customize candlestick colors and appearance
-                </p>
-            </div>
-
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                        <Label htmlFor="up-color" className="text-xs font-medium">Bullish Color</Label>
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                            <Input
-                                id="up-color"
-                                type="color"
-                                value={settings.candles.upColor}
-                                onChange={(e) =>
-                                    updateLocal('candles.upColor', e.target.value)
-                                }
-                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
-                            />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.upColor}</span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="down-color" className="text-xs font-medium">Bearish Color</Label>
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                            <Input
-                                id="down-color"
-                                type="color"
-                                value={settings.candles.downColor}
-                                onChange={(e) =>
-                                    updateLocal('candles.downColor', e.target.value)
-                                }
-                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
-                            />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.downColor}</span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="wick-up-color" className="text-xs font-medium">Bullish Wick</Label>
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                            <Input
-                                id="wick-up-color"
-                                type="color"
-                                value={settings.candles.wickupColor}
-                                onChange={(e) =>
-                                    updateLocal('candles.wickupColor', e.target.value)
-                                }
-                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
-                            />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.wickupColor}</span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="wick-down-color" className="text-xs font-medium">Bearish Wick</Label>
-                        <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                            <Input
-                                id="wick-down-color"
-                                type="color"
-                                value={settings.candles.wickDownColor}
-                                onChange={(e) =>
-                                    updateLocal('candles.wickDownColor', e.target.value)
-                                }
-                                className="w-10 h-10 p-1 cursor-pointer shrink-0"
-                            />
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">{settings.candles.wickDownColor}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <div>
-                        <Label htmlFor="border-visible" className="text-sm font-medium cursor-pointer">Candle Borders</Label>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Show borders around candles</p>
-                    </div>
-                    <Switch
-                        id="border-visible"
-                        checked={settings.candles.borderVisible}
-                        onCheckedChange={(checked) =>
-                            updateLocal('candles.borderVisible', checked)
-                        }
-                    />
-                </div>
-            </div>
-        </div>
-    );
+				{/* Footer */}
+				<div className="p-4 border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end gap-3 shrink-0">
+					<Button variant="ghost" onClick={() => action.toggleSettings(false)}>
+						Cancel
+					</Button>
+					<Button onClick={handleSave} className="min-w-[80px]">
+						Save
+					</Button>
+				</div>
+			</div>
+		</div>
+	);
 }
