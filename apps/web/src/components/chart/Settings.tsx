@@ -5,8 +5,8 @@ import { X, Palette, Grid3x3, ChartCandlestick, Moon, Sun } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
-import { ChartSettings, useApp } from '@/components/chart/context';
 import { cn } from "@/lib/utils";
+import { ChartSettings, useUIStore } from '@/stores/useUIStore';
 
 const SettingRow = ({ label, desc, children }: { label: string, desc?: string, children: React.ReactNode }) => (
 	<div className="flex items-center justify-between py-3">
@@ -57,8 +57,12 @@ const TabButton = ({ active, onClick, icon: Icon, label }: any) => (
 // --- Main Component ---
 
 export default function Settings() {
-	const { state, action } = useApp();
-	const { settings } = state;
+	const {
+		toggleSettings,
+		updateSettings,
+		settings
+	} = useUIStore();
+
 	const [localSettings, setLocalSettings] = useState<ChartSettings | null>(null);
 	const [activeTab, setActiveTab] = useState<'appearance' | 'grid' | 'candles'>('appearance');
 
@@ -71,8 +75,8 @@ export default function Settings() {
 	if (!settings.isOpen || !localSettings) return null;
 
 	const handleSave = () => {
-		action.updateSettings(localSettings);
-		action.toggleSettings(false);
+		updateSettings(localSettings);
+		toggleSettings(false);
 	};
 
 	const updateLocal = (path: string, value: any) => {
@@ -99,7 +103,7 @@ export default function Settings() {
 						<h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Settings</h2>
 						<p className="text-sm text-zinc-500 dark:text-zinc-400">Manage your chart preferences</p>
 					</div>
-					<Button variant="ghost" size="icon" onClick={() => action.toggleSettings(false)} className="h-8 w-8 rounded-full">
+					<Button variant="ghost" size="icon" onClick={() => toggleSettings(false)} className="h-8 w-8 rounded-full">
 						<X size={18} />
 					</Button>
 				</div>
@@ -207,7 +211,7 @@ export default function Settings() {
 
 				{/* Footer */}
 				<div className="p-4 border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end gap-3 shrink-0">
-					<Button variant="ghost" onClick={() => action.toggleSettings(false)}>
+					<Button variant="ghost" onClick={() => toggleSettings(false)}>
 						Cancel
 					</Button>
 					<Button onClick={handleSave} className="min-w-[80px]">

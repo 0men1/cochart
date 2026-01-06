@@ -5,16 +5,26 @@ import {
 	createChart,
 	CandlestickSeries,
 	UTCTimestamp,
+	ColorType,
+	IChartApi,
+	ISeriesApi,
+	SeriesType,
 } from "lightweight-charts";
 import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
-import { useApp } from "@/components/chart/context";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
 import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
+import { useUIStore } from "@/stores/useUIStore";
+import { useChartStore } from "@/stores/useChartStore";
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
-	const { state, action, chartRef, seriesRef } = useApp();
-	const { product, timeframe } = state.chart.data;
+	const { settings } = useUIStore();
+	const { product, timeframe } = useChartStore((state) => state.data);
+	const { setDataConnectionState, setInstances } = useChartStore((state) => state);
+
+	const chartRef = useRef<IChartApi | null>(null);
+	const seriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
+
 	const resizeObserverRef = useRef<ResizeObserver | null>(null);
 	const [chartInitialized, setChartInitialized] = useState(false);
 
@@ -81,7 +91,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 				return;
 			}
 
-			const candles = await fetchHistoricalCandles(product.symbol, state.chart.data.product.exchange, timeframe, anchor, end);
+			const candles = await fetchHistoricalCandles(product.symbol, product.exchange, timeframe, anchor, end);
 
 			// mrge new candles into map
 			candles.forEach(candle => { currentCandles.current.set(candle.time as number, candle); });
@@ -109,23 +119,18 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 	useEffect(() => {
 		if (!containerRef.current) return;
 
-		// cleanup previous
-		if (chartRef.current) {
-			chartRef.current.remove();
-		}
-
 		const chart = createChart(containerRef.current, {
 			width: containerRef.current.clientWidth,
 			height: containerRef.current.clientHeight,
 			layout: {
 				attributionLogo: false,
-				textColor: state.settings.background.theme === 'light' ? 'black' : 'white',
-				background: state.settings.background.theme === 'light' ? ThemeConfig.light.background : ThemeConfig.dark.background,
+				textColor: settings.background.theme === 'light' ? 'black' : 'white',
+				background: settings.background.theme === 'light' ? ThemeConfig.light.background : ThemeConfig.dark.background,
 			},
-			crosshair: { mode: state.settings.cursor }, // Normal=0, Magnet=1, Hidden=2, MagentOHLC=3
+			crosshair: { mode: settings.cursor }, // Normal=0, Magnet=1, Hidden=2, MagentOHLC=3
 			grid: {
-				vertLines: state.settings.background.grid.vertLines,
-				horzLines: state.settings.background.grid.horzLines
+				vertLines: settings.background.grid.vertLines,
+				horzLines: settings.background.grid.horzLines
 			},
 			timeScale: {
 				timeVisible: true,
@@ -133,15 +138,15 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 				tickMarkFormatter: (time: number) => {
 					const date = new Date(time * 1000);
 					return (timeframe === '1D')
-						? date.toLocaleDateString([], { timeZone: state.settings.timezone })
-						: date.toLocaleTimeString([], { timeZone: state.settings.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
+						? date.toLocaleDateString([], { timeZone: settings.timezone })
+						: date.toLocaleTimeString([], { timeZone: settings.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
 				}
 			},
 			localization: {
 				timeFormatter: (time: number) => {
 					const date = new Date(time * 1000);
 					return date.toLocaleString([], {
-						timeZone: state.settings.timezone,
+						timeZone: settings.timezone,
 						year: 'numeric', month: 'short', day: 'numeric',
 						hour: '2-digit', minute: '2-digit', hour12: false
 					});
@@ -150,15 +155,16 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 		});
 
 		const series = chart.addSeries(CandlestickSeries, {
-			upColor: state.settings.candles.upColor,
-			downColor: state.settings.candles.downColor,
-			borderVisible: state.settings.candles.borderVisible,
-			wickUpColor: state.settings.candles.wickupColor,
-			wickDownColor: state.settings.candles.wickDownColor,
+			upColor: settings.candles.upColor,
+			downColor: settings.candles.downColor,
+			borderVisible: settings.candles.borderVisible,
+			wickUpColor: settings.candles.wickupColor,
+			wickDownColor: settings.candles.wickDownColor,
 		});
 
 		chartRef.current = chart;
 		seriesRef.current = series;
+		setInstances(chart, series);
 
 		chart.timeScale().subscribeVisibleLogicalRangeChange(async (logicalRange) => {
 			if (!logicalRange) return;
@@ -183,8 +189,8 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 		});
 
 		const resizeObserver = new ResizeObserver(() => {
-			if (containerRef.current && chartRef.current) {
-				chartRef.current.applyOptions({
+			if (containerRef.current) {
+				chart.applyOptions({
 					width: containerRef.current.clientWidth,
 					height: containerRef.current.clientHeight,
 				});
@@ -198,9 +204,10 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			chart.remove();
 			chartRef.current = null;
 			seriesRef.current = null;
+			setInstances(null, null);
 		};
 
-	}, [product.symbol, timeframe, state.settings.timezone, loadHistoricalCandles, interval, containerRef]);
+	}, [product, timeframe, containerRef]);
 
 	// WEBSOCKET SETUP
 	useEffect(() => {
@@ -208,20 +215,20 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			try {
 				if (connectionState?.status !== ConnectionStatus.CONNECTED) {
 					unsubscribeTickData.current = await subscribeToTicks(product.symbol, product.exchange, updateChart);
-					unsubscribeStatusListener.current = await subscribeToStatus(product.exchange, action.setChartConnectionState);
-					action.setChartConnectionState({ status: ConnectionStatus.CONNECTED, reconnectAttempts: 0 });
+					unsubscribeStatusListener.current = await subscribeToStatus(product.exchange, setDataConnectionState);
+					setDataConnectionState({ status: ConnectionStatus.CONNECTED, reconnectAttempts: 0 });
 				}
 			} catch (error) {
 				console.error("failed to fetch tick data: ", error);
-				action.setChartConnectionState({ status: ConnectionStatus.ERROR, reconnectAttempts: 0 });
+				setDataConnectionState({ status: ConnectionStatus.ERROR, reconnectAttempts: 0 });
 			}
 		};
 
 		setupTickConnection();
 
 		return () => {
-			if (unsubscribeStatusListener.current) unsubscribeStatusListener.current();
-			if (unsubscribeTickData.current) unsubscribeTickData.current();
+			unsubscribeStatusListener.current?.();
+			unsubscribeTickData.current?.();
 			setConnectionState(null);
 		};
 	}, [product, updateChart]);
@@ -237,31 +244,32 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 
 	// STYLE UPDATES
 	useEffect(() => {
-		if (!chartRef.current) return;
-		chartRef.current.applyOptions({
-			layout: state.settings.background.theme === 'light' ? ThemeConfig.light : ThemeConfig.dark,
-			crosshair: { mode: state.settings.cursor },
-			grid: {
-				vertLines: state.settings.background.grid.vertLines,
-				horzLines: state.settings.background.grid.horzLines
-			}
-		});
-	}, [state.settings.cursor, state.settings.background, state.settings.background.theme]);
+		if (!chartRef.current || !seriesRef.current) return;
 
-	useEffect(() => {
-		if (!seriesRef.current) return;
-		seriesRef.current.applyOptions({
-			upColor: state.settings.candles.upColor,
-			downColor: state.settings.candles.downColor,
-			borderVisible: state.settings.candles.borderVisible,
-			wickUpColor: state.settings.candles.wickupColor,
-			wickDownColor: state.settings.candles.wickDownColor,
+		chartRef.current.applyOptions({
+			layout: {
+				background: {
+					type: ColorType.Solid,
+					color: settings.background.theme === 'dark' ? '#09090b' : '#ffffff'
+				},
+				textColor: settings.background.theme === 'dark' ? '#d4d4d8' : '#18181b',
+			},
+			grid: {
+				vertLines: settings.background.grid.vertLines,
+				horzLines: settings.background.grid.horzLines
+			},
+			crosshair: { mode: settings.cursor },
 		});
-	}, [state.settings.candles]);
+		seriesRef.current.applyOptions({
+			upColor: settings.candles.upColor,
+			downColor: settings.candles.downColor,
+			borderVisible: settings.candles.borderVisible,
+			wickUpColor: settings.candles.wickupColor,
+			wickDownColor: settings.candles.wickDownColor,
+		});
+	}, [settings]);
 
 	return {
-		chart: chartRef.current,
-		series: seriesRef.current,
 		isChartInitialized: chartInitialized
 	};
 }
