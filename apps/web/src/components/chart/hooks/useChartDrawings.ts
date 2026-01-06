@@ -32,7 +32,7 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
 
 export function useChartDrawings() {
 	const { id, drawings, tools, chartApi, seriesApi, cancelTool } = useChartStore();
-	const { addDrawing, initializeDrawings } = useChartStore();
+	const { addDrawing, initializeDrawings, selectDrawing } = useChartStore();
 
 	const drawingsRef = useRef<Map<string, BaseDrawing>>(new Map());
 	const isInitializedRef = useRef<string | null>(null);
@@ -70,7 +70,7 @@ export function useChartDrawings() {
 		if (isInitializedRef.current !== id) return;
 
 		const currentDrawings = drawingsRef.current;
-		const collectionDrawings = drawings;
+		const collectionDrawings = drawings.collection;
 
 		// Attach drawings that do appear in collection but not in drawingsRef
 		collectionDrawings.forEach(drawing => {
@@ -98,8 +98,7 @@ export function useChartDrawings() {
 	useEffect(() => {
 		if (!id) return;
 		if (isInitializedRef.current !== id) return;
-		console.log("SETTING DRAWINGS", id, drawings)
-		setDrawings(id, drawings);
+		setDrawings(id, drawings.collection);
 	}, [id, drawings]);
 
 
@@ -114,17 +113,28 @@ export function useChartDrawings() {
 		try {
 			if (!param.point || !param.logical) return;
 			if (tools.activeHandler) {
-				console.log("click")
 				const inst = tools.activeHandler.onClick(param.point.x, param.point.y);
 				if (inst) {
 					if (seriesApi) {
 						seriesApi.attachPrimitive(inst);
 						drawingsRef.current.set(inst.id, inst);
-						addDrawing(inst);
-						cancelTool()
+						addDrawing(inst); // reducer should serialize internally
+						cancelTool();
 					}
 				}
 				return;
+			}
+			const hoveredId = param.hoveredObjectId as string;
+			const hit = drawingsRef.current.get(hoveredId);
+			if (hit) {
+				if (drawings.selected && hit.id !== drawings.selected.id) {
+					drawingsRef.current.get(drawings.selected.id)?.setSelected(false);
+				}
+				hit.setSelected(true);
+				selectDrawing(hit);
+			} else if (drawings.selected) {
+				drawingsRef.current.get(drawings.selected.id)?.setSelected(false);
+				selectDrawing(null);
 			}
 		} catch (e) { console.error(e); }
 	}, [tools.activeHandler, drawings, seriesApi]);

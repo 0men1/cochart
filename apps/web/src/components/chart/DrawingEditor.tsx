@@ -1,14 +1,10 @@
-/*
- *
-
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Trash, Type } from 'lucide-react';
-import { useApp } from '@/components/chart/context';
-
+import { useChartStore } from '@/stores/useChartStore';
 
 export const DrawingEditor: React.FC = () => {
 	const [values, setValues] = useState<Record<string, any>>({});
@@ -16,14 +12,14 @@ export const DrawingEditor: React.FC = () => {
 	const [textInput, setTextInput] = useState('');
 	const editorRef = useRef<HTMLDivElement>(null);
 	const colorPickerActive = useRef(false);
-	const { state, action } = useApp();
 
-	const { selected } = state.chart.drawings
+	const { deleteDrawing, drawings } = useChartStore();
+	const { selected } = drawings
 
 	const handleDelete = async () => {
 		if (!selected) return;
-		selected.delete()
-		action.deleteDrawing(selected)
+		selected.delete();
+		deleteDrawing(selected);
 	}
 
 	useEffect(() => {
@@ -147,9 +143,9 @@ export const DrawingEditor: React.FC = () => {
 							autoFocus
 						/>
 
-			
+
 						<div className="flex items-center space-x-2">
-				
+
 							{labelTextColorOption && (
 								<div className="flex items-center">
 									<span className="text-xs mr-1">Text:</span>
@@ -168,7 +164,7 @@ export const DrawingEditor: React.FC = () => {
 								</div>
 							)}
 
-		
+
 							{labelBackgroundColorOption && (
 								<div className="flex items-center">
 									<span className="text-xs mr-1">Background:</span>
@@ -192,4 +188,3 @@ export const DrawingEditor: React.FC = () => {
 		</div>
 	);
 };
- * */

@@ -11,6 +11,7 @@ import TickerSearchBox from './TickerSearchBox';
 import ChartFooter from './ChartFooter';
 import FeatureSpotlight from '../onboarding/FeatureSpotlight';
 import { useUIStore } from '@/stores/useUIStore';
+import { DrawingEditor } from './DrawingEditor';
 
 
 export default function ClientChart() {
@@ -57,6 +58,10 @@ function ProvideConsumer() {
 						</div>
 						)*/}
 					</div>
+					<div className="absolute top-4 right-4 z-10">
+						<DrawingEditor />
+					</div>
+
 				</div>
 
 				<FeatureSpotlight

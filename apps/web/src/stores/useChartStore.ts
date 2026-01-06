@@ -20,7 +20,10 @@ interface ToolState {
 
 interface ChartState {
 	id: string;
-	drawings: SerializedDrawing[];
+	drawings: {
+		collection: SerializedDrawing[];
+		selected: BaseDrawing | null;
+	};
 	data: DataState;
 	chartApi: IChartApi | null;
 	seriesApi: ISeriesApi<SeriesType> | null;
@@ -31,6 +34,7 @@ interface ChartState {
 	setDataConnectionState: (state: ConnectionState) => void;
 	addDrawing: (drawing: BaseDrawing) => void;
 	deleteDrawing: (drawing: BaseDrawing) => void;
+	selectDrawing: (drawing: BaseDrawing | null) => void;
 	startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => void;
 	cancelTool: () => void;
 	initializeDrawings: (drawings: SerializedDrawing[]) => void;
@@ -51,7 +55,10 @@ const defaultData: DataState = {
 export const useChartStore = create<ChartState>((set) => ({
 	id: `${defaultData.product.symbol}:${defaultData.product.exchange}`,
 	data: defaultData,
-	drawings: [],
+	drawings: {
+		collection: [],
+		selected: null
+	},
 	chartApi: null,
 	seriesApi: null,
 	tools: {
@@ -83,10 +90,23 @@ export const useChartStore = create<ChartState>((set) => ({
 		}
 	})),
 	addDrawing: (drawing: BaseDrawing) => set((state) => ({
-		drawings: [...state.drawings, drawing.serialize()]
+		drawings: {
+			...state.drawings,
+			collection: [...state.drawings.collection, drawing.serialize()]
+		}
+
+	})),
+	selectDrawing: (drawing: BaseDrawing | null) => set((state) => ({
+		drawings: {
+			...state.drawings,
+			selected: drawing
+		}
 	})),
 	deleteDrawing: (drawing: BaseDrawing) => set((state) => ({
-		drawings: state.drawings.filter(d => d.id !== drawing.id)
+		drawings: {
+			selected: null,
+			collection: state.drawings.collection.filter(d => d.id !== drawing.id)
+		}
 	})),
 	startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => set((state) => ({
 		...state,
@@ -102,7 +122,10 @@ export const useChartStore = create<ChartState>((set) => ({
 			activeHandler: null
 		}
 	})),
-	initializeDrawings: (drawings: SerializedDrawing[]) => set(({
-		drawings
+	initializeDrawings: (drawings: SerializedDrawing[]) => set((state) => ({
+		drawings: {
+			...state.drawings,
+			collection: drawings
+		}
 	}))
 }))
