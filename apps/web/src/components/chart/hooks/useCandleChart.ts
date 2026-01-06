@@ -119,6 +119,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			height: containerRef.current.clientHeight,
 			layout: {
 				attributionLogo: false,
+				textColor: state.settings.background.theme === 'light' ? 'black' : 'white',
 				background: state.settings.background.theme === 'light' ? ThemeConfig.light.background : ThemeConfig.dark.background,
 			},
 			crosshair: { mode: state.settings.cursor }, // Normal=0, Magnet=1, Hidden=2, MagentOHLC=3

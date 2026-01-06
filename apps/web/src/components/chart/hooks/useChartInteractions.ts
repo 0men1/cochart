@@ -1,31 +1,31 @@
-'use client'
-
+"use client"
 import { useCallback, useEffect } from "react";
 import { useApp } from "../context";
 
 export function useChartInteraction() {
-    const { action } = useApp();
+	const { action } = useApp();
 
-    const keyDownHandler = useCallback((event: KeyboardEvent) => {
-        if (/^[a-zA-Z]$/.test(event.key)) {
-            action.toggleTickerSearchBoxAndSetTerm("");
-        }
+	const keyDownHandler = useCallback((event: KeyboardEvent) => {
+		if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+			return;
+		}
 
-        switch (event.key) {
-            case 'Escape':
-                action.toggleTickerSearchBox(false);
-                action.toggleCollabWindow(false);
-                action.cancelTool();
-                break;
-            default:
-                break;
-        }
-    }, [])
+		if (/^[a-zA-Z]$/.test(event.key)) {
+			action.toggleTickerSearchBoxAndSetTerm(event.key);
+		}
 
-    useEffect(() => {
-        window.addEventListener('keydown', keyDownHandler)
-        return () => {
-            window.removeEventListener('keydown', keyDownHandler)
-        }
-    }, [keyDownHandler])
+		switch (event.key) {
+			case 'Escape':
+				break;
+			default:
+				break;
+		}
+	}, [action])
+
+	useEffect(() => {
+		window.addEventListener('keydown', keyDownHandler)
+		return () => {
+			window.removeEventListener('keydown', keyDownHandler)
+		}
+	}, [keyDownHandler])
 }
