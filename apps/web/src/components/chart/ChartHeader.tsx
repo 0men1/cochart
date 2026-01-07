@@ -107,7 +107,7 @@ export default function ChartHeader() {
 							<div className="space-y-1 text-xs">
 								<div className="flex items-center justify-between">
 									<span>Collab Connection:</span>
-									{/* getStatusDiv(state.collaboration.room.status)*/}
+									{getStatusDiv(status)}
 								</div>
 								<div className="flex items-center justify-between">
 									<span>Candle Data:</span>
