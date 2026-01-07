@@ -3,6 +3,7 @@ package rooms
 import (
 	"encoding/json"
 	"log"
+	"time"
 )
 
 type Room struct {
@@ -86,7 +87,7 @@ func (r *Room) broadcastToAll(message []byte) {
 	for client := range r.Clients {
 		select {
 		case client.Send <- message:
-		default:
+		case <-time.After(100 * time.Millisecond):
 			log.Printf("Removing unresponsive client: %s\n", client.DisplayName)
 			close(client.Send)
 			delete(r.Clients, client)
@@ -102,7 +103,7 @@ func (r *Room) broadcastToOthers(message []byte, sender *Client) {
 
 		select {
 		case client.Send <- message:
-		default:
+		case <-time.After(100 * time.Millisecond):
 			log.Printf("Removing unresponsive client: %s\n", client.DisplayName)
 			close(client.Send)
 			delete(r.Clients, client)

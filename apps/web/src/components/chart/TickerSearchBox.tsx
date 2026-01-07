@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import { useApp } from "./context"
 import TickerSearchItem from "./TickerSearchItem";
+import { useUIStore } from "@/stores/useUIStore";
+import { useChartStore } from "@/stores/useChartStore";
 
 const SearchIcon = ({ className }: { className?: string }) => (
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -24,9 +25,16 @@ interface SearchResult {
 	Type: string;
 }
 
-export default function TickerSearchBox() {
-	const { state, action } = useApp();
-	const [query, setQuery] = useState(state.tickerSearchBox.searchTerm);
+interface TickerSearchBoxProps {
+	onClose?: () => void;
+}
+
+export default function TickerSearchBox({ onClose }: TickerSearchBoxProps) {
+
+	const { tickerSearchBox } = useUIStore();
+	const { selectChart, data } = useChartStore();
+
+	const [query, setQuery] = useState(tickerSearchBox.searchTerm);
 	const [results, setResults] = useState<SearchResult[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [cursor, setCursor] = useState(0);
@@ -41,21 +49,21 @@ export default function TickerSearchBox() {
 	}, [results, cursor]);
 
 	const handleSelect = (item: SearchResult) => {
-		action.toggleTickerSearchBox(false);
-		action.selectChart({
+		if (onClose) onClose();
+		selectChart({
 			symbol: item.ID,
 			name: item.Name,
 			exchange: item.Exchange
-		}, state.chart.data.timeframe);
+		}, data.timeframe);
 	};
 
 	useEffect(() => {
-		if (!state.tickerSearchBox.isOpen) {
+		if (!tickerSearchBox.isOpen) {
 			setQuery("");
 			setResults([]);
 			setCursor(0);
 		} else {
-			const term = state.tickerSearchBox.searchTerm;
+			const term = tickerSearchBox.searchTerm;
 			setQuery(term);
 
 			setTimeout(() => {
@@ -70,7 +78,7 @@ export default function TickerSearchBox() {
 				}
 			}, 0);
 		}
-	}, [state.tickerSearchBox.isOpen, state.tickerSearchBox.searchTerm]);
+	}, [tickerSearchBox.isOpen, tickerSearchBox.searchTerm]);
 
 	useEffect(() => {
 		const handleKey = (e: KeyboardEvent) => {
@@ -83,7 +91,7 @@ export default function TickerSearchBox() {
 
 			switch (e.key) {
 				case "Escape":
-					action.toggleTickerSearchBox(false);
+					if (onClose) onClose();
 					break;
 				case "Enter":
 					if (currentResults.length > 0) {
@@ -104,7 +112,7 @@ export default function TickerSearchBox() {
 		};
 		window.addEventListener("keydown", handleKey);
 		return () => window.removeEventListener("keydown", handleKey);
-	}, [action]);
+	}, []);
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -140,11 +148,11 @@ export default function TickerSearchBox() {
 		};
 	}, [query]);
 
-	if (!state.tickerSearchBox.isOpen) return null;
+	if (!tickerSearchBox.isOpen) return null;
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-start justify-center pt-16 md:pt-[20vh] px-4 bg-black/80 backdrop-blur-sm">
-			<div className="absolute inset-0" onClick={() => action.toggleTickerSearchBox(false)}></div>
+			<div className="absolute inset-0" onClick={onClose}></div>
 
 			<div className="relative z-50 w-full max-w-lg overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 

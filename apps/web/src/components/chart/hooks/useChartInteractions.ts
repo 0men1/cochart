@@ -1,9 +1,9 @@
 "use client"
 import { useCallback, useEffect } from "react";
-import { useApp } from "../context";
+import { useUIStore } from "@/stores/useUIStore";
 
 export function useChartInteraction() {
-	const { action } = useApp();
+	const { toggleTickerSearch } = useUIStore();
 
 	const keyDownHandler = useCallback((event: KeyboardEvent) => {
 		if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
@@ -11,7 +11,7 @@ export function useChartInteraction() {
 		}
 
 		if (/^[a-zA-Z]$/.test(event.key)) {
-			action.toggleTickerSearchBoxAndSetTerm(event.key);
+			toggleTickerSearch(true, event.key);
 		}
 
 		switch (event.key) {
@@ -20,7 +20,7 @@ export function useChartInteraction() {
 			default:
 				break;
 		}
-	}, [action])
+	}, [])
 
 	useEffect(() => {
 		window.addEventListener('keydown', keyDownHandler)
