@@ -1,9 +1,11 @@
 import { BaseDrawingHandler, DrawingTool, SerializedDrawing } from "@/core/chart/drawings/types";
-import { Product } from "./types";
+import { CollabAction, Product } from "./types";
 import { ConnectionState, ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
 import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
+import { useCollabStore } from "./useCollabStore";
 
 
 interface DataState {
@@ -38,7 +40,9 @@ interface ChartState {
 	startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => void;
 	cancelTool: () => void;
 	initializeDrawings: (drawings: SerializedDrawing[]) => void;
-
+	syncChart: (product: Product, timeframe: IntervalKey) => void;
+	syncAddDrawing: (drawings: SerializedDrawing) => void;
+	syncDeleteDrawing: (drawingId: string) => void;
 }
 
 const defaultData: DataState = {
@@ -52,80 +56,112 @@ const defaultData: DataState = {
 	connectionState: { status: ConnectionStatus.DISCONNECTED, reconnectAttempts: 0 },
 }
 
-export const useChartStore = create<ChartState>((set) => ({
-	id: `${defaultData.product.symbol}:${defaultData.product.exchange}`,
-	data: defaultData,
-	drawings: {
-		collection: [],
-		selected: null
-	},
-	chartApi: null,
-	seriesApi: null,
-	tools: {
-		activeTool: null,
-		activeHandler: null
-	},
-	setProduct: (product: Product) => set((state) => ({
-		...state,
-		data: {
-			...state.data,
-			product
-		}
-	})),
-	selectChart: (product: Product, timeframe: IntervalKey) => set((state) => ({
-		...state,
-		id: `${product.symbol}:${product.exchange}`,
-		data: {
-			...state.data,
-			product,
-			timeframe
-		}
-	})),
-	setInstances: (chartApi: IChartApi | null, seriesApi: ISeriesApi<SeriesType> | null) => set({ chartApi, seriesApi }),
-	setDataConnectionState: (connectionState: ConnectionState) => set((state) => ({
-		...state,
-		data: {
-			...state.data,
-			connectionState
-		}
-	})),
-	addDrawing: (drawing: BaseDrawing) => set((state) => ({
+export const useChartStore = create<ChartState>()(
+	immer((set) => ({
+		id: `${defaultData.product.symbol}:${defaultData.product.exchange}`,
+		data: defaultData,
 		drawings: {
-			...state.drawings,
-			collection: [...state.drawings.collection, drawing.serialize()]
-		}
-
-	})),
-	selectDrawing: (drawing: BaseDrawing | null) => set((state) => ({
-		drawings: {
-			...state.drawings,
-			selected: drawing
-		}
-	})),
-	deleteDrawing: (drawing: BaseDrawing) => set((state) => ({
-		drawings: {
-			selected: null,
-			collection: state.drawings.collection.filter(d => d.id !== drawing.id)
-		}
-	})),
-	startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => set((state) => ({
-		...state,
-		tools: {
-			activeTool: tool,
-			activeHandler: handler
-		}
-	})),
-	cancelTool: () => set((state) => ({
-		...state,
+			collection: [],
+			selected: null
+		},
+		chartApi: null,
+		seriesApi: null,
 		tools: {
 			activeTool: null,
 			activeHandler: null
-		}
-	})),
-	initializeDrawings: (drawings: SerializedDrawing[]) => set((state) => ({
-		drawings: {
-			...state.drawings,
-			collection: drawings
-		}
+		},
+		setProduct: (product: Product) => set((state) => {
+			state.data.product = product;
+		}),
+		selectChart: (product: Product, timeframe: IntervalKey) => {
+			set((state) => {
+				state.id = `${product.symbol}:${product.exchange}`;
+				state.data.product = product;
+				state.data.timeframe = timeframe;
+			});
+
+			// Side effects go outside the set function
+			const { socket, status } = useCollabStore.getState();
+			if (status === ConnectionStatus.CONNECTED && socket) {
+				socket.send(JSON.stringify({
+					type: CollabAction.SELECT_CHART,
+					payload: { product, timeframe }
+				}));
+			}
+		},
+		syncChart: (product: Product, timeframe: IntervalKey) => {
+			console.log("Syncing chart from remote...");
+			set((state) => {
+				state.id = `${product.symbol}:${product.exchange}`;
+				state.data.product = product;
+				state.data.timeframe = timeframe;
+			});
+		},
+		syncAddDrawing: (drawing: SerializedDrawing) => {
+			set((state) => {
+				const exists = state.drawings.collection.some((d: SerializedDrawing) => d.id === drawing.id);
+				if (!exists) {
+					state.drawings.collection.push(drawing);
+				}
+			});
+		},
+		syncDeleteDrawing: (drawingId: string) => {
+			set((state) => {
+				state.drawings.collection = state.drawings.collection.filter(
+					(d: SerializedDrawing) => d.id !== drawingId
+				);
+
+				// Deselect if it was selected
+				if (state.drawings.selected?.id === drawingId) {
+					state.drawings.selected = null;
+				}
+			});
+		},
+		setInstances: (chartApi, seriesApi) => set((state) => {
+			state.chartApi = chartApi;
+			state.seriesApi = seriesApi;
+		}),
+		setDataConnectionState: (connectionState) => set((state) => {
+			state.data.connectionState = connectionState;
+		}),
+		addDrawing: (drawing: BaseDrawing) => {
+			set((state) => {
+				state.drawings.collection.push(drawing.serialize());
+			});
+
+			const { socket, status } = useCollabStore.getState();
+			if (status === ConnectionStatus.CONNECTED && socket) {
+				socket.send(JSON.stringify({
+					type: CollabAction.ADD_DRAWING,
+					payload: { drawing: drawing.serialize() }
+				}));
+			}
+		},
+		selectDrawing: (drawing) => set((state) => {
+			state.drawings.selected = drawing;
+		}),
+		deleteDrawing: (drawing) => set((state) => {
+			state.drawings.selected = null;
+			state.drawings.collection = state.drawings.collection.filter((d: SerializedDrawing) => d.id !== drawing.id);
+
+			const { socket, status } = useCollabStore.getState();
+			if (status === ConnectionStatus.CONNECTED && socket) {
+				socket.send(JSON.stringify({
+					type: CollabAction.DELETE_DRAWING,
+					payload: { drawingId: drawing.id }
+				}));
+			}
+		}),
+		startTool: (tool, handler) => set((state) => {
+			state.tools.activeTool = tool;
+			state.tools.activeHandler = handler;
+		}),
+		cancelTool: () => set((state) => {
+			state.tools.activeTool = null;
+			state.tools.activeHandler = null;
+		}),
+		initializeDrawings: (drawings) => set((state) => {
+			state.drawings.collection = drawings;
+		})
 	}))
-}))
+);

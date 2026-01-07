@@ -1,10 +1,11 @@
-import { Settings, Wifi } from "lucide-react";
+import { Settings, Share2, Users, Wifi } from "lucide-react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { useUIStore } from "@/stores/useUIStore";
 import { useChartStore } from "@/stores/useChartStore";
 import { Product } from "@/stores/types";
+import { useCollabStore } from "@/stores/useCollabStore";
 
 
 function getStatusDiv(status: ConnectionStatus) {
@@ -31,6 +32,9 @@ export default function ChartHeader() {
 	const { data, selectChart } = useChartStore();
 
 	const { toggleTickerSearch } = useUIStore();
+	const { status, roomId, toggleCollabWindow } = useCollabStore();
+
+	const isInRoom = status === ConnectionStatus.CONNECTED && !!roomId;
 
 	const timeframes: string[] = ["1m", "5m", "15m", "1H", "6H", "1D"];
 
@@ -40,10 +44,8 @@ export default function ChartHeader() {
 
 	return (
 		<div className="flex justify-between items-center w-full h-12 px-2 md:px-4 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-			{/* Left side components: Ticker + Timeframes */}
 			<div className="flex items-center min-w-0 flex-1 mr-2">
 				<div className="flex items-center gap-1 w-full">
-					{/* Ticker selector - prevent shrinking so it's always visible */}
 					<Button
 						variant="ghost"
 						size="sm"
@@ -55,7 +57,6 @@ export default function ChartHeader() {
 
 					<div className="shrink-0 w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2" />
 
-					{/* Timeframe selector - Scrollable on mobile */}
 					<div className="flex items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
 						{timeframes.map((time) => (
 							<Button
@@ -75,12 +76,10 @@ export default function ChartHeader() {
 
 
 			<div className="flex items-center gap-2 md:gap-7 shrink-0">
-				{/* Right side components
 				<Button
-					onClick={() => { action.toggleCollabWindow(true) }}
+					onClick={() => { toggleCollabWindow(true) }}
 					className={isInRoom ? "bg-emerald-600 hover:bg-emerald-700 relative" : ""}
-					size="sm" // Smaller on mobile if needed, or stick to default
-				>
+					size="sm" >
 					{isInRoom ? (
 						<>
 							<Users size={16} className="md:mr-2" />
@@ -94,7 +93,7 @@ export default function ChartHeader() {
 						</>
 					)}
 				</Button>
- */}
+
 				{/* Connection Status Icon with Tooltip */}
 				<Tooltip>
 					<TooltipTrigger asChild>

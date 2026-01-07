@@ -30,3 +30,9 @@ export interface Product {
 	name: string;
 	exchange: string;
 }
+
+export enum CollabAction {
+	SELECT_CHART = 'SELECT_CHART',
+	ADD_DRAWING = 'ADD_DRAWING',
+	DELETE_DRAWING = 'DELETE_DRAWING',
+}

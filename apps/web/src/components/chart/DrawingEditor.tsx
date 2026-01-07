@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Trash, Type } from 'lucide-react';
 import { useChartStore } from '@/stores/useChartStore';
 
-export const DrawingEditor: React.FC = () => {
+export const DrawingEditor = () => {
 	const [values, setValues] = useState<Record<string, any>>({});
 	const [showTextInput, setShowTextInput] = useState(false);
 	const [textInput, setTextInput] = useState('');
