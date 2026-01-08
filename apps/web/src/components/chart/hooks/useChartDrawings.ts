@@ -39,16 +39,13 @@ export function useChartDrawings() {
 
 	const attachListeners = useCallback((drawing: BaseDrawing) => {
 		drawing.subscribe(DrawingOperation.DELETE, () => {
-			console.log('delete')
 			deleteDrawing(drawing.id);
 			drawing.options
 		})
 		drawing.subscribe(DrawingOperation.SELECT, () => {
-			console.log('select')
 			selectDrawing(drawing.id);
 		})
 		drawing.subscribe(DrawingOperation.MODIFY, () => {
-			console.log('modify')
 			modifyDrawing(drawing);
 		})
 	}, [addDrawing, modifyDrawing, selectDrawing, drawings.selected])

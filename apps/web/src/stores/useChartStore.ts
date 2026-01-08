@@ -93,7 +93,6 @@ export const useChartStore = create<ChartState>()(
 			}
 		},
 		syncChart: (product: Product, timeframe: IntervalKey) => {
-			console.log("Syncing chart from remote...");
 			set((state) => {
 				state.id = `${product.symbol}:${product.exchange}`;
 				state.data.product = product;

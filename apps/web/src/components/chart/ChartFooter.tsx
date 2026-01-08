@@ -16,7 +16,6 @@ export default function ChartFooter() {
 
 	const handleTimezoneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		setTimezone(e.target.value);
-		console.log("New timezone:", e.target.value);
 	};
 
 	return (

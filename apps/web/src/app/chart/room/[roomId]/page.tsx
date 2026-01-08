@@ -10,7 +10,6 @@ export default function ChartCollabRoom({ params }: { params: Promise<{ roomId: 
 	const { connectSocket } = useCollabStore();
 
 	useEffect(() => {
-		console.log("roomId", roomId)
 		if (roomId) {
 			connectSocket(roomId);
 		}

@@ -50,8 +50,6 @@ export const useCollabStore = create<CollabState>((set, get) => ({
 					? JSON.parse(data)
 					: data;
 
-				console.log("incomingAction", incomingAction)
-
 				const { syncChart, syncAddDrawing, syncDeleteDrawing } = useChartStore.getState();
 				switch (incomingAction.type) {
 					case CollabAction.SELECT_CHART:
