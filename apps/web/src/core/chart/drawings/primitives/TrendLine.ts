@@ -1,5 +1,5 @@
 import { CanvasRenderingTarget2D } from 'fancy-canvas';
-import { IChartApi, ISeriesApi, IPrimitivePaneRenderer, IPrimitivePaneView, SeriesType, Coordinate } from 'lightweight-charts';
+import { IChartApi, ISeriesApi, IPrimitivePaneRenderer, IPrimitivePaneView, SeriesType, Coordinate } from 'cochart-charts';
 import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
@@ -66,20 +66,22 @@ class TrendLinePaneView implements IPrimitivePaneView {
 	}
 
 	update() {
-		if (!this._source.series) {
-			console.warn("Series not attached right")
+		if (this._source["_previewPoints"]) {
+			const points = this._source["_previewPoints"];
+			this._p1.x = points[0].x;
+			this._p1.y = points[0].y;
+			this._p2.x = points[1].x;
+			this._p2.y = points[1].y;
 		}
+		else {
+			const series = this._source.series;
+			const timeScale = this._source.chart.timeScale();
 
-		if (!this._source.chart) {
-			console.warn("Chart not attached right")
+			this._p1.x = timeScale.timeToCoordinate(this._source._p1.time);
+			this._p1.y = series.priceToCoordinate(this._source._p1.price);
+			this._p2.x = timeScale.timeToCoordinate(this._source._p2.time);
+			this._p2.y = series.priceToCoordinate(this._source._p2.price);
 		}
-		const series = this._source.series;
-		const timeScale = this._source.chart.timeScale();
-
-		this._p1.x = timeScale.timeToCoordinate(this._source._p1.time);
-		this._p1.y = series.priceToCoordinate(this._source._p1.price);
-		this._p2.x = timeScale.timeToCoordinate(this._source._p2.time);
-		this._p2.y = series.priceToCoordinate(this._source._p2.price);
 
 		this._renderer._isSelected = this._source.isSelected();
 		this._renderer._options = this._source.options;
@@ -181,21 +183,15 @@ export class TrendLine extends BaseDrawing {
 		return this._paneViews;
 	}
 }
-/**
- * TrendLine.ts:70 Uncaught TypeError: Cannot read properties of undefined (reading 'timeScale')
-    at TrendLinePaneView.update (TrendLine.ts:70:46)
-    at TrendLine.ts:152:43
-    at Array.forEach (<anonymous>)
-    at TrendLine.updateAllViews (TrendLine.ts:152:25)
-    at TrendLine.updateOptions (BaseDrawing.ts:105:14)
-    at updateOption (DrawingEditor.tsx:59:21)
-    at onChange (DrawingEditor.tsx:90:42)
- */
 
 export class TrendLineHandler implements BaseDrawingHandler {
 	private _chart: IChartApi;
 	private _series: ISeriesApi<SeriesType>;
-	private _collectedPoints: Point[] = [];
+	private _activeDrawing: TrendLine | null = null;
+
+	// 1. New Property: Cache the start screen coordinates
+	private _startScreenPoint: { x: Coordinate, y: Coordinate } | null = null;
+	private _animationFrame: number | null = null;
 
 	static config: DrawingConfig = {
 		requiredPoints: 2,
@@ -208,44 +204,81 @@ export class TrendLineHandler implements BaseDrawingHandler {
 	}
 
 	onStart(): void {
-		this._collectedPoints = [];
+		this._activeDrawing = null;
+		this._startScreenPoint = null;
+	}
+
+	onMouseMove(x: Coordinate, y: Coordinate): void {
+		if (!this._activeDrawing || !this._startScreenPoint) return;
+
+		if (this._animationFrame) {
+			cancelAnimationFrame(this._animationFrame);
+		}
+
+		this._animationFrame = requestAnimationFrame(() => {
+			if (!this._activeDrawing || !this._startScreenPoint) return;
+
+			// 2. Optimization: Use cached start point (Zero calculation)
+			// This eliminates the jitter caused by rounding errors in getScreenCoordinates
+			this._activeDrawing.setPreviewPoints([
+				{ x: this._startScreenPoint.x, y: this._startScreenPoint.y },
+				{ x: x, y: y }
+			]);
+		});
 	}
 
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
 		try {
 			const timePoint = this._chart.timeScale().coordinateToTime(x);
-			if (!timePoint) return null;
-
 			const price = this._series.coordinateToPrice(y);
-			if (price === null) return null;
+			if (!timePoint || price === null) return null;
 
-			const point: Point = { time: timePoint, price };
-			this._collectedPoints.push(point);
+			const point: Point = { time: timePoint as any, price };
 
-			if (this._collectedPoints.length === TrendLineHandler.config.requiredPoints) {
-				const drawing = this.createDrawing(this._collectedPoints);
-				return drawing;
+			// --- FIRST CLICK ---
+			if (!this._activeDrawing) {
+				// Initialize drawing
+				this._activeDrawing = new TrendLine([point, point]);
+
+				// Cache the SCREEN position of the start click
+				this._startScreenPoint = { x, y };
+
+				this._series.attachPrimitive(this._activeDrawing);
+				return null;
 			}
 
-			return null;
+			// --- SECOND CLICK ---
+			else {
+				// Update the Model (Time/Price)
+				this._activeDrawing.updatePoints([
+					this._activeDrawing.points[0],
+					point
+				]);
+
+				// 3. Critical Fix: CLEAR the preview override.
+				// This tells the View: "Stop using raw pixels, go back to using Time/Price"
+				this._activeDrawing.setPreviewPoints(null);
+
+				const finishedDrawing = this._activeDrawing;
+
+				// Reset Handler State
+				this._activeDrawing = null;
+				this._startScreenPoint = null;
+				if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
+
+				return finishedDrawing;
+			}
 		} catch (error) {
 			console.error("failed to create trendline: ", error)
 			return null;
 		}
 	}
 
-	createDrawing(points: Point[]): BaseDrawing | null {
-		try {
-			const drawing = new TrendLine(points);
-			this._collectedPoints = [];
-			return drawing;
-		} catch (e) {
-			console.error("error: afiled to create trendLine. ", e);
-			return null;
-		}
-	}
-
 	onCancel(): void {
-		this._collectedPoints = [];
+		if (this._activeDrawing) {
+			this._series.detachPrimitive(this._activeDrawing);
+			this._activeDrawing = null;
+			this._startScreenPoint = null;
+		}
 	}
 }

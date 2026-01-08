@@ -1,4 +1,4 @@
-import { Coordinate, Time } from "lightweight-charts";
+import { Coordinate, Time } from "cochart-charts";
 
 export interface Point {
 	time: Time,

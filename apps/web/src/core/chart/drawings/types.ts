@@ -1,14 +1,15 @@
-import { Coordinate } from "lightweight-charts";
+import { Coordinate } from "cochart-charts";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { Point } from "@/core/chart/types";
 
 export interface BaseDrawingHandler {
 	onStart(): void;
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null;
+	onMouseMove(x: Coordinate, y: Coordinate): void;
 	onCancel(): void;
 }
 
-export type DrawingTool = 'trendline' | 'verticalLine' | null;
+export type DrawingTool = 'TREND_LINE' | 'VERTICAL_LINE' | null;
 
 export type EditableOptionType = 'text' | 'color' | 'number' | 'boolean';
 

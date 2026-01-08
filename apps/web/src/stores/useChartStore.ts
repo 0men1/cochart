@@ -1,7 +1,7 @@
 import { BaseDrawingHandler, DrawingTool, SerializedDrawing } from "@/core/chart/drawings/types";
 import { CollabAction, Product } from "./types";
 import { ConnectionState, ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
-import { IChartApi, ISeriesApi, SeriesType } from "lightweight-charts";
+import { IChartApi, ISeriesApi, SeriesType } from "cochart-charts";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";

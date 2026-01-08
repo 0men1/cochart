@@ -12,6 +12,7 @@ TASKS (ordered by priority):
 Requirements
 - Get a better drawing system (provide more tool options)
    - The drawing system can be greatly improved. fork LWC and extend to drag drawings and their control points.
+   - FORKED! Now working to improve the drawing system internally rather than do workarounds
 
 PROBLEM DISCOVERY:
 - Issues on mobile (Connections are established but deltas are not visibly updating the state (indexdb issue))

@@ -1,4 +1,4 @@
-import { CrosshairMode } from "lightweight-charts";
+import { CrosshairMode } from "cochart-charts";
 
 export interface ChartSettings {
 	isOpen: boolean

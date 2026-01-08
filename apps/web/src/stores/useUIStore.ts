@@ -1,4 +1,4 @@
-import { CrosshairMode } from "lightweight-charts";
+import { CrosshairMode } from "cochart-charts";
 import { create } from "zustand";
 
 export interface ChartSettings {

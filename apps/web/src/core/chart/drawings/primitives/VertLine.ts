@@ -1,5 +1,5 @@
 import { CanvasRenderingTarget2D } from "fancy-canvas";
-import { Coordinate, IChartApi, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesApi, ISeriesPrimitiveAxisView, SeriesType } from "lightweight-charts";
+import { Coordinate, IChartApi, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesApi, ISeriesPrimitiveAxisView, SeriesType } from "cochart-charts";
 import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";
 import { positionsLine } from "./positions";
@@ -247,12 +247,13 @@ export class VerticalLineHandler implements BaseDrawingHandler {
 		this._collectedPoints = [];
 	}
 
+	onMouseMove(x: Coordinate, y: Coordinate): void { }
+
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
 		try {
 			const timePoint = this._chart.timeScale().coordinateToTime(x);
-			if (!timePoint) return null;
 			const price = this._series.coordinateToPrice(y);
-			if (price === null) return null;
+			if (!timePoint || !price) return null;
 
 			const point: Point = { time: timePoint, price: 0 };
 			this._collectedPoints.push(point);

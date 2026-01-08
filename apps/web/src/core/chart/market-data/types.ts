@@ -1,4 +1,4 @@
-import { UTCTimestamp } from "lightweight-charts";
+import { UTCTimestamp } from "cochart-charts";
 
 export type Candlestick = {
 	time: UTCTimestamp,

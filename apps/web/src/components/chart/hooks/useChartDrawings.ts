@@ -4,7 +4,7 @@ import { VertLine } from "@/core/chart/drawings/primitives/VertLine";
 import { SerializedDrawing } from "@/core/chart/drawings/types";
 import { useCallback, useEffect, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
-import { MouseEventParams } from "lightweight-charts";
+import { MouseEventParams } from "cochart-charts";
 import { setCursor } from "@/core/chart/cursor";
 import { useChartStore } from "@/stores/useChartStore";
 /**
@@ -142,11 +142,17 @@ export function useChartDrawings() {
 	const mouseMoveHandler = useCallback((param: MouseEventParams) => {
 		try {
 			if (!param.point || !param.logical) return;
+
+			if (tools.activeHandler) {
+				tools.activeHandler.onMouseMove(param.point.x, param.point.y);
+				return;
+			}
+
 			const hoveredId = param.hoveredObjectId as string;
 			const inst = drawingsRef.current.get(hoveredId);
 			setCursor(inst ? 'pointer' : 'default');
 		} catch (e) { console.error(e); }
-	}, []);
+	}, [tools.activeHandler]);
 
 	useEffect(() => {
 		chartApi?.subscribeCrosshairMove(mouseMoveHandler);

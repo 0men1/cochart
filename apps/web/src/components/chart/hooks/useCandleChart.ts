@@ -9,7 +9,7 @@ import {
 	IChartApi,
 	ISeriesApi,
 	SeriesType,
-} from "lightweight-charts";
+} from "cochart-charts";
 import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";

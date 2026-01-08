@@ -1,4 +1,4 @@
-import { UTCTimestamp } from "lightweight-charts";
+import { UTCTimestamp } from "cochart-charts";
 import { Candlestick } from "./types";
 
 export async function fetchHistoricalCandles(ticker: string, provider: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {

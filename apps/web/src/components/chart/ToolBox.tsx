@@ -38,8 +38,8 @@ function Toolbox() {
 	}
 
 	const buttons = [
-		{ tool: "verticalLine" as DrawingTool, icon: MoveUp, label: "Vertical Line" },
-		{ tool: "trendline" as DrawingTool, icon: MoveDiagonal, label: "Trendline" },
+		{ tool: "VERTICAL_LINE" as DrawingTool, icon: MoveUp, label: "Vertical Line" },
+		{ tool: "TREND_LINE" as DrawingTool, icon: MoveDiagonal, label: "Trendline" },
 	];
 
 	return (
