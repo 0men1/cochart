@@ -1,7 +1,7 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { TrendLine } from "@/core/chart/drawings/primitives/TrendLine";
 import { VertLine } from "@/core/chart/drawings/primitives/VertLine";
-import { SerializedDrawing } from "@/core/chart/drawings/types";
+import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types";
 import { useCallback, useEffect, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
 import { MouseEventParams } from "cochart-charts";
@@ -32,22 +32,31 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
 
 export function useChartDrawings() {
 	const { id, drawings, tools, chartApi, seriesApi, cancelTool } = useChartStore();
-	const { addDrawing, initializeDrawings, selectDrawing } = useChartStore();
+	const { addDrawing, deleteDrawing, initializeDrawings, selectDrawing } = useChartStore();
 
 	const drawingsRef = useRef<Map<string, BaseDrawing>>(new Map());
 	const isInitializedRef = useRef<string | null>(null);
+
+	const attachListeners = useCallback((drawing: BaseDrawing) => {
+		drawing.subscribe(DrawingOperation.DELETE, () => {
+			console.log('delete')
+			drawingsRef.current.delete(drawing.id);
+			deleteDrawing(drawing);
+		})
+
+		drawing.subscribe(DrawingOperation.SELECT, () => {
+			console.log('select')
+			selectDrawing(drawing);
+		})
+	}, [])
 
 	useEffect(() => {
 		if (!seriesApi) return;
 		let active = true;
 
 		(async () => {
-			if (!seriesApi || isInitializedRef.current === id) return;
-
+			if (!seriesApi || isInitializedRef.current === id || !active) return;
 			const recovered = await getDrawings(id)
-
-			if (!active) return;
-
 			initializeDrawings(recovered);
 
 			// 2) restore + attach concrete instances immediately
@@ -55,6 +64,7 @@ export function useChartDrawings() {
 				const inst = restoreDrawing(sd);
 				if (!inst) continue;
 				seriesApi.attachPrimitive(inst);
+				attachListeners(inst);
 				drawingsRef.current.set(inst.id, inst);
 			}
 
@@ -117,6 +127,7 @@ export function useChartDrawings() {
 				if (inst) {
 					if (seriesApi) {
 						seriesApi.attachPrimitive(inst);
+						attachListeners(inst);
 						drawingsRef.current.set(inst.id, inst);
 						addDrawing(inst); // reducer should serialize internally
 						cancelTool();

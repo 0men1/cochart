@@ -1,11 +1,11 @@
 import { IChartApi, ISeriesApi, SeriesType, ISeriesPrimitive, Time, Coordinate, IPrimitivePaneView, SeriesAttachedParameter, ISeriesPrimitiveAxisView, PrimitiveHoveredItem, PrimitivePaneViewZOrder } from 'cochart-charts';
 import { Point } from '@/core/chart/types';
-import { BaseOptions, EditableOption, ISerializable, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, ISerializable, SerializedDrawing } from '../types';
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializable, PrimitiveHoveredItem {
 	protected readonly _id: string;
-
-	abstract serialize(): SerializedDrawing;
+	externalId: string;
+	zOrder: PrimitivePaneViewZOrder = "top";
 
 	protected _isDestroyed: boolean = false;
 	protected _isSelected: boolean = false;
@@ -13,7 +13,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	protected _chart!: IChartApi;
 	protected _series!: ISeriesApi<SeriesType>;
 
-	protected _requestUpdate: (() => void) | null = null;
 	protected _visibleRangeUpdateHandler: (() => void) | null = null;
 
 	public _paneViews: IPrimitivePaneView[];
@@ -25,10 +24,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	private _initialScreenPoints: { x: number, y: number }[] | null = null;
 	private _activeControlPoint: number | null = null;
 
-	externalId: string;
-	cursorStyle?: string | undefined;
-	isBackground?: boolean | undefined;
-	zOrder: PrimitivePaneViewZOrder = "top";
+	private _listeners: Map<DrawingOperation, Set<DrawingListener>> = new Map();
 
 	constructor(
 		protected _points: Point[],
@@ -44,7 +40,25 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		this.initialize();
 	}
 
+	public subscribe(operation: DrawingOperation, listener: DrawingListener): () => void {
+		if (!this._listeners.has(operation)) {
+			this._listeners.set(operation, new Set());
+		}
+		this._listeners.get(operation)?.add(listener);
+		return () => {
+			const listeners = this._listeners.get(operation);
+			if (listeners) {
+				listeners.delete(listener);
+			}
+		}
+	}
 
+	protected notify(operation: DrawingOperation) {
+		const listeners = this._listeners?.get(operation);
+		if (listeners) {
+			listeners.forEach(listener => listener(this));
+		}
+	}
 
 	onDragStart(x: number, y: number): boolean {
 		const hitPointIndex = this.getControlPointsAt(x as Coordinate, y as Coordinate);
@@ -57,6 +71,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		}
 
 		this._isSelected = true;
+		this.notify(DrawingOperation.SELECT);
 		this._dragStartPoint = { x, y };
 		this._initialScreenPoints = this._points.map(p => {
 			const coords = this.getScreenCoordinates(p);
@@ -150,7 +165,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	attached(param: SeriesAttachedParameter<Time>) {
 		this._chart = param.chart;
 		this._series = param.series;
-		this._requestUpdate = param.requestUpdate
 
 		const updateHandler = () => this.updateAllViews();
 		this._chart.timeScale().subscribeVisibleLogicalRangeChange(updateHandler);
@@ -160,8 +174,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	}
 
 	detached() {
-		this._requestUpdate = null;
-
 		if (this._visibleRangeUpdateHandler) {
 			this._chart.timeScale().unsubscribeVisibleLogicalRangeChange(this._visibleRangeUpdateHandler);
 			this._visibleRangeUpdateHandler = null;
@@ -199,16 +211,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		return null;
 	}
 
-	getPosition() {
-		return {
-			points: this._points.map(p => ({
-				time: p.time,
-				price: p.price,
-				screen: this.getScreenCoordinates(p)
-			}))
-		};
-	}
-
 	isSelected(): boolean {
 		return this._isSelected;
 	}
@@ -216,11 +218,13 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	setSelected(selected: boolean): void {
 		if (this._isSelected === selected) return;
 		this._isSelected = selected;
+		this._series.applyOptions(this._series.options());
 		this.updateAllViews()
 	}
 
 	updateOptions(options: Record<string, any>): void {
 		this._options = { ...this._options, ...options };
+		this._series.applyOptions(this._series.options());
 		this.updateAllViews()
 	}
 
@@ -236,11 +240,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		return { x, y };
 	}
 
-	movePoint(index: number, newPoint: Point) {
-		this._points[index] = newPoint
-		this.updateAllViews();
-	}
-
 	updateAllViews(): void {
 		const updateData = { selected: this._isSelected, points: this._points, options: this._options };
 		this._paneViews.forEach(view => {
@@ -248,7 +247,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 				(view as any).update(updateData);
 			}
 		});
-		this._requestUpdate?.();
 	}
 
 	get chart(): IChartApi {
@@ -268,6 +266,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	}
 
 	abstract isPointOnDrawing(x: number, y: number): boolean;
+	abstract serialize(): SerializedDrawing;
 	abstract paneViews(): IPrimitivePaneView[];
 	abstract getEditableOptions(): EditableOption[];
 	protected abstract initialize(): void;

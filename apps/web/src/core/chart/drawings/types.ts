@@ -12,6 +12,15 @@ export type DrawingTool = 'TREND_LINE' | 'VERTICAL_LINE' | null;
 
 export type EditableOptionType = 'text' | 'color' | 'number' | 'boolean';
 
+export enum DrawingOperation {
+	CREATE = 'CREATE',
+	DELETE = 'DELETE',
+	MODIFY = 'MODIFY',
+	SELECT = 'SELECT'
+}
+
+export type DrawingListener = (drawing: BaseDrawing) => void;
+
 export interface EditableOption {
 	key: string;
 	label: string;
@@ -46,13 +55,4 @@ export interface DrawingToolHandler extends BaseDrawingHandler {
 
 export interface DrawingConfig {
 	requiredPoints: number;
-	allowContinuousDrawing?: boolean;
-}
-
-export interface DrawingOperation {
-	id: string;
-	type: 'delete' | 'create' | 'modify';
-	timestamp: Date;
-	drawingId: string;
-	canUndo: boolean;
 }
