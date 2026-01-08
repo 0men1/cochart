@@ -142,12 +142,6 @@ export function useChartDrawings() {
 	const mouseMoveHandler = useCallback((param: MouseEventParams) => {
 		try {
 			if (!param.point || !param.logical) return;
-
-			if (tools.activeHandler) {
-				tools.activeHandler.onMouseMove(param.point.x, param.point.y);
-				return;
-			}
-
 			const hoveredId = param.hoveredObjectId as string;
 			const inst = drawingsRef.current.get(hoveredId);
 			setCursor(inst ? 'pointer' : 'default');

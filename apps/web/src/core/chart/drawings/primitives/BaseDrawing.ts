@@ -2,7 +2,6 @@ import { IChartApi, ISeriesApi, SeriesType, ISeriesPrimitive, Time, Coordinate, 
 import { Point } from '@/core/chart/types';
 import { BaseOptions, EditableOption, ISerializable, SerializedDrawing } from '../types';
 
-
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializable, PrimitiveHoveredItem {
 	protected readonly _id: string;
 
@@ -24,6 +23,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 	private _dragStartPoint: { x: number, y: number } | null = null;
 	private _initialScreenPoints: { x: number, y: number }[] | null = null;
+	private _activeControlPoint: number | null = null;
 
 	externalId: string;
 	cursorStyle?: string | undefined;
@@ -47,11 +47,16 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 
 	onDragStart(x: number, y: number): boolean {
-		if (!this.isPointOnDrawing(x, y)) {
+		const hitPointIndex = this.getControlPointsAt(x as Coordinate, y as Coordinate);
+		if (hitPointIndex !== null) {
+			this._activeControlPoint = hitPointIndex;
+		} else if (this.isPointOnDrawing(x, y)) {
+			this._activeControlPoint = null;
+		} else {
 			return false;
 		}
 
-		this._isSelected = true; // Auto-select on drag start
+		this._isSelected = true;
 		this._dragStartPoint = { x, y };
 		this._initialScreenPoints = this._points.map(p => {
 			const coords = this.getScreenCoordinates(p);
@@ -69,6 +74,23 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 		const deltaX = x - this._dragStartPoint.x;
 		const deltaY = y - this._dragStartPoint.y;
+
+		if (this._activeControlPoint !== null) {
+			const newScreenPoints = this._initialScreenPoints.map((p, i) => {
+				if (i === this._activeControlPoint) {
+					return {
+						x: (p.x + deltaX) as Coordinate,
+						y: (p.y + deltaY) as Coordinate
+					}
+				}
+				return {
+					x: p.x as Coordinate,
+					y: p.y as Coordinate
+				};
+			})
+			this.setPreviewPoints(newScreenPoints);
+			return;
+		}
 
 		const newScreenPoints = this._initialScreenPoints.map(p => ({
 			x: (p.x + deltaX) as Coordinate,
@@ -96,11 +118,10 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		this.updateAllViews();
 	}
 
-
-
 	get id(): string {
 		return this._id
 	}
+
 	setPreviewPoints(points: { x: Coordinate, y: Coordinate }[] | null) {
 		this._previewPoints = points;
 		this.updateAllViews();

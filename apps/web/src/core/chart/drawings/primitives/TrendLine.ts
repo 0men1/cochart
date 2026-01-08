@@ -187,15 +187,10 @@ export class TrendLine extends BaseDrawing {
 export class TrendLineHandler implements BaseDrawingHandler {
 	private _chart: IChartApi;
 	private _series: ISeriesApi<SeriesType>;
-	private _activeDrawing: TrendLine | null = null;
-
-	// 1. New Property: Cache the start screen coordinates
-	private _startScreenPoint: { x: Coordinate, y: Coordinate } | null = null;
-	private _animationFrame: number | null = null;
+	private _collectedPoints: Point[] = [];
 
 	static config: DrawingConfig = {
 		requiredPoints: 2,
-		allowContinuousDrawing: false
 	};
 
 	constructor(chart: IChartApi, series: ISeriesApi<SeriesType>) {
@@ -204,27 +199,7 @@ export class TrendLineHandler implements BaseDrawingHandler {
 	}
 
 	onStart(): void {
-		this._activeDrawing = null;
-		this._startScreenPoint = null;
-	}
-
-	onMouseMove(x: Coordinate, y: Coordinate): void {
-		if (!this._activeDrawing || !this._startScreenPoint) return;
-
-		if (this._animationFrame) {
-			cancelAnimationFrame(this._animationFrame);
-		}
-
-		this._animationFrame = requestAnimationFrame(() => {
-			if (!this._activeDrawing || !this._startScreenPoint) return;
-
-			// 2. Optimization: Use cached start point (Zero calculation)
-			// This eliminates the jitter caused by rounding errors in getScreenCoordinates
-			this._activeDrawing.setPreviewPoints([
-				{ x: this._startScreenPoint.x, y: this._startScreenPoint.y },
-				{ x: x, y: y }
-			]);
-		});
+		this._collectedPoints = [];
 	}
 
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
@@ -232,53 +207,31 @@ export class TrendLineHandler implements BaseDrawingHandler {
 			const timePoint = this._chart.timeScale().coordinateToTime(x);
 			const price = this._series.coordinateToPrice(y);
 			if (!timePoint || price === null) return null;
-
 			const point: Point = { time: timePoint as any, price };
-
-			// --- FIRST CLICK ---
-			if (!this._activeDrawing) {
-				// Initialize drawing
-				this._activeDrawing = new TrendLine([point, point]);
-
-				// Cache the SCREEN position of the start click
-				this._startScreenPoint = { x, y };
-
-				this._series.attachPrimitive(this._activeDrawing);
-				return null;
+			this._collectedPoints.push(point);
+			if (this._collectedPoints.length === TrendLineHandler.config.requiredPoints) {
+				const drawing = this.createDrawing(this._collectedPoints);
+				return drawing;
 			}
-
-			// --- SECOND CLICK ---
-			else {
-				// Update the Model (Time/Price)
-				this._activeDrawing.updatePoints([
-					this._activeDrawing.points[0],
-					point
-				]);
-
-				// 3. Critical Fix: CLEAR the preview override.
-				// This tells the View: "Stop using raw pixels, go back to using Time/Price"
-				this._activeDrawing.setPreviewPoints(null);
-
-				const finishedDrawing = this._activeDrawing;
-
-				// Reset Handler State
-				this._activeDrawing = null;
-				this._startScreenPoint = null;
-				if (this._animationFrame) cancelAnimationFrame(this._animationFrame);
-
-				return finishedDrawing;
-			}
+			return null;
 		} catch (error) {
 			console.error("failed to create trendline: ", error)
 			return null;
 		}
 	}
 
-	onCancel(): void {
-		if (this._activeDrawing) {
-			this._series.detachPrimitive(this._activeDrawing);
-			this._activeDrawing = null;
-			this._startScreenPoint = null;
+	createDrawing(points: Point[]): BaseDrawing | null {
+		try {
+			const drawing = new TrendLine(points);
+			this._collectedPoints = [];
+			return drawing;
+		} catch (e) {
+			console.error("error: afiled to create trendLine. ", e);
+			return null;
 		}
+	}
+
+	onCancel(): void {
+		this._collectedPoints = [];
 	}
 }

@@ -61,13 +61,19 @@ class VertLinePaneView implements IPrimitivePaneView {
 	}
 
 	update() {
-		const series = this._source.series;
-		const timeScale = this._source.chart.timeScale();
-		this._p1.x = timeScale.timeToCoordinate(this._source._p1.time)
-		this._p1.y = series.priceToCoordinate(this._source._p1.price)
-
+		if (this._source["_previewPoints"]) {
+			const points = this._source["_previewPoints"];
+			this._p1.x = points[0].x;
+			this._p1.y = points[0].y;
+		}
+		else {
+			const series = this._source.series;
+			const timeScale = this._source.chart.timeScale();
+			this._p1.x = timeScale.timeToCoordinate(this._source._p1.time);
+			this._p1.y = series.priceToCoordinate(this._source._p1.price);
+		}
 		this._renderer._isSelected = this._source.isSelected();
-		this._renderer._options = this._source._options;
+		this._renderer._options = this._source.options;
 	}
 
 	renderer() {
@@ -235,7 +241,6 @@ export class VerticalLineHandler implements BaseDrawingHandler {
 
 	static config: DrawingConfig = {
 		requiredPoints: 1,
-		allowContinuousDrawing: true
 	};
 
 	constructor(chart: IChartApi, series: ISeriesApi<SeriesType>) {
@@ -247,22 +252,17 @@ export class VerticalLineHandler implements BaseDrawingHandler {
 		this._collectedPoints = [];
 	}
 
-	onMouseMove(x: Coordinate, y: Coordinate): void { }
-
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
 		try {
 			const timePoint = this._chart.timeScale().coordinateToTime(x);
 			const price = this._series.coordinateToPrice(y);
 			if (!timePoint || !price) return null;
-
 			const point: Point = { time: timePoint, price: 0 };
 			this._collectedPoints.push(point);
-
 			if (this._collectedPoints.length >= VerticalLineHandler.config.requiredPoints) {
 				const drawing = this.createDrawing(this._collectedPoints);
 				return drawing
 			}
-
 			return null;
 		} catch (error) {
 			console.error("failed to create vertline: ", error);

@@ -5,7 +5,6 @@ import { Point } from "@/core/chart/types";
 export interface BaseDrawingHandler {
 	onStart(): void;
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null;
-	onMouseMove(x: Coordinate, y: Coordinate): void;
 	onCancel(): void;
 }
 
