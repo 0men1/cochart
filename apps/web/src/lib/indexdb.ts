@@ -1,3 +1,4 @@
+import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { SerializedDrawing } from "@/core/chart/drawings/types";
 
 const DATABASE_NAME = "COCHART";
@@ -47,7 +48,7 @@ async function ensureDatabase(): Promise<IDBDatabase> {
 	return await initDatabase();
 }
 
-export async function setDrawings(chartId: string, drawings: SerializedDrawing[]): Promise<void> {
+export async function setDrawings(chartId: string, drawings: BaseDrawing[]): Promise<void> {
 	if (!chartId || typeof chartId !== "string") {
 		console.error("Invalid chartId");
 		return;
@@ -60,9 +61,11 @@ export async function setDrawings(chartId: string, drawings: SerializedDrawing[]
 			const tx = database.transaction(DRAWINGS_STORENAME, "readwrite");
 			const store = tx.objectStore(DRAWINGS_STORENAME)
 
+			const serialized_drawings = drawings.map(d => d.serialize());
+
 			const data = {
 				chartId,
-				drawings,
+				drawings: serialized_drawings,
 				timestamp: Date.now(),
 				lastModified: new Date().toISOString()
 			}

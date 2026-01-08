@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Trash, Type } from 'lucide-react';
@@ -16,41 +16,47 @@ export const DrawingEditor = () => {
 	const { deleteDrawing, drawings } = useChartStore();
 	const { selected } = drawings
 
+	const selectedDrawing = useMemo(() => {
+		if (!selected) return null;
+		return drawings.collection.get(selected)
+	}, [selected, drawings]);
+
+
 	const handleDelete = async () => {
 		if (!selected) return;
-		selected.delete();
+		selectedDrawing?.delete();
 		deleteDrawing(selected);
 	}
 
 	useEffect(() => {
-		if (selected) {
+		if (selected && selectedDrawing) {
 			const initialValues: Record<string, any> = {};
-			selected.getEditableOptions().forEach(option => {
+			selectedDrawing?.getEditableOptions().forEach(option => {
 				initialValues[option.key] = option.currentValue;
 			});
 			setValues(initialValues);
 
-			const textOption = selected.getEditableOptions().find(o => o.key === 'labelText');
+			const textOption = selectedDrawing?.getEditableOptions().find(o => o.key === 'labelText');
 			if (textOption) {
 				setTextInput(textOption.currentValue?.toString() || '');
 			}
 		}
-	}, [selected]);
+	}, [selected, selectedDrawing]);
 
-	if (!selected) return null;
+	if (!selectedDrawing) return null;
 
 	const updateOption = (key: string, value: any) => {
 		const newValues = { ...values, [key]: value };
 		setValues(newValues);
-		selected.updateOptions({ [key]: value });
+		selectedDrawing?.updateOptions({ [key]: value });
 	};
 
-	const colorOptions = selected.getEditableOptions().filter(o => o.type === 'color');
-	const numberOptions = selected.getEditableOptions().filter(o => o.type === 'number');
+	const colorOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'color');
+	const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'number');
 
-	const lineColorOption = colorOptions.find(o => o.key === 'color');
-	const labelTextColorOption = colorOptions.find(o => o.key === 'labelTextColor');
-	const labelBackgroundColorOption = colorOptions.find(o => o.key === 'labelBackgroundColor');
+	const lineColorOption = colorOptions?.find(o => o.key === 'color');
+	const labelTextColorOption = colorOptions?.find(o => o.key === 'labelTextColor');
+	const labelBackgroundColorOption = colorOptions?.find(o => o.key === 'labelBackgroundColor');
 
 	const applyTextChanges = () => {
 		if (colorPickerActive.current) {
@@ -89,7 +95,7 @@ export const DrawingEditor = () => {
 					}
 				</Button>
 
-				{numberOptions.map(option => (
+				{numberOptions?.map(option => (
 					<div key={option.key} className="flex items-center space-x-1">
 						<Button
 							size="sm"
