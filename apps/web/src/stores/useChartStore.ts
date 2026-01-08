@@ -6,7 +6,8 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { useCollabStore } from "./useCollabStore";
-
+import { restoreDrawing } from "@/components/chart/hooks/useChartDrawings";
+import { enableMapSet } from "immer";
 
 interface DataState {
 	product: Product
@@ -23,8 +24,8 @@ interface ToolState {
 interface ChartState {
 	id: string;
 	drawings: {
-		collection: SerializedDrawing[];
-		selected: BaseDrawing | null;
+		collection: Map<string, BaseDrawing>;
+		selected: string | null;
 	};
 	data: DataState;
 	chartApi: IChartApi | null;
@@ -35,11 +36,11 @@ interface ChartState {
 	setInstances: (chartApi: IChartApi | null, seriesApi: ISeriesApi<SeriesType> | null) => void;
 	setDataConnectionState: (state: ConnectionState) => void;
 	addDrawing: (drawing: BaseDrawing) => void;
-	deleteDrawing: (drawing: BaseDrawing) => void;
-	selectDrawing: (drawing: BaseDrawing | null) => void;
+	deleteDrawing: (drawingId: string) => void;
+	selectDrawing: (drawingId: string | null) => void;
+	modifyDrawing: (newDrawing: BaseDrawing) => void;
 	startTool: (tool: DrawingTool, handler: BaseDrawingHandler) => void;
 	cancelTool: () => void;
-	initializeDrawings: (drawings: SerializedDrawing[]) => void;
 	syncChart: (product: Product, timeframe: IntervalKey) => void;
 	syncAddDrawing: (drawings: SerializedDrawing) => void;
 	syncDeleteDrawing: (drawingId: string) => void;
@@ -56,12 +57,14 @@ const defaultData: DataState = {
 	connectionState: { status: ConnectionStatus.DISCONNECTED, reconnectAttempts: 0 },
 }
 
+enableMapSet();
+
 export const useChartStore = create<ChartState>()(
 	immer((set) => ({
 		id: `${defaultData.product.symbol}:${defaultData.product.exchange}`,
 		data: defaultData,
 		drawings: {
-			collection: [],
+			collection: new Map(),
 			selected: null
 		},
 		chartApi: null,
@@ -99,20 +102,15 @@ export const useChartStore = create<ChartState>()(
 		},
 		syncAddDrawing: (drawing: SerializedDrawing) => {
 			set((state) => {
-				const exists = state.drawings.collection.some((d: SerializedDrawing) => d.id === drawing.id);
-				if (!exists) {
-					state.drawings.collection.push(drawing);
-				}
+				const baseDrawing = restoreDrawing(drawing);
+				if (!baseDrawing) return;
+				state.drawings.collection.set(drawing.id, baseDrawing);
 			});
 		},
 		syncDeleteDrawing: (drawingId: string) => {
 			set((state) => {
-				state.drawings.collection = state.drawings.collection.filter(
-					(d: SerializedDrawing) => d.id !== drawingId
-				);
-
-				// Deselect if it was selected
-				if (state.drawings.selected?.id === drawingId) {
+				state.drawings.collection.delete(drawingId);
+				if (state.drawings.selected === drawingId) {
 					state.drawings.selected = null;
 				}
 			});
@@ -126,7 +124,7 @@ export const useChartStore = create<ChartState>()(
 		}),
 		addDrawing: (drawing: BaseDrawing) => {
 			set((state) => {
-				state.drawings.collection.push(drawing.serialize());
+				state.drawings.collection.set(drawing.id, drawing);
 			});
 
 			const { socket, status } = useCollabStore.getState();
@@ -137,18 +135,20 @@ export const useChartStore = create<ChartState>()(
 				}));
 			}
 		},
-		selectDrawing: (drawing) => set((state) => {
-			state.drawings.selected = drawing;
+		modifyDrawing: (newDrawing: BaseDrawing) => set((state) => {
+			state.drawings.collection.set(newDrawing.id, newDrawing);
 		}),
-		deleteDrawing: (drawing) => set((state) => {
+		selectDrawing: (drawingId: string | null) => set((state) => {
+			state.drawings.selected = drawingId;
+		}),
+		deleteDrawing: (drawingId: string) => set((state) => {
 			state.drawings.selected = null;
-			state.drawings.collection = state.drawings.collection.filter((d: SerializedDrawing) => d.id !== drawing.id);
-
+			state.drawings.collection.delete(drawingId);
 			const { socket, status } = useCollabStore.getState();
 			if (status === ConnectionStatus.CONNECTED && socket) {
 				socket.send(JSON.stringify({
 					type: CollabAction.DELETE_DRAWING,
-					payload: { drawingId: drawing.id }
+					payload: { drawingId: drawingId }
 				}));
 			}
 		}),
@@ -160,8 +160,5 @@ export const useChartStore = create<ChartState>()(
 			state.tools.activeTool = null;
 			state.tools.activeHandler = null;
 		}),
-		initializeDrawings: (drawings) => set((state) => {
-			state.drawings.collection = drawings;
-		})
 	}))
 );
