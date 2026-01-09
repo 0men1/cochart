@@ -24,9 +24,7 @@ function getStatusDiv(status: ConnectionStatus) {
 }
 
 export default function ChartHeader() {
-	const {
-		toggleSettings
-	} = useUIStore();
+	const { toggleChartSettings } = useChartStore();
 
 	const { product, timeframe } = useChartStore().data;
 	const { data, selectChart } = useChartStore();
@@ -122,7 +120,7 @@ export default function ChartHeader() {
 					variant="outline"
 					size="icon" // Use icon size on mobile for better fit
 					className="rounded-md w-9 h-9 md:w-10 md:h-10"
-					onClick={() => toggleSettings(true)}
+					onClick={() => toggleChartSettings(true)}
 				>
 					<Settings size={18} />
 				</Button>

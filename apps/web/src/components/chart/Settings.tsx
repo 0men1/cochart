@@ -6,7 +6,8 @@ import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { cn } from "@/lib/utils";
-import { ChartSettings, useUIStore } from '@/stores/useUIStore';
+import { useChartStore } from '@/stores/useChartStore';
+import { ChartSettings } from '@/stores/types';
 
 const SettingRow = ({ label, desc, children }: { label: string, desc?: string, children: React.ReactNode }) => (
 	<div className="flex items-center justify-between py-3">
@@ -56,31 +57,31 @@ const TabButton = ({ active, onClick, icon: Icon, label }: any) => (
 
 // --- Main Component ---
 
-export default function Settings() {
+export default function chartSettings() {
 	const {
-		toggleSettings,
-		updateSettings,
-		settings
-	} = useUIStore();
+		toggleChartSettings,
+		setChartSettings,
+		chartSettings
+	} = useChartStore();
 
-	const [localSettings, setLocalSettings] = useState<ChartSettings | null>(null);
+	const [localChartSettings, setLocalChartSettings] = useState<ChartSettings | null>(null);
 	const [activeTab, setActiveTab] = useState<'appearance' | 'grid' | 'candles'>('appearance');
 
 	useEffect(() => {
-		if (settings.isOpen) {
-			setLocalSettings(JSON.parse(JSON.stringify(settings)));
+		if (chartSettings.isOpen) {
+			setLocalChartSettings(chartSettings);
 		}
-	}, [settings.isOpen]);
+	}, [chartSettings.isOpen]);
 
-	if (!settings.isOpen || !localSettings) return null;
+	if (!chartSettings.isOpen || !localChartSettings) return null;
 
 	const handleSave = () => {
-		updateSettings(localSettings);
-		toggleSettings(false);
+		setChartSettings(localChartSettings);
+		toggleChartSettings(false);
 	};
 
 	const updateLocal = (path: string, value: any) => {
-		setLocalSettings(prev => {
+		setLocalChartSettings(prev => {
 			if (!prev) return null;
 			const copy = JSON.parse(JSON.stringify(prev));
 			const keys = path.split('.');
@@ -100,10 +101,10 @@ export default function Settings() {
 				{/* Header */}
 				<div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between shrink-0">
 					<div>
-						<h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Settings</h2>
+						<h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">chartSettings</h2>
 						<p className="text-sm text-zinc-500 dark:text-zinc-400">Manage your chart preferences</p>
 					</div>
-					<Button variant="ghost" size="icon" onClick={() => toggleSettings(false)} className="h-8 w-8 rounded-full">
+					<Button variant="ghost" size="icon" onClick={() => toggleChartSettings(false)} className="h-8 w-8 rounded-full">
 						<X size={18} />
 					</Button>
 				</div>
@@ -137,12 +138,12 @@ export default function Settings() {
 						<div className="space-y-1">
 							<SettingRow label="Theme Mode" desc="Toggle between light and dark mode">
 								<div className="flex items-center gap-3">
-									{localSettings.background.theme === 'dark'
+									{localChartSettings.background.theme === 'dark'
 										? <Moon size={16} className="text-zinc-500" />
 										: <Sun size={16} className="text-zinc-500" />
 									}
 									<Switch
-										checked={localSettings.background.theme === 'dark'}
+										checked={localChartSettings.background.theme === 'dark'}
 										onCheckedChange={(c) => updateLocal('background.theme', c ? 'dark' : 'light')}
 									/>
 								</div>
@@ -154,14 +155,14 @@ export default function Settings() {
 						<div className="space-y-1">
 							<SettingRow label="Vertical Lines" desc="Show vertical time dividers">
 								<Switch
-									checked={localSettings.background.grid.vertLines.visible}
+									checked={localChartSettings.background.grid.vertLines.visible}
 									onCheckedChange={(c) => updateLocal('background.grid.vertLines.visible', c)}
 								/>
 							</SettingRow>
 							<div className="my-2 border-t border-zinc-100 dark:border-zinc-900" />
 							<SettingRow label="Horizontal Lines" desc="Show horizontal price dividers">
 								<Switch
-									checked={localSettings.background.grid.horzLines.visible}
+									checked={localChartSettings.background.grid.horzLines.visible}
 									onCheckedChange={(c) => updateLocal('background.grid.horzLines.visible', c)}
 								/>
 							</SettingRow>
@@ -174,22 +175,22 @@ export default function Settings() {
 								<h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Colors</h3>
 								<ColorRow
 									label="Bullish Body"
-									value={localSettings.candles.upColor}
+									value={localChartSettings.candles.upColor}
 									onChange={(v) => updateLocal('candles.upColor', v)}
 								/>
 								<ColorRow
 									label="Bearish Body"
-									value={localSettings.candles.downColor}
+									value={localChartSettings.candles.downColor}
 									onChange={(v) => updateLocal('candles.downColor', v)}
 								/>
 								<ColorRow
 									label="Bullish Wick"
-									value={localSettings.candles.wickupColor}
+									value={localChartSettings.candles.wickupColor}
 									onChange={(v) => updateLocal('candles.wickupColor', v)}
 								/>
 								<ColorRow
 									label="Bearish Wick"
-									value={localSettings.candles.wickDownColor}
+									value={localChartSettings.candles.wickDownColor}
 									onChange={(v) => updateLocal('candles.wickDownColor', v)}
 								/>
 							</div>
@@ -200,7 +201,7 @@ export default function Settings() {
 								<h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Style</h3>
 								<SettingRow label="Candle Borders" desc="Draw borders around candle bodies">
 									<Switch
-										checked={localSettings.candles.borderVisible}
+										checked={localChartSettings.candles.borderVisible}
 										onCheckedChange={(c) => updateLocal('candles.borderVisible', c)}
 									/>
 								</SettingRow>
@@ -211,7 +212,7 @@ export default function Settings() {
 
 				{/* Footer */}
 				<div className="p-4 border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end gap-3 shrink-0">
-					<Button variant="ghost" onClick={() => toggleSettings(false)}>
+					<Button variant="ghost" onClick={() => toggleChartSettings(false)}>
 						Cancel
 					</Button>
 					<Button onClick={handleSave} className="min-w-[80px]">

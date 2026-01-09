@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useCandleChart } from './hooks/useCandleChart';
 import ChartHeader from './ChartHeader';
 import Toolbox from './ToolBox';
@@ -15,6 +15,18 @@ import { DrawingEditor } from './DrawingEditor';
 import CollabStatus from './CollabStatus';
 import { useCollabStore } from '@/stores/useCollabStore';
 import { ConnectionStatus } from '@/core/chart/market-data/types';
+import { LocalStorage } from '@/lib/localStorage';
+import { ChartSettings } from '@/stores/types';
+import { useChartStore } from '@/stores/useChartStore';
+
+export interface SavedState {
+	chartSettings: ChartSettings;
+}
+
+function saveStateToLocalStorage(state: SavedState) {
+	const { isOpen, ...settingsToSave } = state.chartSettings;
+	LocalStorage.setItem('cochart_chart_settings', settingsToSave);
+}
 
 export default function ClientChart() {
 	const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -24,8 +36,17 @@ export default function ClientChart() {
 		toggleFeatureSpotlight,
 	} = useUIStore();
 
+	const { chartSettings } = useChartStore();
+
 	const { status, roomId } = useCollabStore();
 	const isLoading = status === ConnectionStatus.CONNECTING;
+
+
+	useEffect(() => {
+		saveStateToLocalStorage({
+			chartSettings
+		});
+	}, [chartSettings])
 
 	useCandleChart(chartContainerRef);
 	useChartDrawings();

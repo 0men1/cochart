@@ -1,5 +1,6 @@
 "use client"
 
+import { useChartStore } from "@/stores/useChartStore";
 import { useUIStore } from "@/stores/useUIStore";
 
 const TIMEZONES = [
@@ -11,8 +12,9 @@ const TIMEZONES = [
 ];
 
 export default function ChartFooter() {
-	const { toggleFeatureSpotlight, setTimezone, settings } = useUIStore();
-	const currentTimezone = settings.timezone || "UTC";
+	const { toggleFeatureSpotlight } = useUIStore();
+	const { chartSettings, setTimezone } = useChartStore();
+	const currentTimezone = chartSettings.timezone || "UTC";
 
 	const handleTimezoneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 		setTimezone(e.target.value);

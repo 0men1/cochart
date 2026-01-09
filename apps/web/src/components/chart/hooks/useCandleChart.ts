@@ -14,11 +14,10 @@ import { ThemeConfig } from "@/constants/theme";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
 import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
-import { useUIStore } from "@/stores/useUIStore";
 import { useChartStore } from "@/stores/useChartStore";
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
-	const { settings } = useUIStore();
+	const { chartSettings } = useChartStore();
 	const { product, timeframe } = useChartStore((state) => state.data);
 	const { setDataConnectionState, setInstances } = useChartStore((state) => state);
 
@@ -124,13 +123,13 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			height: containerRef.current.clientHeight,
 			layout: {
 				attributionLogo: false,
-				textColor: settings.background.theme === 'light' ? 'black' : 'white',
-				background: settings.background.theme === 'light' ? ThemeConfig.light.background : ThemeConfig.dark.background,
+				textColor: chartSettings.background.theme === 'light' ? 'black' : 'white',
+				background: chartSettings.background.theme === 'light' ? ThemeConfig.light.background : ThemeConfig.dark.background,
 			},
-			crosshair: { mode: settings.cursor }, // Normal=0, Magnet=1, Hidden=2, MagentOHLC=3
+			crosshair: { mode: chartSettings.cursor }, // Normal=0, Magnet=1, Hidden=2, MagentOHLC=3
 			grid: {
-				vertLines: settings.background.grid.vertLines,
-				horzLines: settings.background.grid.horzLines
+				vertLines: chartSettings.background.grid.vertLines,
+				horzLines: chartSettings.background.grid.horzLines
 			},
 			timeScale: {
 				timeVisible: true,
@@ -138,15 +137,15 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 				tickMarkFormatter: (time: number) => {
 					const date = new Date(time * 1000);
 					return (timeframe === '1D')
-						? date.toLocaleDateString([], { timeZone: settings.timezone })
-						: date.toLocaleTimeString([], { timeZone: settings.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
+						? date.toLocaleDateString([], { timeZone: chartSettings.timezone })
+						: date.toLocaleTimeString([], { timeZone: chartSettings.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
 				}
 			},
 			localization: {
 				timeFormatter: (time: number) => {
 					const date = new Date(time * 1000);
 					return date.toLocaleString([], {
-						timeZone: settings.timezone,
+						timeZone: chartSettings.timezone,
 						year: 'numeric', month: 'short', day: 'numeric',
 						hour: '2-digit', minute: '2-digit', hour12: false
 					});
@@ -155,11 +154,11 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 		});
 
 		const series = chart.addSeries(CandlestickSeries, {
-			upColor: settings.candles.upColor,
-			downColor: settings.candles.downColor,
-			borderVisible: settings.candles.borderVisible,
-			wickUpColor: settings.candles.wickupColor,
-			wickDownColor: settings.candles.wickDownColor,
+			upColor: chartSettings.candles.upColor,
+			downColor: chartSettings.candles.downColor,
+			borderVisible: chartSettings.candles.borderVisible,
+			wickUpColor: chartSettings.candles.wickupColor,
+			wickDownColor: chartSettings.candles.wickDownColor,
 		});
 
 		chartRef.current = chart;
@@ -250,24 +249,24 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			layout: {
 				background: {
 					type: ColorType.Solid,
-					color: settings.background.theme === 'dark' ? '#09090b' : '#ffffff'
+					color: chartSettings.background.theme === 'dark' ? '#09090b' : '#ffffff'
 				},
-				textColor: settings.background.theme === 'dark' ? '#d4d4d8' : '#18181b',
+				textColor: chartSettings.background.theme === 'dark' ? '#d4d4d8' : '#18181b',
 			},
 			grid: {
-				vertLines: settings.background.grid.vertLines,
-				horzLines: settings.background.grid.horzLines
+				vertLines: chartSettings.background.grid.vertLines,
+				horzLines: chartSettings.background.grid.horzLines
 			},
-			crosshair: { mode: settings.cursor },
+			crosshair: { mode: chartSettings.cursor },
 		});
 		seriesRef.current.applyOptions({
-			upColor: settings.candles.upColor,
-			downColor: settings.candles.downColor,
-			borderVisible: settings.candles.borderVisible,
-			wickUpColor: settings.candles.wickupColor,
-			wickDownColor: settings.candles.wickDownColor,
+			upColor: chartSettings.candles.upColor,
+			downColor: chartSettings.candles.downColor,
+			borderVisible: chartSettings.candles.borderVisible,
+			wickUpColor: chartSettings.candles.wickupColor,
+			wickDownColor: chartSettings.candles.wickDownColor,
 		});
-	}, [settings]);
+	}, [chartSettings]);
 
 	return {
 		isChartInitialized: chartInitialized
