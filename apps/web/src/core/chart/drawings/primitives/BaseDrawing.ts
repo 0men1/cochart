@@ -26,6 +26,8 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 	private _listeners: Map<DrawingOperation, Set<DrawingListener>> = new Map();
 
+	private _attached: boolean = false;
+
 	constructor(
 		protected _points: Point[],
 		protected _options: BaseOptions,
@@ -129,6 +131,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		this._dragStartPoint = null;
 		this._initialScreenPoints = null;
 		this._previewPoints = null;
+		this.notify(DrawingOperation.MODIFY);
 		this.updateAllViews();
 	}
 
@@ -157,6 +160,8 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		this._chart.timeScale().subscribeVisibleLogicalRangeChange(updateHandler);
 		this._visibleRangeUpdateHandler = updateHandler;
 
+		this._attached = true;
+
 		this.updateAllViews();
 	}
 
@@ -164,6 +169,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		if (this._visibleRangeUpdateHandler) {
 			this._chart.timeScale().unsubscribeVisibleLogicalRangeChange(this._visibleRangeUpdateHandler);
 			this._visibleRangeUpdateHandler = null;
+			this._attached = false;
 		}
 	}
 
@@ -219,7 +225,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 	updatePoints(newPoints: Point[]): void {
 		this._points = newPoints;
-		this.notify(DrawingOperation.MODIFY);
 		this.updateAllViews();
 	}
 
@@ -253,6 +258,10 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 	get points(): Point[] {
 		return this._points;
+	}
+
+	get isAttached(): boolean {
+		return this._attached;
 	}
 
 	abstract isPointOnDrawing(x: number, y: number): boolean;

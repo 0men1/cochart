@@ -74,6 +74,7 @@ interface ChartState {
 	drawings: {
 		collection: Map<string, BaseDrawing>;
 		selected: string | null;
+		updatedAt: number;
 	};
 	data: DataState;
 	chartApi: IChartApi | null;
@@ -96,6 +97,7 @@ interface ChartState {
 	syncChart: (product: Product, timeframe: IntervalKey) => void;
 	syncAddDrawing: (drawings: SerializedDrawing) => void;
 	syncDeleteDrawing: (drawingId: string) => void;
+	syncModifyDrawing: (drawing: SerializedDrawing) => void;
 }
 
 const defaultData: DataState = {
@@ -126,7 +128,8 @@ export const useChartStore = create<ChartState>()(
 		data: defaultData,
 		drawings: {
 			collection: new Map(),
-			selected: null
+			selected: null,
+			updatedAt: Date.now()
 		},
 		chartApi: null,
 		seriesApi: null,
@@ -192,16 +195,33 @@ export const useChartStore = create<ChartState>()(
 				const baseDrawing = restoreDrawing(drawing);
 				if (!baseDrawing) return;
 				state.drawings.collection.set(drawing.id, baseDrawing);
+				state.drawings.updatedAt = Date.now();
 			});
 		},
 		syncDeleteDrawing: (drawingId: string) => {
 			set((state) => {
+				const drawing = state.drawings.collection.get(drawingId);
+				if (drawing) { drawing.delete(); }
 				state.drawings.collection.delete(drawingId);
+				state.drawings.updatedAt = Date.now();
 				if (state.drawings.selected === drawingId) {
 					state.drawings.selected = null;
 				}
 			});
 		},
+		syncModifyDrawing: (drawing: SerializedDrawing) => {
+			set((state) => {
+				const baseDrawing = restoreDrawing(drawing);
+				if (!baseDrawing) return;
+				if (state.drawings.collection.has(drawing.id)) {
+					state.deleteDrawing(drawing.id);
+				}
+				state.drawings.collection.set(drawing.id, baseDrawing);
+				state.drawings.updatedAt = Date.now();
+			})
+			console.log("sync modify drawing")
+		},
+
 		setInstances: (chartApi, seriesApi) => set((state) => {
 			state.chartApi = chartApi;
 			state.seriesApi = seriesApi;
@@ -212,6 +232,7 @@ export const useChartStore = create<ChartState>()(
 		addDrawing: (drawing: BaseDrawing) => {
 			set((state) => {
 				state.drawings.collection.set(drawing.id, drawing);
+				state.drawings.updatedAt = Date.now();
 			});
 
 			const { socket, status } = useCollabStore.getState();
@@ -224,13 +245,29 @@ export const useChartStore = create<ChartState>()(
 		},
 		modifyDrawing: (newDrawing: BaseDrawing) => set((state) => {
 			state.drawings.collection.set(newDrawing.id, newDrawing);
+			state.drawings.updatedAt = Date.now();
+
+			/*
+
+			const { socket, status } = useCollabStore.getState();
+			if (status === ConnectionStatus.CONNECTED && socket) {
+				socket.send(JSON.stringify({
+					type: CollabAction.MODIFY_DRAWING,
+					payload: { drawing: newDrawing.serialize() }
+				}));
+			}
+			 * */
 		}),
 		selectDrawing: (drawingId: string | null) => set((state) => {
 			state.drawings.selected = drawingId;
 		}),
 		deleteDrawing: (drawingId: string) => set((state) => {
-			state.drawings.selected = null;
+			const drawing = state.drawings.collection.get(drawingId);
+			if (drawing) { drawing.delete(); }
 			state.drawings.collection.delete(drawingId);
+			state.drawings.selected = null;
+			state.drawings.updatedAt = Date.now();
+
 			const { socket, status } = useCollabStore.getState();
 			if (status === ConnectionStatus.CONNECTED && socket) {
 				socket.send(JSON.stringify({

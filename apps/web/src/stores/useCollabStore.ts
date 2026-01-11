@@ -50,7 +50,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
 					? JSON.parse(data)
 					: data;
 
-				const { syncChart, syncAddDrawing, syncDeleteDrawing } = useChartStore.getState();
+				const { syncChart, syncModifyDrawing, syncAddDrawing, syncDeleteDrawing } = useChartStore.getState();
 				switch (incomingAction.type) {
 					case CollabAction.SELECT_CHART:
 						syncChart(incomingAction.payload.product, incomingAction.payload.timeframe);
@@ -61,6 +61,11 @@ export const useCollabStore = create<CollabState>((set, get) => ({
 					case CollabAction.DELETE_DRAWING:
 						syncDeleteDrawing(incomingAction.payload.drawingId);
 						break;
+
+					case CollabAction.MODIFY_DRAWING:
+						syncModifyDrawing(incomingAction.payload.drawing);
+						break;
+
 				}
 			},
 			onClose: () => {

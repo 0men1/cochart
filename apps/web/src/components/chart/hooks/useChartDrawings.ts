@@ -40,7 +40,6 @@ export function useChartDrawings() {
 	const attachListeners = useCallback((drawing: BaseDrawing) => {
 		drawing.subscribe(DrawingOperation.DELETE, () => {
 			deleteDrawing(drawing.id);
-			drawing.options
 		})
 		drawing.subscribe(DrawingOperation.SELECT, () => {
 			selectDrawing(drawing.id);
@@ -62,8 +61,6 @@ export function useChartDrawings() {
 			for (const sd of recovered) {
 				const inst = restoreDrawing(sd);
 				if (!inst) continue;
-				seriesApi.attachPrimitive(inst);
-				attachListeners(inst);
 				addDrawing(inst);
 			}
 
@@ -76,9 +73,13 @@ export function useChartDrawings() {
 
 	useEffect(() => {
 		if (!seriesApi) return;
-
-
-
+		for (const drawing of drawings.collection.values()) {
+			if (!drawing.isAttached) {
+				seriesApi.attachPrimitive(drawing);
+				attachListeners(drawing);
+				seriesApi.applyOptions(seriesApi.options());
+			}
+		}
 	}, [drawings.collection])
 
 	// persist when collection changes, only after initialization for this id
@@ -86,7 +87,7 @@ export function useChartDrawings() {
 		if (!id) return;
 		if (isInitializedRef.current !== id) return;
 		setDrawings(id, drawings.collection.values().toArray());
-	}, [id, drawings]);
+	}, [id, drawings, drawings.updatedAt, modifyDrawing, deleteDrawing]);
 
 	//detach and clear on chart id change/unmount
 	useEffect(() => {
