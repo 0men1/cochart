@@ -208,9 +208,7 @@ export const useChartStore = create<ChartState>()(
 			syncModifyDrawing: (drawing: SerializedDrawing) => {
 				set((state) => {
 					const existingDrawing = state.drawings.collection.get(drawing.id);
-					if (existingDrawing) {
-						existingDrawing.updatePoints(drawing.points);
-					}
+					existingDrawing?.updatePoints(drawing.points);
 					state.drawings.updatedAt = Date.now();
 				})
 			},
@@ -236,7 +234,8 @@ export const useChartStore = create<ChartState>()(
 				}
 			},
 			modifyDrawing: (newDrawing: BaseDrawing) => set((state) => {
-				state.drawings.collection.set(newDrawing.id, newDrawing);
+				const existingDrawing = state.drawings.collection.get(newDrawing.id);
+				existingDrawing?.updatePoints(newDrawing.points);
 				state.drawings.updatedAt = Date.now();
 
 				const { socket, status } = useCollabStore.getState();
