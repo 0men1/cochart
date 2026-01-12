@@ -117,7 +117,6 @@ export async function getDrawings(chartId: string): Promise<SerializedDrawing[]>
 				reject(request.error);
 			}
 		})
-
 	} catch (error) {
 		console.error("Error getting drawings: ", error)
 		throw error;

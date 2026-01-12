@@ -1,4 +1,4 @@
-const control_point_s = 8;
+const control_point_s = 7;
 const control_point_border_s = 2;
 
 export interface ControlPointsStyle {

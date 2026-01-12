@@ -1,10 +1,10 @@
 import { CanvasRenderingTarget2D } from 'fancy-canvas';
-import { IChartApi, ISeriesApi, IPrimitivePaneRenderer, IPrimitivePaneView, SeriesType, Coordinate } from 'cochart-charts';
+import { IPrimitivePaneRenderer, IPrimitivePaneView, Coordinate } from 'cochart-charts';
 import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
-import { Point, ViewPoint } from '@/core/chart/types';
-import { BaseDrawingHandler, BaseOptions, DrawingConfig, EditableOption, SerializedDrawing } from '../types';
+import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
+import { BaseOptions, EditableOption, SerializedDrawing } from '../types';
 
 class TrendLinePaneRenderer implements IPrimitivePaneRenderer {
 	_p1: ViewPoint;
@@ -99,8 +99,8 @@ const defaultOptions: BaseOptions = {
 };
 
 export class TrendLine extends BaseDrawing {
-	static drawingType = "TrendLine";
 	declare _options: BaseOptions;
+	static requiredPoints: number = 2;
 
 	constructor(
 		points: Point[],
@@ -121,7 +121,7 @@ export class TrendLine extends BaseDrawing {
 	serialize(): SerializedDrawing {
 		return {
 			id: this._id,
-			type: TrendLine.drawingType,
+			type: DrawingType.TREND_LINE,
 			points: this._points,
 			options: { ...this._options },
 			isDeleted: false,
@@ -181,57 +181,5 @@ export class TrendLine extends BaseDrawing {
 
 	paneViews() {
 		return this._paneViews;
-	}
-}
-
-export class TrendLineHandler implements BaseDrawingHandler {
-	private _chart: IChartApi;
-	private _series: ISeriesApi<SeriesType>;
-	private _collectedPoints: Point[] = [];
-
-	static config: DrawingConfig = {
-		requiredPoints: 2,
-	};
-
-	constructor(chart: IChartApi, series: ISeriesApi<SeriesType>) {
-		this._chart = chart;
-		this._series = series;
-	}
-
-	onStart(): void {
-		this._collectedPoints = [];
-	}
-
-	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
-		try {
-			const timePoint = this._chart.timeScale().coordinateToTime(x);
-			const price = this._series.coordinateToPrice(y);
-			if (!timePoint || price === null) return null;
-			const point: Point = { time: timePoint as any, price };
-			this._collectedPoints.push(point);
-			if (this._collectedPoints.length === TrendLineHandler.config.requiredPoints) {
-				const drawing = this.createDrawing(this._collectedPoints);
-				return drawing;
-			}
-			return null;
-		} catch (error) {
-			console.error("failed to create trendline: ", error)
-			return null;
-		}
-	}
-
-	createDrawing(points: Point[]): BaseDrawing | null {
-		try {
-			const drawing = new TrendLine(points);
-			this._collectedPoints = [];
-			return drawing;
-		} catch (e) {
-			console.error("error: afiled to create trendLine. ", e);
-			return null;
-		}
-	}
-
-	onCancel(): void {
-		this._collectedPoints = [];
 	}
 }

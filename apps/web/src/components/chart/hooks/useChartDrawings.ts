@@ -7,6 +7,7 @@ import { getDrawings, setDrawings } from "@/lib/indexdb";
 import { MouseEventParams } from "cochart-charts";
 import { setCursor } from "@/core/chart/cursor";
 import { useChartStore } from "@/stores/useChartStore";
+import { DrawingType } from "@/core/chart/types";
 
 /**
  * This hook will be solely responsible for drawing and removing and storing drawings
@@ -15,11 +16,11 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
 	try {
 		let restoredDrawing: BaseDrawing | null = null;
 		switch (drawing.type) {
-			case "TrendLine":
-				restoredDrawing = new TrendLine(drawing.points, drawing.options, drawing.id);
-				break;
-			case "VertLine":
+			case DrawingType.VERTICAL_LINE:
 				restoredDrawing = new VertLine(drawing.points, drawing.options, drawing.id)
+				break;
+			case DrawingType.TREND_LINE:
+				restoredDrawing = new TrendLine(drawing.points, drawing.options, drawing.id);
 				break;
 		}
 		if (restoredDrawing) {
@@ -40,7 +41,6 @@ export function useChartDrawings() {
 	const attachListeners = useCallback((drawing: BaseDrawing) => {
 		drawing.subscribe(DrawingOperation.DELETE, () => {
 			deleteDrawing(drawing.id);
-			drawing.options
 		})
 		drawing.subscribe(DrawingOperation.SELECT, () => {
 			selectDrawing(drawing.id);
@@ -62,8 +62,6 @@ export function useChartDrawings() {
 			for (const sd of recovered) {
 				const inst = restoreDrawing(sd);
 				if (!inst) continue;
-				seriesApi.attachPrimitive(inst);
-				attachListeners(inst);
 				addDrawing(inst);
 			}
 
@@ -71,29 +69,29 @@ export function useChartDrawings() {
 			isInitializedRef.current = id;
 		})().catch(console.error);
 
-		return () => { active = false; };
+		return () => {
+			active = false;
+			isInitializedRef.current = null;
+		};
 	}, [id, seriesApi]);
 
 	useEffect(() => {
 		if (!seriesApi) return;
-
-
-
-	}, [drawings.collection])
+		for (const drawing of drawings.collection.values()) {
+			if (!drawing.isAttached) {
+				seriesApi.attachPrimitive(drawing);
+				attachListeners(drawing);
+				seriesApi.applyOptions(seriesApi.options());
+			}
+		}
+	}, [drawings.collection, drawings.updatedAt])
 
 	// persist when collection changes, only after initialization for this id
 	useEffect(() => {
-		if (!id) return;
-		if (isInitializedRef.current !== id) return;
-		setDrawings(id, drawings.collection.values().toArray());
-	}, [id, drawings]);
-
-	//detach and clear on chart id change/unmount
-	useEffect(() => {
-		return () => {
-			isInitializedRef.current = null;
-		};
-	}, [id, seriesApi]);
+		if (!id || isInitializedRef.current !== id) return;
+		const drawingsArray = Array.from(drawings.collection.values());
+		setDrawings(id, drawingsArray);
+	}, [id, drawings, drawings.updatedAt]);
 
 	const mouseClickHandler = useCallback((param: MouseEventParams) => {
 		try {

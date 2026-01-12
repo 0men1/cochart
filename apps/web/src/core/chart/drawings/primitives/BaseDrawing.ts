@@ -1,8 +1,8 @@
 import { IChartApi, ISeriesApi, SeriesType, ISeriesPrimitive, Time, Coordinate, IPrimitivePaneView, SeriesAttachedParameter, ISeriesPrimitiveAxisView, PrimitiveHoveredItem, PrimitivePaneViewZOrder } from 'cochart-charts';
 import { Point } from '@/core/chart/types';
-import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, ISerializable, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, SerializedDrawing } from '../types';
 
-export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializable, PrimitiveHoveredItem {
+export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
 	protected readonly _id: string;
 	externalId: string;
 	zOrder: PrimitivePaneViewZOrder = "top";
@@ -25,6 +25,8 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	private _activeControlPoint: number | null = null;
 
 	private _listeners: Map<DrawingOperation, Set<DrawingListener>> = new Map();
+
+	private _attached: boolean = false;
 
 	constructor(
 		protected _points: Point[],
@@ -62,13 +64,9 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 	onDragStart(x: number, y: number): boolean {
 		const hitPointIndex = this.getControlPointsAt(x as Coordinate, y as Coordinate);
-		if (hitPointIndex !== null) {
-			this._activeControlPoint = hitPointIndex;
-		} else if (this.isPointOnDrawing(x, y)) {
-			this._activeControlPoint = null;
-		} else {
-			return false;
-		}
+		if (hitPointIndex !== null) { this._activeControlPoint = hitPointIndex; }
+		else if (this.isPointOnDrawing(x, y)) { this._activeControlPoint = null; }
+		else { return false; }
 
 		this.setSelected(true);
 		this._dragStartPoint = { x, y };
@@ -129,16 +127,12 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		this._dragStartPoint = null;
 		this._initialScreenPoints = null;
 		this._previewPoints = null;
-		this.updateAllViews();
+		this.notify(DrawingOperation.MODIFY);
 	}
 
-	get id(): string {
-		return this._id
-	}
 
 	setPreviewPoints(points: { x: Coordinate, y: Coordinate }[] | null) {
 		this._previewPoints = points;
-		this.updateAllViews();
 	}
 
 	async delete(): Promise<void> {
@@ -152,18 +146,14 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	attached(param: SeriesAttachedParameter<Time>) {
 		this._chart = param.chart;
 		this._series = param.series;
-
-		const updateHandler = () => this.updateAllViews();
-		this._chart.timeScale().subscribeVisibleLogicalRangeChange(updateHandler);
-		this._visibleRangeUpdateHandler = updateHandler;
-
-		this.updateAllViews();
+		this._attached = true;
 	}
 
 	detached() {
 		if (this._visibleRangeUpdateHandler) {
 			this._chart.timeScale().unsubscribeVisibleLogicalRangeChange(this._visibleRangeUpdateHandler);
 			this._visibleRangeUpdateHandler = null;
+			this._attached = false;
 		}
 	}
 
@@ -176,24 +166,14 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 	getControlPointsAt(x: Coordinate, y: Coordinate): number | null {
 		if (!this._isSelected) return null;
-
 		const threshold = 8;
-
 		for (let i = 0; i < this._points.length; ++i) {
 			const screenCoords = this.getScreenCoordinates(this._points[i])
 			if (screenCoords.x === undefined || screenCoords.y === undefined || screenCoords.x === null || screenCoords.y === null) {
 				return null;
 			}
-
-			if (screenCoords.x === null || screenCoords.y === null) continue;
-
-			const distance = Math.sqrt(
-				Math.pow(x - screenCoords.x, 2) + Math.pow(y - screenCoords.y, 2)
-			);
-
-			if (distance <= threshold) {
-				return i;
-			}
+			const distance = Math.sqrt(Math.pow(x - screenCoords.x, 2) + Math.pow(y - screenCoords.y, 2));
+			if (distance <= threshold) { return i; }
 		}
 		return null;
 	}
@@ -203,24 +183,22 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 	}
 
 	setSelected(selected: boolean): void {
-		if (this._isSelected === selected) return;
-		this._isSelected = selected;
-		this._series.applyOptions(this._series.options());
-		this.notify(DrawingOperation.SELECT);
-		this.updateAllViews()
+		if (this._isSelected !== selected) {
+			this._isSelected = selected;
+			this._series.applyOptions(this._series.options());
+			this.notify(DrawingOperation.SELECT);
+		}
 	}
 
 	updateOptions(options: Record<string, any>): void {
 		this._options = { ...this._options, ...options };
 		this._series.applyOptions(this._series.options());
 		this.notify(DrawingOperation.MODIFY);
-		this.updateAllViews()
 	}
 
 	updatePoints(newPoints: Point[]): void {
 		this._points = newPoints;
-		this.notify(DrawingOperation.MODIFY);
-		this.updateAllViews();
+		this._series.applyOptions(this._series.options());
 	}
 
 	getScreenCoordinates(point: Point): { x: Coordinate | null, y: Coordinate | null } {
@@ -239,6 +217,10 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 		});
 	}
 
+	get id(): string {
+		return this._id
+	}
+
 	get chart(): IChartApi {
 		return this._chart;
 	}
@@ -253,6 +235,10 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, ISerializab
 
 	get points(): Point[] {
 		return this._points;
+	}
+
+	get isAttached(): boolean {
+		return this._attached;
 	}
 
 	abstract isPointOnDrawing(x: number, y: number): boolean;
