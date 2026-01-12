@@ -198,6 +198,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 
 	updatePoints(newPoints: Point[]): void {
 		this._points = newPoints;
+		this._series.applyOptions(this._series.options());
 	}
 
 	getScreenCoordinates(point: Point): { x: Coordinate | null, y: Coordinate | null } {

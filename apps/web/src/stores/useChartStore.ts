@@ -207,12 +207,10 @@ export const useChartStore = create<ChartState>()(
 			},
 			syncModifyDrawing: (drawing: SerializedDrawing) => {
 				set((state) => {
-					const baseDrawing = restoreDrawing(drawing);
-					if (!baseDrawing) return;
-					if (state.drawings.collection.has(drawing.id)) {
-						state.deleteDrawing(drawing.id);
+					const existingDrawing = state.drawings.collection.get(drawing.id);
+					if (existingDrawing) {
+						existingDrawing.updatePoints(drawing.points);
 					}
-					state.drawings.collection.set(drawing.id, baseDrawing);
 					state.drawings.updatedAt = Date.now();
 				})
 			},
@@ -241,8 +239,6 @@ export const useChartStore = create<ChartState>()(
 				state.drawings.collection.set(newDrawing.id, newDrawing);
 				state.drawings.updatedAt = Date.now();
 
-				/*
-	
 				const { socket, status } = useCollabStore.getState();
 				if (status === ConnectionStatus.CONNECTED && socket) {
 					socket.send(JSON.stringify({
@@ -250,7 +246,6 @@ export const useChartStore = create<ChartState>()(
 						payload: { drawing: newDrawing.serialize() }
 					}));
 				}
-				 * */
 			}),
 			selectDrawing: (drawingId: string | null) => set((state) => {
 				state.drawings.selected = drawingId;

@@ -61,7 +61,6 @@ export const useCollabStore = create<CollabState>((set, get) => ({
 					case CollabAction.DELETE_DRAWING:
 						syncDeleteDrawing(incomingAction.payload.drawingId);
 						break;
-
 					case CollabAction.MODIFY_DRAWING:
 						syncModifyDrawing(incomingAction.payload.drawing);
 						break;
