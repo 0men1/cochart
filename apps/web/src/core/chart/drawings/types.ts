@@ -1,14 +1,5 @@
-import { Coordinate } from "cochart-charts";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { Point } from "@/core/chart/types";
-
-export interface BaseDrawingHandler {
-	onStart(): void;
-	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null;
-	onCancel(): void;
-}
-
-export type DrawingTool = 'TREND_LINE' | 'VERTICAL_LINE' | null;
 
 export type EditableOptionType = 'text' | 'color' | 'number' | 'boolean';
 
@@ -43,16 +34,4 @@ export interface BaseOptions {
 	labelBackgroundColor?: string;
 	labelTextColor?: string;
 	showLabel?: boolean;
-}
-
-export interface ISerializable {
-	serialize(): SerializedDrawing
-}
-
-export interface DrawingToolHandler extends BaseDrawingHandler {
-	createDrawing(points: Point[]): BaseDrawing | null;
-}
-
-export interface DrawingConfig {
-	requiredPoints: number;
 }

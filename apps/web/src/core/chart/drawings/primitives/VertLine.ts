@@ -1,11 +1,10 @@
 import { CanvasRenderingTarget2D } from "fancy-canvas";
-import { Coordinate, IChartApi, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesApi, ISeriesPrimitiveAxisView, SeriesType } from "cochart-charts";
+import { Coordinate, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitiveAxisView } from "cochart-charts";
 import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";
 import { positionsLine } from "./positions";
-import { Point, ViewPoint } from "@/core/chart/types";
-import { BaseDrawingHandler, BaseOptions, DrawingConfig, EditableOption, SerializedDrawing } from "@/core/chart/drawings/types";
-
+import { DrawingType, Point, ViewPoint } from "@/core/chart/types";
+import { BaseOptions, EditableOption, SerializedDrawing } from "@/core/chart/drawings/types";
 
 const defaultOptions: BaseOptions = {
 	color: '#00FF00',
@@ -47,8 +46,6 @@ class VertLinePaneRenderer implements IPrimitivePaneRenderer {
 		});
 	}
 }
-
-
 
 class VertLinePaneView implements IPrimitivePaneView {
 	_source: VertLine;
@@ -117,8 +114,8 @@ class VertLineTimeAxisView implements ISeriesPrimitiveAxisView {
 }
 
 export class VertLine extends BaseDrawing {
-	static drawingType = "VertLine";
 	declare _options: BaseOptions;
+	static requiredPoints: number = 1;
 
 	constructor(
 		points: Point[],
@@ -140,7 +137,7 @@ export class VertLine extends BaseDrawing {
 	serialize(): SerializedDrawing {
 		return {
 			id: this._id,
-			type: VertLine.drawingType,
+			type: DrawingType.VERTICAL_LINE,
 			points: this._points,
 			options: { ...this._options },
 			isDeleted: false,
@@ -170,41 +167,14 @@ export class VertLine extends BaseDrawing {
 				type: 'number',
 				currentValue: this._options.width
 			},
-			{
-				key: 'showLabel',
-				label: 'Show Label',
-				type: 'boolean',
-				currentValue: this._options.showLabel
-			},
-			{
-				key: 'labelText',
-				label: 'Label Text',
-				type: 'text',
-				currentValue: this._options.labelText
-			},
-			{
-				key: 'labelBackgroundColor',
-				label: 'Label Background',
-				type: 'color',
-				currentValue: this._options.labelBackgroundColor
-			},
-			{
-				key: 'labelTextColor',
-				label: 'Label Text Color',
-				type: 'color',
-				currentValue: this._options.labelTextColor
-			}
 		];
 	}
 
 	isPointOnDrawing(x: Coordinate, y: Coordinate): boolean {
 		const coord1 = this.getScreenCoordinates(this._p1)
-
 		const chartHeight = this._chart.chartElement().clientHeight;
 
-		if (coord1.x === null || coord1.y === null) {
-			return false;
-		}
+		if (coord1.x === null || coord1.y === null) { return false; }
 
 		const distance = GeometryUtils.distanceToVerticalLine(x, y, coord1.x, 0, chartHeight);
 		const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
@@ -231,57 +201,5 @@ export class VertLine extends BaseDrawing {
 
 	timeAxisViews() {
 		return this._timeAxisViews;
-	}
-}
-
-export class VerticalLineHandler implements BaseDrawingHandler {
-	private _chart: IChartApi;
-	private _series: ISeriesApi<SeriesType>;
-	private _collectedPoints: Point[] = [];
-
-	static config: DrawingConfig = {
-		requiredPoints: 1,
-	};
-
-	constructor(chart: IChartApi, series: ISeriesApi<SeriesType>) {
-		this._chart = chart;
-		this._series = series;
-	}
-
-	onStart(): void {
-		this._collectedPoints = [];
-	}
-
-	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
-		try {
-			const timePoint = this._chart.timeScale().coordinateToTime(x);
-			const price = this._series.coordinateToPrice(y);
-			if (!timePoint || !price) return null;
-			const point: Point = { time: timePoint, price: 0 };
-			this._collectedPoints.push(point);
-			if (this._collectedPoints.length >= VerticalLineHandler.config.requiredPoints) {
-				const drawing = this.createDrawing(this._collectedPoints);
-				return drawing
-			}
-			return null;
-		} catch (error) {
-			console.error("failed to create vertline: ", error);
-			return null;
-		}
-	}
-
-	createDrawing(points: Point[]): BaseDrawing | null {
-		try {
-			const drawing = new VertLine(points)
-			this._collectedPoints = [];
-			return drawing
-		} catch (e) {
-			console.error("error: failed to create vertline. ", e)
-			return null;
-		}
-	}
-
-	onCancel(): void {
-		this._collectedPoints = [];
 	}
 }

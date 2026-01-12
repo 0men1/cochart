@@ -1,8 +1,8 @@
 import { DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFactory";
 import { Button } from "../ui/button";
-import { DrawingTool } from "@/core/chart/drawings/types";
 import { useChartStore } from "@/stores/useChartStore";
 import { MoveDiagonal, MoveUp } from "lucide-react";
+import { DrawingType } from "@/core/chart/types";
 
 function Toolbox() {
 	const activeTool = useChartStore((s) => s.tools.activeTool);
@@ -14,7 +14,7 @@ function Toolbox() {
 
 	const isReady = !!(chartApi && seriesApi);
 
-	function setTool(tool: DrawingTool) {
+	function setTool(tool: DrawingType) {
 		if (!chartApi || !seriesApi) {
 			console.warn("Chart API not ready yet");
 			return;
@@ -38,8 +38,8 @@ function Toolbox() {
 	}
 
 	const buttons = [
-		{ tool: "VERTICAL_LINE" as DrawingTool, icon: MoveUp, label: "Vertical Line" },
-		{ tool: "TREND_LINE" as DrawingTool, icon: MoveDiagonal, label: "Trendline" },
+		{ tool: DrawingType.VERTICAL_LINE, icon: MoveUp, label: "Vertical Line" },
+		{ tool: DrawingType.TREND_LINE, icon: MoveDiagonal, label: "Trendline" },
 	];
 
 	return (
