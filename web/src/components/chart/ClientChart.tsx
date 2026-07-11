@@ -41,7 +41,7 @@ export default function ClientChart() {
   useChartInteraction()
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-800">
+    <div className="flex flex-col h-screen bg-background text-foreground">
       <main className="flex-1 flex flex-col overflow-hidden">
         <div className="w-full">
           <ChartHeader />
@@ -51,23 +51,21 @@ export default function ClientChart() {
           <div className="flex-1 relative">
             <div ref={chartContainerRef} className="w-full h-full" />
 
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
+              <DrawingEditor />
+            </div>
 
             <SnapshotPrompt />
             {isLoading && roomId && (
-              <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-20">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                  <div className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4">
+              <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center z-20">
+                <div className="bg-card border border-border p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
+                  <div className="text-base font-semibold text-foreground">
                     Connecting to room...
                   </div>
-                  <div className="flex justify-center">
-                    <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-                  </div>
+                  <div className="animate-spin h-8 w-8 border-4 border-live border-t-transparent rounded-full" />
                 </div>
               </div>
             )}
-          </div>
-          <div className="absolute top-4 right-4 z-10">
-            <DrawingEditor />
           </div>
 
         </div>

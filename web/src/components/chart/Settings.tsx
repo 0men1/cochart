@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Palette, Grid3x3, ChartCandlestick, Moon, Sun } from 'lucide-react';
+import { Palette, Grid3x3, ChartCandlestick, Moon, Sun } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import { Modal, ModalClose } from "../ui/modal";
 import { cn } from "@/lib/utils";
 import { useChartStore } from '@/stores/useChartStore';
 import { ChartSettings } from '@/stores/types';
@@ -12,8 +13,8 @@ import { ChartSettings } from '@/stores/types';
 const SettingRow = ({ label, desc, children }: { label: string, desc?: string, children: React.ReactNode }) => (
 	<div className="flex items-center justify-between py-3">
 		<div className="space-y-0.5">
-			<Label className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{label}</Label>
-			{desc && <p className="text-[13px] text-zinc-500 dark:text-zinc-400">{desc}</p>}
+			<Label className="text-sm font-medium text-foreground">{label}</Label>
+			{desc && <p className="text-[13px] text-muted-foreground">{desc}</p>}
 		</div>
 		{children}
 	</div>
@@ -21,12 +22,12 @@ const SettingRow = ({ label, desc, children }: { label: string, desc?: string, c
 
 const ColorRow = ({ label, value, onChange }: { label: string, value: string, onChange: (val: string) => void }) => (
 	<div className="flex items-center justify-between py-2">
-		<span className="text-sm text-zinc-600 dark:text-zinc-300">{label}</span>
+		<span className="text-sm text-muted-foreground">{label}</span>
 		<div className="flex items-center gap-2">
-			<span className="text-xs font-mono text-zinc-400 uppercase">{value}</span>
+			<span className="text-xs font-mono text-muted-foreground uppercase">{value}</span>
 			<div className="relative group">
 				<div
-					className="w-8 h-8 rounded-full border border-zinc-200 dark:border-zinc-700 shadow-sm cursor-pointer transition-transform group-hover:scale-105"
+					className="w-8 h-8 rounded-full border border-border shadow-sm cursor-pointer transition-transform group-hover:scale-105"
 					style={{ backgroundColor: value }}
 				/>
 				<input
@@ -46,8 +47,8 @@ const TabButton = ({ active, onClick, icon: Icon, label }: any) => (
 		className={cn(
 			"flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all",
 			active
-				? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
-				: "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50"
+				? "bg-accent text-foreground"
+				: "text-muted-foreground hover:text-foreground hover:bg-accent/50"
 		)}
 	>
 		<Icon size={16} />
@@ -93,24 +94,23 @@ export default function chartSettings() {
 	};
 
 	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-			<div
-				className="w-full max-w-md bg-white dark:bg-zinc-950 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[90vh]"
-				onClick={(e) => e.stopPropagation()}
-			>
-				{/* Header */}
-				<div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between shrink-0">
-					<div>
-						<h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">chartSettings</h2>
-						<p className="text-sm text-zinc-500 dark:text-zinc-400">Manage your chart preferences</p>
-					</div>
-					<Button variant="ghost" size="icon" onClick={() => toggleChartSettings(false)} className="h-8 w-8 rounded-full">
-						<X size={18} />
-					</Button>
+		<Modal
+			open
+			onClose={() => toggleChartSettings(false)}
+			aria-label="Chart settings"
+			className="max-w-md overflow-hidden flex flex-col max-h-[85vh]"
+		>
+			{/* Header */}
+			<div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
+				<div>
+					<h2 className="text-lg font-semibold tracking-tight text-foreground">Settings</h2>
+					<p className="text-sm text-muted-foreground">Manage your chart preferences</p>
 				</div>
+				<ModalClose onClick={() => toggleChartSettings(false)} />
+			</div>
 
-				{/* Tabs Navigation */}
-				<div className="flex items-center gap-1 px-4 py-2 border-b border-zinc-100 dark:border-zinc-900 overflow-x-auto shrink-0 no-scrollbar">
+			{/* Tabs Navigation */}
+			<div className="flex items-center gap-1 px-4 py-2 border-b border-border overflow-x-auto shrink-0 no-scrollbar">
 					<TabButton
 						active={activeTab === 'appearance'}
 						onClick={() => setActiveTab('appearance')}
@@ -139,8 +139,8 @@ export default function chartSettings() {
 							<SettingRow label="Theme Mode" desc="Toggle between light and dark mode">
 								<div className="flex items-center gap-3">
 									{localChartSettings.background.theme === 'dark'
-										? <Moon size={16} className="text-zinc-500" />
-										: <Sun size={16} className="text-zinc-500" />
+										? <Moon size={16} className="text-muted-foreground" />
+										: <Sun size={16} className="text-muted-foreground" />
 									}
 									<Switch
 										checked={localChartSettings.background.theme === 'dark'}
@@ -159,7 +159,7 @@ export default function chartSettings() {
 									onCheckedChange={(c) => updateLocal('background.grid.vertLines.visible', c)}
 								/>
 							</SettingRow>
-							<div className="my-2 border-t border-zinc-100 dark:border-zinc-900" />
+							<div className="my-2 border-t border-border" />
 							<SettingRow label="Horizontal Lines" desc="Show horizontal price dividers">
 								<Switch
 									checked={localChartSettings.background.grid.horzLines.visible}
@@ -172,7 +172,7 @@ export default function chartSettings() {
 					{activeTab === 'candles' && (
 						<div className="space-y-4">
 							<div className="space-y-1">
-								<h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Colors</h3>
+								<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Colors</h3>
 								<ColorRow
 									label="Bullish Body"
 									value={localChartSettings.candles.upColor}
@@ -195,10 +195,10 @@ export default function chartSettings() {
 								/>
 							</div>
 
-							<div className="my-4 border-t border-zinc-100 dark:border-zinc-900" />
+							<div className="my-4 border-t border-border" />
 
 							<div className="space-y-1">
-								<h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Style</h3>
+								<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Style</h3>
 								<SettingRow label="Candle Borders" desc="Draw borders around candle bodies">
 									<Switch
 										checked={localChartSettings.candles.borderVisible}
@@ -210,16 +210,15 @@ export default function chartSettings() {
 					)}
 				</div>
 
-				{/* Footer */}
-				<div className="p-4 border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end gap-3 shrink-0">
-					<Button variant="ghost" onClick={() => toggleChartSettings(false)}>
-						Cancel
-					</Button>
-					<Button onClick={handleSave} className="min-w-[80px]">
-						Save
-					</Button>
-				</div>
+			{/* Footer */}
+			<div className="p-4 border-t border-border bg-muted/30 flex justify-end gap-3 shrink-0">
+				<Button variant="ghost" onClick={() => toggleChartSettings(false)}>
+					Cancel
+				</Button>
+				<Button onClick={handleSave} className="min-w-[80px]">
+					Save
+				</Button>
 			</div>
-		</div>
+		</Modal>
 	);
 }

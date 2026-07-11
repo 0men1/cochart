@@ -1,5 +1,6 @@
 import { DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFactory";
 import { Button } from "../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChartStore } from "@/stores/useChartStore";
 import { MoveDiagonal, MoveUp } from "lucide-react";
 import { DrawingType } from "@/core/chart/types";
@@ -43,23 +44,28 @@ function Toolbox() {
 	];
 
 	return (
-		<div className="flex flex-col gap-1 py-2 px-1 bg-slate-50 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700">
-			{buttons.map(({ tool, icon: Icon }) => {
+		<div className="flex flex-col gap-1 py-2 px-1.5 bg-card border-r border-border">
+			{buttons.map(({ tool, icon: Icon, label }) => {
 				const isActive = activeTool === tool;
 				return (
-					<Button
-						key={tool}
-						variant="ghost"
-						size="icon"
-						disabled={!isReady} // Visually disable if chart isn't ready
-						className={`h-9 w-9 rounded-lg transition-all ${isActive
-							? 'bg-blue-600 text-white hover:bg-blue-700'
-							: 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
-						onClick={() => setTool(tool)}
-						title={!isReady ? "Chart loading..." : undefined}
-					>
-						<Icon size={20} />
-					</Button>
+					<Tooltip key={tool}>
+						<TooltipTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								disabled={!isReady} // Visually disable if chart isn't ready
+								className={`h-10 w-10 rounded-lg transition-all ${isActive
+									? 'bg-primary text-primary-foreground hover:bg-primary/90'
+									: 'text-muted-foreground hover:text-foreground'}`}
+								onClick={() => setTool(tool)}
+							>
+								<Icon size={20} />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent side="right">
+							{!isReady ? "Chart loading..." : label}
+						</TooltipContent>
+					</Tooltip>
 				);
 			})}
 		</div>

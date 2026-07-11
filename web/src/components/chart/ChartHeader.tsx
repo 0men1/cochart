@@ -11,9 +11,9 @@ import { useCollabStore } from "@/stores/useCollabStore";
 function getStatusDiv(status: ConnectionStatus) {
 	switch (status) {
 		case ConnectionStatus.CONNECTED:
-			return (<span className="text-green-500">●</span>)
+			return (<span className="text-live">●</span>)
 		case ConnectionStatus.DISCONNECTED:
-			return (<span className="text-red-500">●</span>)
+			return (<span className="text-destructive">●</span>)
 		case ConnectionStatus.CONNECTING:
 			break;
 		case ConnectionStatus.ERROR:
@@ -41,30 +41,28 @@ export default function ChartHeader() {
 	};
 
 	return (
-		<div className="flex justify-between items-center w-full h-12 px-2 md:px-4 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+		<div className="flex justify-between items-center w-full h-12 px-2 md:px-4 bg-card border-b border-border">
 			<div className="flex items-center min-w-0 flex-1 mr-2">
 				<div className="flex items-center gap-1 w-full">
 					<Button
 						variant="ghost"
 						size="sm"
-						className="shrink-0 font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 h-8 px-2"
+						className="shrink-0 font-semibold text-base h-8 px-2.5"
 						onClick={() => toggleTickerSearch(true, product.name)}
 					>
 						{product.name}
 					</Button>
 
-					<div className="shrink-0 w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2" />
+					<div className="shrink-0 w-px h-4 bg-border mx-2" />
 
-					<div className="flex items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+					<div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
 						{timeframes.map((time) => (
 							<Button
 								key={time}
 								variant="ghost"
 								size="sm"
 								onClick={() => handleChartUpdate(product, time as IntervalKey)}
-								className={`
-                                    shrink-0 h-8 px-3 text-xs font-medium transition-colors
-                                    ${time === timeframe ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-transparent'} `} >
+								className={`shrink-0 h-8 px-3 text-xs font-medium transition-colors ${time === timeframe ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`} >
 								{time}
 							</Button>
 						))}
@@ -73,16 +71,16 @@ export default function ChartHeader() {
 			</div>
 
 
-			<div className="flex items-center gap-2 md:gap-7 shrink-0">
+			<div className="flex items-center gap-2 md:gap-4 shrink-0">
 				<Button
 					onClick={() => { toggleCollabWindow(true) }}
-					className={isInRoom ? "bg-emerald-600 hover:bg-emerald-700 relative" : ""}
+					className={isInRoom ? "bg-live text-live-foreground hover:bg-live/90 relative" : ""}
 					size="sm" >
 					{isInRoom ? (
 						<>
 							<Users size={16} className="md:mr-2" />
 							<span className="hidden md:inline">Live</span>
-							<span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />
+							<span className="absolute -top-1 -right-1 w-3 h-3 bg-live rounded-full animate-pulse" />
 						</>
 					) : (
 						<>
@@ -95,8 +93,8 @@ export default function ChartHeader() {
 				{/* Connection Status Icon with Tooltip */}
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button variant="ghost" size="sm" className="p-2">
-							<Wifi size={18} className="text-slate-600 dark:text-slate-400" />
+						<Button variant="ghost" size="icon" className="h-9 w-9">
+							<Wifi size={18} className="text-muted-foreground" />
 						</Button>
 					</TooltipTrigger>
 					<TooltipContent side="bottom" className="p-3 max-w-xs">

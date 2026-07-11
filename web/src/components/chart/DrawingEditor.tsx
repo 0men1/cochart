@@ -69,7 +69,7 @@ export const DrawingEditor = () => {
 	};
 
 	return (
-		<div ref={editorRef} className="bg-white dark:bg-slate-800 rounded-lg shadow-lg">
+		<div ref={editorRef} className="bg-card border border-border rounded-lg shadow-lg">
 			<div className="p-2 flex items-center space-x-2">
 				{lineColorOption && (
 					<Input
@@ -128,7 +128,7 @@ export const DrawingEditor = () => {
 				<Button
 					size="sm"
 					variant="ghost"
-					className="text-red-500 hover:text-red-700 w-8 h-8 p-0"
+					className="text-destructive hover:text-destructive hover:bg-destructive/10 w-8 h-8 p-0"
 					onClick={handleDelete}
 					title="Delete Drawing"
 				>
@@ -137,7 +137,7 @@ export const DrawingEditor = () => {
 			</div>
 
 			{showTextInput && (
-				<div className="p-2 pt-0 border-t border-gray-200 dark:border-gray-700">
+				<div className="p-2 pt-0 border-t border-border">
 					<div className="flex flex-col space-y-2 mt-2">
 						<Input
 							value={textInput}
