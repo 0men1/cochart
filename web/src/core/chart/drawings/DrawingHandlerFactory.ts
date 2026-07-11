@@ -1,4 +1,5 @@
 import { Coordinate, IChartApi, ISeriesApi, SeriesType } from 'cochart-charts';
+import { coordinateToTimeExtrapolated } from '../interval';
 import { DrawingConstructor, DrawingType, Point } from '../types';
 import { TrendLine } from './primitives/TrendLine';
 import { VertLine } from './primitives/VertLine';
@@ -27,7 +28,7 @@ export class BaseDrawingHandler {
 
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
 		try {
-			const timePoint = this._chart.timeScale().coordinateToTime(x);
+			const timePoint = coordinateToTimeExtrapolated(this._chart, this._series, x);
 			const price = this._series.coordinateToPrice(y);
 
 			if (!timePoint || price === null) return null;

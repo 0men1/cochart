@@ -1,6 +1,6 @@
 import { IChartApi, ISeriesApi, SeriesType, ISeriesPrimitive, Time, Coordinate, IPrimitivePaneView, SeriesAttachedParameter, ISeriesPrimitiveAxisView, PrimitiveHoveredItem, PrimitivePaneViewZOrder } from 'cochart-charts';
 import { Point } from '@/core/chart/types';
-import { snapTimeToInterval } from '@/core/chart/interval';
+import { coordinateToTimeExtrapolated, timeToCoordinateExtrapolated } from '@/core/chart/interval';
 import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, SerializedDrawing } from '../types';
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
@@ -116,7 +116,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 	onDragEnd(): void {
 		if (this._previewPoints && this._chart && this._series) {
 			const newPoints = this._previewPoints.map(p => ({
-				time: this._chart.timeScale().coordinateToTime(p.x) as Time,
+				time: coordinateToTimeExtrapolated(this._chart, this._series, p.x) as Time,
 				price: this._series.coordinateToPrice(p.y) as number
 			}));
 
@@ -207,7 +207,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 	// carried across timeframe changes) still resolve to a real candle coordinate
 	// instead of null (which the renderers drop).
 	public timeToX(time: Time): Coordinate | null {
-		return this._chart.timeScale().timeToCoordinate(snapTimeToInterval(time));
+		return timeToCoordinateExtrapolated(this._chart, this._series, time);
 	}
 
 	getScreenCoordinates(point: Point): { x: Coordinate | null, y: Coordinate | null } {
