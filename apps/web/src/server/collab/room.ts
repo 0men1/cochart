@@ -1,8 +1,27 @@
 import type { Client } from "./client";
+import {
+  type ChartSelection,
+  CollabAction,
+  type Drawing,
+  type IncomingAction,
+} from "./protocol";
 import type { RoomManager } from "./roomManager";
+
+interface RoomState {
+  seeded: boolean;
+  chart: ChartSelection | null;
+  drawings: Map<string, Drawing>;
+}
 
 export class Room {
   clients = new Set<Client>();
+
+  // The single source of truth for this room.
+  private state: RoomState = {
+    seeded: false,
+    chart: null,
+    drawings: new Map(),
+  };
 
   constructor(
     public id: string,
@@ -14,7 +33,7 @@ export class Room {
     client.start();
 
     const activeUsers = this.clients.size;
-    const action = JSON.stringify({
+    const joined = JSON.stringify({
       type: "USER_JOINED",
       payload: { displayName: client.displayName, numActiveUsers: activeUsers },
     });
@@ -23,7 +42,13 @@ export class Room {
       `User joined: ${client.displayName} (Room: ${this.id}, Total: ${activeUsers})`,
     );
 
-    this.broadcastToOthers(action, client);
+    this.broadcastToOthers(joined, client);
+
+    // Bring the newcomer up to the room's authoritative state.
+    if (this.state.seeded) {
+      const msg = this.snapshotMessage();
+      client.send(msg);
+    }
   }
 
   unregister(client: Client): void {
@@ -36,16 +61,84 @@ export class Room {
       // already closed
     }
 
-    const action = JSON.stringify({
+    const left = JSON.stringify({
       type: "USER_LEFT",
       payload: { displayName: client.displayName },
     });
-    this.broadcastToAll(action);
+    this.broadcastToAll(left);
 
     if (this.clients.size === 0) {
       console.log(`Room ${this.id} empty, cleaning up`);
       this.manager.removeRoom(this.id);
     }
+  }
+
+  // Applies an incoming message to the room's truth, then relays it to the
+  // other clients. Unparseable messages are relayed as-is.
+  handleMessage(raw: string, sender: Client): void {
+    let action: IncomingAction;
+    try {
+      action = JSON.parse(raw);
+    } catch {
+      this.broadcastToOthers(raw, sender);
+      return;
+    }
+
+    switch (action.type) {
+      case CollabAction.INIT_ROOM: {
+        // First seed wins; ignore later seeds so a late joiner can't
+        // overwrite the truth.
+        if (this.state.seeded) return;
+        this.state.seeded = true;
+        this.state.chart = {
+          product: action.payload?.product,
+          timeframe: action.payload?.timeframe,
+        };
+        this.state.drawings = new Map(
+          (action.payload?.drawings ?? []).map((d) => [d.id, d]),
+        );
+        // Covers the rare case where someone joined before the seed arrived.
+        this.broadcastToOthers(this.snapshotMessage(), sender);
+        return;
+      }
+      case CollabAction.SELECT_CHART: {
+        this.state.seeded = true;
+        this.state.chart = {
+          product: action.payload?.product,
+          timeframe: action.payload?.timeframe,
+        };
+        break;
+      }
+      case CollabAction.ADD_DRAWING:
+      case CollabAction.MODIFY_DRAWING: {
+        const drawing = action.payload?.drawing;
+        if (drawing?.id) {
+          this.state.seeded = true;
+          this.state.drawings.set(drawing.id, drawing);
+        }
+        break;
+      }
+      case CollabAction.DELETE_DRAWING: {
+        const drawingId = action.payload?.drawingId;
+        if (drawingId) this.state.drawings.delete(drawingId);
+        break;
+      }
+      default:
+        break;
+    }
+
+    this.broadcastToOthers(raw, sender);
+  }
+
+  private snapshotMessage(): string {
+    return JSON.stringify({
+      type: CollabAction.SNAPSHOT,
+      payload: {
+        product: this.state.chart?.product ?? null,
+        timeframe: this.state.chart?.timeframe ?? null,
+        drawings: Array.from(this.state.drawings.values()),
+      },
+    });
   }
 
   broadcastToAll(message: string): void {

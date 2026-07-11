@@ -153,8 +153,8 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 		if (this._visibleRangeUpdateHandler) {
 			this._chart.timeScale().unsubscribeVisibleLogicalRangeChange(this._visibleRangeUpdateHandler);
 			this._visibleRangeUpdateHandler = null;
-			this._attached = false;
 		}
+		this._attached = false;
 	}
 
 	hitTest(x: number, y: number): PrimitiveHoveredItem | null {

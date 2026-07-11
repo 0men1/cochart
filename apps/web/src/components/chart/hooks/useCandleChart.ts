@@ -206,7 +206,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			setInstances(null, null);
 		};
 
-	}, [product, timeframe, containerRef]);
+	}, [product.symbol, product.exchange, timeframe, containerRef]);
 
 	// WEBSOCKET SETUP
 	useEffect(() => {
@@ -230,7 +230,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			unsubscribeTickData.current?.();
 			setConnectionState(null);
 		};
-	}, [product, updateChart]);
+	}, [product.symbol, product.exchange, updateChart]);
 
 	// RESET DATA ON SYMBOL CHANGE
 	useEffect(() => {
@@ -239,7 +239,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 		setChartInitialized(false);
 		const now = Math.floor(Date.now() / 1000);
 		loadHistoricalCandles(now - (1000 * interval * 2), now);
-	}, [product, timeframe, loadHistoricalCandles, interval]);
+	}, [product.symbol, product.exchange, timeframe, loadHistoricalCandles, interval]);
 
 	// STYLE UPDATES
 	useEffect(() => {

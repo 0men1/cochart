@@ -32,6 +32,8 @@ export interface Product {
 }
 
 export enum CollabAction {
+	INIT_ROOM = 'INIT_ROOM',
+	SNAPSHOT = 'SNAPSHOT',
 	SELECT_CHART = 'SELECT_CHART',
 	ADD_DRAWING = 'ADD_DRAWING',
 	DELETE_DRAWING = 'DELETE_DRAWING',
