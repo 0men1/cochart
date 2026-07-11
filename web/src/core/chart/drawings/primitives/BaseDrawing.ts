@@ -14,6 +14,11 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 	protected _chart!: IChartApi;
 	protected _series!: ISeriesApi<SeriesType>;
 
+	// Primitive-scoped repaint callback handed to us on attach. Lets us request a
+	// redraw without series.applyOptions() — safe to call inside a crosshair-move
+	// handler (applyOptions re-emits crosshair-move and would recurse).
+	protected _requestUpdate: (() => void) | null = null;
+
 	protected _visibleRangeUpdateHandler: (() => void) | null = null;
 
 	public _paneViews: IPrimitivePaneView[];
@@ -147,7 +152,13 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 	attached(param: SeriesAttachedParameter<Time>) {
 		this._chart = param.chart;
 		this._series = param.series;
+		this._requestUpdate = param.requestUpdate ?? null;
 		this._attached = true;
+	}
+
+	// Schedule a repaint of this primitive without touching series options.
+	requestUpdate(): void {
+		this._requestUpdate?.();
 	}
 
 	detached() {

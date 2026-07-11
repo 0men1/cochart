@@ -161,11 +161,21 @@ export function useChartDrawings() {
   const mouseMoveHandler = useCallback((param: MouseEventParams) => {
     try {
       if (!param.point || !param.logical) return;
+      const el = chartApi?.chartElement();
+
+      // While placing a drawing, drive the live preview and keep the crosshair
+      // cursor — the hoverable preview primitive would otherwise flip us to
+      // 'pointer' mid-draw.
+      if (tools.activeHandler) {
+        tools.activeHandler.onMove(param.point.x, param.point.y);
+        if (el) setCursor('', el);
+        return;
+      }
+
       const hoveredId = param.hoveredObjectId as string;
       // Scope the cursor to the chart element so it can't leak onto the rest of
       // the UI. '' clears the inline cursor, falling back to the container's
       // `cursor-crosshair`; 'pointer' overrides it on a draggable drawing.
-      const el = chartApi?.chartElement();
       if (el) setCursor(hoveredId ? 'pointer' : '', el);
     } catch (e) { console.error(e); }
   }, [tools.activeHandler, chartApi]);

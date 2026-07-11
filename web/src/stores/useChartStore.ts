@@ -357,6 +357,8 @@ export const useChartStore = create<ChartState>()(
         state.tools.activeHandler = handler;
       }),
       cancelTool: () => set((state) => {
+        // Let the handler tear down any in-progress preview before we drop it.
+        try { state.tools.activeHandler?.onCancel(); } catch (e) { console.error(e); }
         state.tools.activeTool = null;
         state.tools.activeHandler = null;
       }),

@@ -2,12 +2,21 @@
 import { useCallback, useEffect } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useCollabStore } from "@/stores/useCollabStore";
+import { useChartStore } from "@/stores/useChartStore";
 
 export function useChartInteraction() {
 	const { toggleTickerSearch } = useUIStore();
 
 	const keyDownHandler = useCallback((event: KeyboardEvent) => {
 		if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+			return;
+		}
+
+		// Abort an in-progress drawing (clears the preview and deactivates the tool).
+		if (event.key === 'Escape') {
+			if (useChartStore.getState().tools.activeTool) {
+				useChartStore.getState().cancelTool();
+			}
 			return;
 		}
 
