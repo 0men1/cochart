@@ -1,22 +1,11 @@
 services:
 
-  server:
-    build: ./apps/server
-    ports:
-      - "8080:8080"
-    environment:
-      - ALLOWED_ORIGINS=http://localhost:3000
-
   web:
       build:
         context: ./apps/web
         dockerfile: Dockerfile.dev
-      environment:
-          - SERVER_URL=http://server:8080
       volumes:
         - ./apps/web:/app
         - /app/node_modules
       ports:
         - "3000:3000"
-      depends_on:
-        - server

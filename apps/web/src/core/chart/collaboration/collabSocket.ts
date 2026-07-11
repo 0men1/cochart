@@ -13,7 +13,7 @@ export class CollabSocket {
 		onClose: () => void;
 		onError: (error: Event) => void;
 	}) {
-		this.ws = new WebSocket(`${getBaseSocketUrl()}/rooms/join?roomId=${roomId}`)
+		this.ws = new WebSocket(`${getBaseSocketUrl()}/api/rooms/join?roomId=${roomId}`)
 		this.roomId = roomId;
 
 		this.ws.onopen = () => {
