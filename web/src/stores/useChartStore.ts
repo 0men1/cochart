@@ -8,7 +8,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { useCollabStore } from "./useCollabStore";
 import { restoreDrawing } from "@/components/chart/hooks/useChartDrawings";
-import { enableMapSet, setAutoFreeze } from "immer";
+import { enableMapSet, setAutoFreeze, Draft } from "immer";
 import { DrawingType } from "@/core/chart/types";
 import { BaseDrawingHandler } from "@/core/chart/drawings/DrawingHandlerFactory";
 
@@ -120,6 +120,21 @@ const defaultData: DataState = {
 enableMapSet();
 setAutoFreeze(false);
 
+// Detach every drawing from the live series and empty the collection. Used when
+// switching tickers (drawings are per-ticker) and by clearDrawings. delete()
+// detaches from the current series; instances stranded on a disposed series are
+// simply dropped when the map is cleared.
+function detachAndClearDrawings(state: Draft<ChartState>) {
+  for (const drawing of state.drawings.collection.values()) {
+    if (drawing.isAttached && drawing.series === state.seriesApi) {
+      try { drawing.delete(); } catch (e) { console.error(e); }
+    }
+  }
+  state.drawings.collection.clear();
+  state.drawings.selected = null;
+  state.drawings.updatedAt = Date.now();
+}
+
 export const useChartStore = create<ChartState>()(
   persist(
     immer((set) => ({
@@ -172,9 +187,14 @@ export const useChartStore = create<ChartState>()(
             state.data.product.exchange === product.exchange &&
             state.data.timeframe === timeframe;
           if (sameChart) return;
-          state.id = `${product.symbol}:${product.exchange}`;
+          const newId = `${product.symbol}:${product.exchange}`;
+          const tickerChanged = state.id !== newId;
+          state.id = newId;
           state.data.product = product;
           state.data.timeframe = timeframe;
+          // Drawings are per-ticker; drop the outgoing ticker's instances so they
+          // can't leak onto (and later clone on) the recreated series.
+          if (tickerChanged) detachAndClearDrawings(state);
         });
 
         // Side effects go outside the set function
@@ -195,9 +215,14 @@ export const useChartStore = create<ChartState>()(
             state.data.product.exchange === product.exchange &&
             state.data.timeframe === timeframe;
           if (sameChart) return;
-          state.id = `${product.symbol}:${product.exchange}`;
+          const newId = `${product.symbol}:${product.exchange}`;
+          const tickerChanged = state.id !== newId;
+          state.id = newId;
           state.data.product = product;
           state.data.timeframe = timeframe;
+          // Drawings are per-ticker; drop the outgoing ticker's instances so they
+          // can't leak onto (and later clone on) the recreated series.
+          if (tickerChanged) detachAndClearDrawings(state);
         });
       },
       syncSnapshot: (product: Product, timeframe: IntervalKey, drawings: SerializedDrawing[], mode: 'replace' | 'keep' = 'replace') => {
@@ -246,14 +271,7 @@ export const useChartStore = create<ChartState>()(
       },
       clearDrawings: () => {
         set((state) => {
-          for (const drawing of state.drawings.collection.values()) {
-            if (drawing.isAttached && drawing.series === state.seriesApi) {
-              try { drawing.delete(); } catch (e) { console.error(e); }
-            }
-          }
-          state.drawings.collection.clear();
-          state.drawings.selected = null;
-          state.drawings.updatedAt = Date.now();
+          detachAndClearDrawings(state);
         });
       },
       syncAddDrawing: (drawing: SerializedDrawing) => {

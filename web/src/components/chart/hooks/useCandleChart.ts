@@ -15,6 +15,29 @@ import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickD
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
 import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
 import { useChartStore } from "@/stores/useChartStore";
+import { IntervalKey } from "@/core/chart/market-data/types";
+import { setActiveIntervalSeconds } from "@/core/chart/interval";
+
+// Builds the time-axis + crosshair label formatters for a given timezone. The
+// candle data stays UTC; only the displayed labels are shifted to `tz`.
+function buildTimeFormatters(timeframe: IntervalKey, tz: string) {
+	return {
+		tickMarkFormatter: (time: number) => {
+			const date = new Date(time * 1000);
+			return (timeframe === '1D')
+				? date.toLocaleDateString([], { timeZone: tz })
+				: date.toLocaleTimeString([], { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+		},
+		timeFormatter: (time: number) => {
+			const date = new Date(time * 1000);
+			return date.toLocaleString([], {
+				timeZone: tz,
+				year: 'numeric', month: 'short', day: 'numeric',
+				hour: '2-digit', minute: '2-digit', hour12: false
+			});
+		},
+	};
+}
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
 	const { chartSettings } = useChartStore();
@@ -45,6 +68,12 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 	const unsubscribeStatusListener = useRef<(() => void) | null>(null);
 
 	const interval = INTERVAL_SECONDS[timeframe];
+
+	// Publish the active interval so the drawing layer can snap point times to the
+	// current candle boundaries (single active chart, incl. collab rooms).
+	useEffect(() => {
+		setActiveIntervalSeconds(interval);
+	}, [interval]);
 
 	// LIVE UPDATE LOGIC
 	const updateChart = useCallback((tick: TickData) => {
@@ -134,22 +163,10 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			timeScale: {
 				timeVisible: true,
 				secondsVisible: timeframe === '1m',
-				tickMarkFormatter: (time: number) => {
-					const date = new Date(time * 1000);
-					return (timeframe === '1D')
-						? date.toLocaleDateString([], { timeZone: chartSettings.timezone })
-						: date.toLocaleTimeString([], { timeZone: chartSettings.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
-				}
+				tickMarkFormatter: buildTimeFormatters(timeframe, chartSettings.timezone).tickMarkFormatter,
 			},
 			localization: {
-				timeFormatter: (time: number) => {
-					const date = new Date(time * 1000);
-					return date.toLocaleString([], {
-						timeZone: chartSettings.timezone,
-						year: 'numeric', month: 'short', day: 'numeric',
-						hour: '2-digit', minute: '2-digit', hour12: false
-					});
-				}
+				timeFormatter: buildTimeFormatters(timeframe, chartSettings.timezone).timeFormatter,
 			}
 		});
 
@@ -245,6 +262,8 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 	useEffect(() => {
 		if (!chartRef.current || !seriesRef.current) return;
 
+		const { tickMarkFormatter, timeFormatter } = buildTimeFormatters(timeframe, chartSettings.timezone);
+
 		chartRef.current.applyOptions({
 			layout: {
 				background: {
@@ -258,6 +277,9 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 				horzLines: chartSettings.background.grid.horzLines
 			},
 			crosshair: { mode: chartSettings.cursor },
+			// Re-time axis + crosshair labels when the timezone changes.
+			timeScale: { tickMarkFormatter },
+			localization: { timeFormatter },
 		});
 		seriesRef.current.applyOptions({
 			upColor: chartSettings.candles.upColor,
@@ -266,7 +288,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			wickUpColor: chartSettings.candles.wickupColor,
 			wickDownColor: chartSettings.candles.wickDownColor,
 		});
-	}, [chartSettings]);
+	}, [chartSettings, timeframe]);
 
 	return {
 		isChartInitialized: chartInitialized

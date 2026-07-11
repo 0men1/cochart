@@ -65,8 +65,7 @@ class VertLinePaneView implements IPrimitivePaneView {
 		}
 		else {
 			const series = this._source.series;
-			const timeScale = this._source.chart.timeScale();
-			this._p1.x = timeScale.timeToCoordinate(this._source._p1.time);
+			this._p1.x = this._source.timeToX(this._source._p1.time);
 			this._p1.y = series.priceToCoordinate(this._source._p1.price);
 		}
 		this._renderer._isSelected = this._source.isSelected();
@@ -89,8 +88,7 @@ class VertLineTimeAxisView implements ISeriesPrimitiveAxisView {
 	}
 
 	update() {
-		const timeScale = this._source.chart.timeScale();
-		this._x = timeScale.timeToCoordinate(this._source._p1.time);
+		this._x = this._source.timeToX(this._source._p1.time);
 	}
 
 	visible() {

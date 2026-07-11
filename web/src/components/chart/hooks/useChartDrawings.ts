@@ -146,9 +146,13 @@ export function useChartDrawings() {
     try {
       if (!param.point || !param.logical) return;
       const hoveredId = param.hoveredObjectId as string;
-      setCursor(hoveredId ? 'pointer' : 'default');
+      // Scope the cursor to the chart element so it can't leak onto the rest of
+      // the UI. '' clears the inline cursor, falling back to the container's
+      // `cursor-crosshair`; 'pointer' overrides it on a draggable drawing.
+      const el = chartApi?.chartElement();
+      if (el) setCursor(hoveredId ? 'pointer' : '', el);
     } catch (e) { console.error(e); }
-  }, [tools.activeHandler]);
+  }, [tools.activeHandler, chartApi]);
 
   useEffect(() => {
     chartApi?.subscribeCrosshairMove(mouseMoveHandler);

@@ -62,7 +62,7 @@ export default function ClientChart() {
         <div className="flex flex-1 w-full overflow-hidden relative">
           <Toolbox />
           <div className="flex-1 relative">
-            <div ref={chartContainerRef} className="w-full h-full" />
+            <div ref={chartContainerRef} className="w-full h-full cursor-crosshair" />
 
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
               <DrawingEditor />

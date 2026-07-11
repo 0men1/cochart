@@ -1,5 +1,6 @@
 import { IChartApi, ISeriesApi, SeriesType, ISeriesPrimitive, Time, Coordinate, IPrimitivePaneView, SeriesAttachedParameter, ISeriesPrimitiveAxisView, PrimitiveHoveredItem, PrimitivePaneViewZOrder } from 'cochart-charts';
 import { Point } from '@/core/chart/types';
+import { snapTimeToInterval } from '@/core/chart/interval';
 import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, SerializedDrawing } from '../types';
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
@@ -201,9 +202,16 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 		this._series.applyOptions(this._series.options());
 	}
 
+	// Single chokepoint for time -> x mapping. Snaps the point's time to the
+	// current candle interval first, so drawings placed at sub-interval times (or
+	// carried across timeframe changes) still resolve to a real candle coordinate
+	// instead of null (which the renderers drop).
+	public timeToX(time: Time): Coordinate | null {
+		return this._chart.timeScale().timeToCoordinate(snapTimeToInterval(time));
+	}
+
 	getScreenCoordinates(point: Point): { x: Coordinate | null, y: Coordinate | null } {
-		const timeScale = this._chart.timeScale();
-		const x = timeScale.timeToCoordinate(point.time);
+		const x = this.timeToX(point.time);
 		const y = this._series.priceToCoordinate(point.price);
 		return { x, y };
 	}

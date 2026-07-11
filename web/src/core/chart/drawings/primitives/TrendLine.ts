@@ -75,11 +75,10 @@ class TrendLinePaneView implements IPrimitivePaneView {
 		}
 		else {
 			const series = this._source.series;
-			const timeScale = this._source.chart.timeScale();
 
-			this._p1.x = timeScale.timeToCoordinate(this._source._p1.time);
+			this._p1.x = this._source.timeToX(this._source._p1.time);
 			this._p1.y = series.priceToCoordinate(this._source._p1.price);
-			this._p2.x = timeScale.timeToCoordinate(this._source._p2.time);
+			this._p2.x = this._source.timeToX(this._source._p2.time);
 			this._p2.y = series.priceToCoordinate(this._source._p2.price);
 		}
 
