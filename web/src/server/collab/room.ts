@@ -32,23 +32,17 @@ export class Room {
     this.clients.add(client);
     client.start();
 
-    const activeUsers = this.clients.size;
-    const joined = JSON.stringify({
-      type: "USER_JOINED",
-      payload: { displayName: client.displayName, numActiveUsers: activeUsers },
-    });
-
     console.log(
-      `User joined: ${client.displayName} (Room: ${this.id}, Total: ${activeUsers})`,
+      `User joined: ${client.displayName} (Room: ${this.id}, Total: ${this.clients.size})`,
     );
 
-    this.broadcastToOthers(joined, client);
-
-    // Bring the newcomer up to the room's authoritative state.
+    // Bring the newcomer up to the room's authoritative state first...
     if (this.state.seeded) {
-      const msg = this.snapshotMessage();
-      client.send(msg);
+      client.send(this.snapshotMessage());
     }
+
+    // ...then hand everyone (including the newcomer) the updated roster.
+    this.broadcastToAll(this.presenceMessage());
   }
 
   unregister(client: Client): void {
@@ -61,16 +55,27 @@ export class Room {
       // already closed
     }
 
-    const left = JSON.stringify({
-      type: "USER_LEFT",
-      payload: { displayName: client.displayName },
-    });
-    this.broadcastToAll(left);
-
     if (this.clients.size === 0) {
       console.log(`Room ${this.id} empty, cleaning up`);
       this.manager.removeRoom(this.id);
+      return;
     }
+
+    this.broadcastToAll(this.presenceMessage());
+  }
+
+  private presenceMessage(): string {
+    return JSON.stringify({
+      type: CollabAction.PRESENCE,
+      payload: {
+        users: Array.from(this.clients, (c) => ({
+          userId: c.userId,
+          displayName: c.displayName,
+          color: c.color,
+        })),
+        count: this.clients.size,
+      },
+    });
   }
 
   // Applies an incoming message to the room's truth, then relays it to the

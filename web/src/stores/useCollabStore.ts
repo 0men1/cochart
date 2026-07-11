@@ -4,7 +4,8 @@ import { SerializedDrawing } from "@/core/chart/drawings/types";
 import { getDrawings } from "@/lib/indexdb";
 import { create } from "zustand";
 import { useChartStore } from "./useChartStore";
-import { CollabAction, Product } from "./types";
+import { useIdentityStore } from "./useIdentityStore";
+import { CollabAction, PresenceUser, Product } from "./types";
 
 // A room snapshot held back from the chart store until the user decides what
 // to do with their existing drawings (replace vs keep alongside).
@@ -22,7 +23,7 @@ interface CollabState {
   roomId: string | null,
   isHost: boolean,
   isLoading: boolean,
-  activeUsers: string[]
+  activeUsers: PresenceUser[]
   socket: CollabSocket | null;
   status: ConnectionStatus;
   pendingSnapshot: PendingSnapshot | null;
@@ -59,13 +60,15 @@ export const useCollabStore = create<CollabState>((set, get) => ({
     // the first render (before the socket finishes opening).
     set({ socket, roomId, status: ConnectionStatus.CONNECTING });
 
-    socket.connect(roomId, {
+    // Identify ourselves to the room with this browser's anonymous identity.
+    const identity = useIdentityStore.getState().identity;
+
+    socket.connect(roomId, identity, {
       onOpen: () => {
         set({ roomId, status: ConnectionStatus.CONNECTED });
 
         // The host seeds the room's initial truth with its current chart.
         if (get().isHost) {
-          console.log("Is host sending room\n");
           const chart = useChartStore.getState();
           const drawings = Array.from(chart.drawings.collection.values())
             .map((d) => d.serialize());
@@ -86,6 +89,13 @@ export const useCollabStore = create<CollabState>((set, get) => ({
 
         const { syncChart, syncModifyDrawing,
           syncAddDrawing, syncDeleteDrawing, syncSnapshot } = useChartStore.getState();
+
+        // Presence is independent of chart state — always apply the latest
+        // roster, even while a snapshot decision is pending.
+        if (incomingAction.type === CollabAction.PRESENCE) {
+          set({ activeUsers: incomingAction.payload?.users ?? [] });
+          return;
+        }
 
         // While a snapshot awaits the user's replace/keep decision, fold
         // deltas into the pending payload instead of the chart store so the
@@ -222,6 +232,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
         isHost: false,
         status: ConnectionStatus.DISCONNECTED,
         pendingSnapshot: null,
+        activeUsers: [],
       });
       // Drop the room's drawings; the IndexedDB restore effect re-runs on
       // roomId -> null and brings back the user's own saved drawings.

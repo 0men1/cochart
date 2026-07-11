@@ -14,7 +14,9 @@ import { useUIStore } from '@/stores/useUIStore';
 import { DrawingEditor } from './DrawingEditor';
 import CollabStatus from './CollabStatus';
 import SnapshotPrompt from './SnapshotPrompt';
+import PresenceStack from './PresenceStack';
 import { useCollabStore } from '@/stores/useCollabStore';
+import { useIdentityStore } from '@/stores/useIdentityStore';
 import { ConnectionStatus } from '@/core/chart/market-data/types';
 import { ChartSettings } from '@/stores/types';
 import { useChartStore } from '@/stores/useChartStore';
@@ -30,9 +32,20 @@ export default function ClientChart() {
     toggleFeatureSpotlight,
   } = useUIStore();
 
+  const initIdentity = useIdentityStore((s) => s.init);
   useEffect(() => {
     useChartStore.persist.rehydrate();
-  }, []);
+    // Assign this browser an anonymous identity the moment the app opens.
+    initIdentity();
+  }, [initIdentity]);
+
+  // Drive the whole UI's light/dark theme off the user's chart setting by
+  // toggling the `dark` class on <html>, which all design tokens key off of.
+  const theme = useChartStore((s) => s.chartSettings.background.theme);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
   const { status, roomId } = useCollabStore();
   const isLoading = status === ConnectionStatus.CONNECTING;
 
@@ -54,6 +67,8 @@ export default function ClientChart() {
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
               <DrawingEditor />
             </div>
+
+            <PresenceStack />
 
             <SnapshotPrompt />
             {isLoading && roomId && (

@@ -38,4 +38,11 @@ export enum CollabAction {
 	ADD_DRAWING = 'ADD_DRAWING',
 	DELETE_DRAWING = 'DELETE_DRAWING',
 	MODIFY_DRAWING = 'MODIFY_DRAWING',
+	PRESENCE = 'PRESENCE',
+}
+
+export interface PresenceUser {
+	userId: string;
+	displayName: string;
+	color: string;
 }

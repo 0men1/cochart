@@ -15,7 +15,7 @@ export default function SnapshotPrompt() {
   if (!pendingSnapshot || pendingSnapshot.awaitingLocalCheck) return null;
 
   return (
-    <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center z-20">
+    <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center z-[60]">
       <div className="bg-card border border-border p-6 rounded-lg shadow-lg max-w-md">
         <div className="text-lg font-semibold text-foreground mb-2">
           This room already has a chart

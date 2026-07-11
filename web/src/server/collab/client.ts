@@ -8,14 +8,14 @@ export class Client {
     public conn: WebSocket,
     public displayName: string,
     public room: Room,
+    public userId: string,
+    public color: string,
   ) { }
 
   start(): void {
-    console.log("Starting client")
     this.conn.on("message", (data: Buffer) => {
       // Let the room apply the delta to its authoritative state and relay
       // it. Text frame + trim matches the original Go server behavior.
-      console.log("Data in start funciton : " + data)
       this.room.handleMessage(data.toString().trim(), this);
     });
 
@@ -25,9 +25,7 @@ export class Client {
   }
 
   send(message: string): void {
-    console.log(this.displayName + " is sending: " + message)
     if (this.conn.readyState === this.conn.OPEN) {
-      console.log("sending msg: " + message);
       this.conn.send(message);
     }
   }

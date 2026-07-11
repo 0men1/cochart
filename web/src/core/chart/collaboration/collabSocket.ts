@@ -1,20 +1,29 @@
 import { getBaseSocketUrl } from "@/lib/utils";
+import type { Identity } from "@/lib/identity";
 
 export class CollabSocket {
   private ws: WebSocket | null = null;
   private roomId: string | null = null;
+  private identity: Identity | null = null;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private intentionalClose: boolean = false;
 
-  connect(roomId: string, callbacks: {
+  connect(roomId: string, identity: Identity | null, callbacks: {
     onOpen: () => void;
     onMessage: (data: any) => void;
     onClose: () => void;
     onError: (error: Event) => void;
   }) {
-    this.ws = new WebSocket(`${getBaseSocketUrl()}/api/rooms/join?roomId=${roomId}`)
+    const params = new URLSearchParams({ roomId });
+    if (identity) {
+      params.set("userId", identity.userId);
+      params.set("displayName", identity.displayName);
+      params.set("color", identity.color);
+    }
+    this.ws = new WebSocket(`${getBaseSocketUrl()}/api/rooms/join?${params.toString()}`)
     this.roomId = roomId;
+    this.identity = identity;
 
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
@@ -39,7 +48,7 @@ export class CollabSocket {
         setTimeout(() => {
           this.reconnectAttempts++;
           if (this.roomId) {
-            this.connect(this.roomId, callbacks);
+            this.connect(this.roomId, this.identity, callbacks);
           }
         }, delay);
       }

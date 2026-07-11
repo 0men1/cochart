@@ -9,7 +9,15 @@ export const CollabAction = {
   ADD_DRAWING: "ADD_DRAWING",
   MODIFY_DRAWING: "MODIFY_DRAWING",
   DELETE_DRAWING: "DELETE_DRAWING",
+  PRESENCE: "PRESENCE", // server -> clients: the room's active-user roster
 } as const;
+
+// Anonymous per-connection identity, echoed to peers for presence display.
+export interface PresenceUser {
+  userId: string;
+  displayName: string;
+  color: string;
+}
 
 export interface Drawing {
   id: string;

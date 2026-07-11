@@ -7,6 +7,12 @@ import type { RoomManager } from "./roomManager";
 
 var i = 1;
 
+// Fallback colors for connections that don't supply one (older clients).
+const FALLBACK_COLORS = [
+  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6",
+  "#3b82f6", "#8b5cf6", "#ec4899", "#06b6d4", "#f43f5e",
+];
+
 // POST /api/rooms/create
 export function handleCreateRoom(
   res: ServerResponse,
@@ -30,7 +36,10 @@ export function handleJoinRoom(
 ): void {
   const url = new URL(req.url ?? "", "http://localhost");
   const roomId = url.searchParams.get("roomId") ?? "";
-  const displayName = url.searchParams.get("displayName") ?? (i++).toString();
+  const seq = i++;
+  const displayName = url.searchParams.get("displayName") || `Guest ${seq}`;
+  const userId = url.searchParams.get("userId") || randomUUID();
+  const color = url.searchParams.get("color") || FALLBACK_COLORS[seq % FALLBACK_COLORS.length];
 
   const room = manager.getRoom(roomId);
   if (!room) {
@@ -39,6 +48,6 @@ export function handleJoinRoom(
     return;
   }
 
-  const client = new Client(ws, displayName, room);
+  const client = new Client(ws, displayName, room, userId, color);
   room.register(client);
 }

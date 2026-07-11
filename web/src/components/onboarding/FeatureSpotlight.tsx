@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import {
 	Zap,
 	Users,
@@ -11,14 +10,12 @@ import {
 import { Modal, ModalClose } from '@/components/ui/modal';
 import { useUIStore } from '@/stores/useUIStore';
 
-const SEEN_KEY = 'cochart:spotlight-seen';
-
 interface FeatureSpotlightProps {
 	onClose?: () => void;
 }
 
 const FeatureSpotlight = ({ onClose }: FeatureSpotlightProps) => {
-	const { featureSpotlight, toggleFeatureSpotlight } = useUIStore();
+	const { featureSpotlight } = useUIStore();
 
 	const features = [
 		{
@@ -43,18 +40,7 @@ const FeatureSpotlight = ({ onClose }: FeatureSpotlightProps) => {
 		}
 	];
 
-	// Auto-show once on a visitor's first ever visit; never blocks again.
-	useEffect(() => {
-		if (typeof window === 'undefined') return;
-		if (!localStorage.getItem(SEEN_KEY)) {
-			toggleFeatureSpotlight(true);
-		}
-	}, [toggleFeatureSpotlight]);
-
 	const handleClose = () => {
-		if (typeof window !== 'undefined') {
-			localStorage.setItem(SEEN_KEY, '1');
-		}
 		if (onClose) onClose();
 	};
 
