@@ -3,11 +3,19 @@ import { coordinateToTimeExtrapolated } from '../interval';
 import { DrawingConstructor, DrawingType, Point } from '../types';
 import { TrendLine } from './primitives/TrendLine';
 import { VertLine } from './primitives/VertLine';
+import { HorizontalLine } from './primitives/HorizontalLine';
+import { Ray } from './primitives/Ray';
+import { Rectangle } from './primitives/Rectangle';
+import { FibonacciRetracement } from './primitives/FibonacciRetracement';
 import { BaseDrawing } from './primitives/BaseDrawing';
 
 const DRAWING_CLASSES: Record<DrawingType, DrawingConstructor> = {
 	TREND_LINE: TrendLine,
 	VERTICAL_LINE: VertLine,
+	HORIZONTAL_LINE: HorizontalLine,
+	RAY: Ray,
+	RECTANGLE: Rectangle,
+	FIBONACCI: FibonacciRetracement,
 }
 
 export class BaseDrawingHandler {

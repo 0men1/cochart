@@ -2,7 +2,7 @@ import { DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFacto
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChartStore } from "@/stores/useChartStore";
-import { MoveDiagonal, MoveUp } from "lucide-react";
+import { MoveDiagonal, MoveUp, Minus, MoveUpRight, RectangleHorizontal, AlignJustify } from "lucide-react";
 import { DrawingType } from "@/core/chart/types";
 
 function Toolbox() {
@@ -40,7 +40,11 @@ function Toolbox() {
 
   const buttons = [
     { tool: DrawingType.VERTICAL_LINE, icon: MoveUp, label: "Vertical Line" },
+    { tool: DrawingType.HORIZONTAL_LINE, icon: Minus, label: "Horizontal Line" },
     { tool: DrawingType.TREND_LINE, icon: MoveDiagonal, label: "Trendline" },
+    { tool: DrawingType.RAY, icon: MoveUpRight, label: "Ray" },
+    { tool: DrawingType.RECTANGLE, icon: RectangleHorizontal, label: "Rectangle" },
+    { tool: DrawingType.FIBONACCI, icon: AlignJustify, label: "Fib Retracement" },
   ];
 
   return (

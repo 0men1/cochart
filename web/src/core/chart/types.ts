@@ -8,7 +8,11 @@ export interface DrawingConstructor {
 
 export enum DrawingType {
 	TREND_LINE = 'TREND_LINE',
-	VERTICAL_LINE = 'VERTICAL_LINE'
+	VERTICAL_LINE = 'VERTICAL_LINE',
+	HORIZONTAL_LINE = 'HORIZONTAL_LINE',
+	RAY = 'RAY',
+	RECTANGLE = 'RECTANGLE',
+	FIBONACCI = 'FIBONACCI'
 }
 
 export interface Point {

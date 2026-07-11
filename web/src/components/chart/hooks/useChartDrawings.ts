@@ -1,6 +1,10 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { TrendLine } from "@/core/chart/drawings/primitives/TrendLine";
 import { VertLine } from "@/core/chart/drawings/primitives/VertLine";
+import { HorizontalLine } from "@/core/chart/drawings/primitives/HorizontalLine";
+import { Ray } from "@/core/chart/drawings/primitives/Ray";
+import { Rectangle } from "@/core/chart/drawings/primitives/Rectangle";
+import { FibonacciRetracement } from "@/core/chart/drawings/primitives/FibonacciRetracement";
 import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types";
 import { useCallback, useEffect, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
@@ -22,6 +26,18 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
         break;
       case DrawingType.TREND_LINE:
         restoredDrawing = new TrendLine(drawing.points, drawing.options, drawing.id);
+        break;
+      case DrawingType.HORIZONTAL_LINE:
+        restoredDrawing = new HorizontalLine(drawing.points, drawing.options, drawing.id);
+        break;
+      case DrawingType.RAY:
+        restoredDrawing = new Ray(drawing.points, drawing.options, drawing.id);
+        break;
+      case DrawingType.RECTANGLE:
+        restoredDrawing = new Rectangle(drawing.points, drawing.options, drawing.id);
+        break;
+      case DrawingType.FIBONACCI:
+        restoredDrawing = new FibonacciRetracement(drawing.points, drawing.options, drawing.id);
         break;
     }
     if (restoredDrawing) {

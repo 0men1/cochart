@@ -34,4 +34,8 @@ export interface BaseOptions {
 	labelBackgroundColor?: string;
 	labelTextColor?: string;
 	showLabel?: boolean;
+	fillColor?: string;
+	fillOpacity?: number;
+	extend?: boolean;
+	levels?: number[];
 }
