@@ -1,6 +1,5 @@
-import { Settings, Share2, Users, Wifi } from "lucide-react";
+import { Settings, Share2, Users } from "lucide-react";
 import { Button } from "../ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { useUIStore } from "@/stores/useUIStore";
 import { useChartStore } from "@/stores/useChartStore";
@@ -8,26 +7,12 @@ import { Product } from "@/stores/types";
 import { useCollabStore } from "@/stores/useCollabStore";
 
 
-function getStatusDiv(status: ConnectionStatus) {
-  switch (status) {
-    case ConnectionStatus.CONNECTED:
-      return (<span className="text-live">●</span>)
-    case ConnectionStatus.DISCONNECTED:
-      return (<span className="text-destructive">●</span>)
-    case ConnectionStatus.CONNECTING:
-      break;
-    case ConnectionStatus.ERROR:
-      break;
-    case ConnectionStatus.RECONNECTING:
-      return (<span className="text-yellow-500">●</span>)
-  }
-}
 
 export default function ChartHeader() {
   const { toggleChartSettings } = useChartStore();
 
   const { product, timeframe } = useChartStore().data;
-  const { data, selectChart } = useChartStore();
+  const { selectChart } = useChartStore();
 
   const { toggleTickerSearch } = useUIStore();
   const { status, roomId, toggleCollabWindow } = useCollabStore();
@@ -85,35 +70,11 @@ export default function ChartHeader() {
             </>
           ) : (
             <>
-              <Share2 size={16} className="md:mr-2" />
-              <span className="hidden md:inline">Share</span>
+              <Share2 size={16} />
             </>
           )}
         </Button>
 
-        {/* Connection Status Icon with Tooltip */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9">
-              <Wifi size={18} className="text-muted-foreground" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="p-3 max-w-xs">
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Connection Status</h4>
-              <div className="space-y-1 text-xs">
-                <div className="flex items-center justify-between">
-                  <span>Collab Connection:</span>
-                  {getStatusDiv(status)}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Candle Data:</span>
-                  {getStatusDiv(data.connectionState.status)}
-                </div>
-              </div>
-            </div>
-          </TooltipContent>
-        </Tooltip>
 
         <Button
           variant="outline"
