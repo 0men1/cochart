@@ -9,26 +9,36 @@
 ![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socket.io&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-*A real-time collaborative financial charting platform with advanced drawing tools and live market data.*
+*Open-source, real-time collaborative market charting — open a chart, draw, and share a link. No signup, no walls.*
 
 </div>
 
+> **Project status:** early-stage and actively developed (pre-1.0). Contributions and feedback welcome.
+
 ## What is CoChart?
 
-CoChart lets multiple people analyze markets together on a shared chart in real
-time. Open a room, share the link, and everyone sees the same candlesticks,
-drawings, and cursors update live.
+CoChart is an open-source, Excalidraw-style tool for markets: open a chart and
+start drawing instantly — no account required — then share a link and everyone
+in the room sees the same candlesticks, drawings, and cursors update live.
+
+You're anonymous by default and nothing gets in your way before the first
+drawing. **The core is free and open forever;** cloud saving is a planned,
+optional way to support the project — never a gate on what CoChart already does.
 
 ## Features
 
+- **Free & open source (MIT)** — self-host it, fork it, or just use it; the core
+  has no paywalls.
+- **No signup** — anonymous by default. Start drawing instantly and invite others
+  with a link.
 - **Live & historical candlesticks** — OHLCV data streamed and backfilled from
   Coinbase's public market API (no API key required).
 - **Drawing tools** — trendlines, rays, horizontal & vertical lines, rectangles,
   and Fibonacci retracements, with draggable control points.
 - **Real-time collaboration** — WebSocket-backed rooms sync chart state, drawings,
   and peer cursors across participants.
-- **Local persistence** — your drawings and settings are saved in the browser via
-  IndexedDB, so sessions survive reloads.
+- **Local persistence** — drawings and settings are saved in your browser via
+  IndexedDB, so sessions survive reloads (opt-in cloud saving is planned).
 
 ## Getting Started
 
