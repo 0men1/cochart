@@ -213,13 +213,12 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 		return this._isHovered;
 	}
 
-	// Transient hover highlight. Uses requestUpdate() (not applyOptions) so it's
-	// cheap and safe to toggle from the crosshair-move handler on every move.
+	// Transient hover highlight — flag only. The repaint is owned by the batched
+	// hover applicator in useChartDrawings (a lone requestUpdate/applyOptions
+	// fired from inside the crosshair-move dispatch gets coalesced away, which
+	// left control points stuck on screen).
 	setHovered(hovered: boolean): void {
-		if (this._isHovered !== hovered) {
-			this._isHovered = hovered;
-			this.requestUpdate();
-		}
+		this._isHovered = hovered;
 	}
 
 	// Control points render (and are grabbable) when the drawing is selected or
