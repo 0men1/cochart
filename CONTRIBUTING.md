@@ -9,7 +9,7 @@ Requirements: **Node.js ≥ 20** and npm.
 
 ```bash
 git clone https://github.com/0men1/cochart.git
-cd cochart/web
+cd cochart
 npm install
 npm run dev        # http://localhost:3000
 ```
@@ -24,7 +24,7 @@ endpoints.
 2. Make your change. Keep pull requests focused — one logical change per PR.
 3. **Lint before pushing:**
    ```bash
-   cd web && npm run lint
+   npm run lint
    ```
 4. Verify the app still builds and runs:
    ```bash

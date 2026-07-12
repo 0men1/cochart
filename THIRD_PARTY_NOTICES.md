@@ -27,5 +27,5 @@ not imply endorsement.
 ## Other dependencies
 
 All remaining runtime and build dependencies are declared in
-[`web/package.json`](./web/package.json) and retain their respective open-source
+[`package.json`](./package.json) and retain their respective open-source
 licenses (see each package under `node_modules`).

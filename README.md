@@ -35,7 +35,6 @@ drawings, and cursors update live.
 Requirements: **Node.js ≥ 20** and npm.
 
 ```bash
-cd web
 npm install
 npm run dev
 ```
@@ -43,7 +42,7 @@ npm run dev
 Then open http://localhost:3000. No API keys or secrets are needed — CoChart uses
 Coinbase's public endpoints for market data.
 
-### Scripts (run from `web/`)
+### Scripts
 
 | Command         | Description                                        |
 | --------------- | -------------------------------------------------- |
@@ -57,15 +56,15 @@ Coinbase's public endpoints for market data.
 - **Framework:** Next.js 16, React 19, TypeScript
 - **Styling:** Tailwind CSS 4, Radix UI
 - **State:** Zustand + Immer
-- **Realtime:** Custom Node HTTP + WebSocket server (`web/server.ts`, `ws`)
+- **Realtime:** Custom Node HTTP + WebSocket server (`server.ts`, `ws`)
 - **Charts:** [`cochart-charts`](https://github.com/0men1/cochart-charts) — a fork
   of TradingView Lightweight Charts™ (see [Credits](#credits))
 
 ## Project Layout
 
 ```
-web/
 ├── server.ts              # Custom HTTP + WebSocket server (entry point)
+├── next.config.ts         # Next.js config
 └── src/
     ├── app/               # Next.js routes (/, /chart, /chart/room/:id)
     ├── components/        # UI (chart, onboarding, ui primitives)
