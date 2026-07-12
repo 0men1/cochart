@@ -53,5 +53,18 @@ reproduce, the symbol/room involved, and your browser/OS.
 
 ## Tests
 
-There is no automated test suite yet — adding one is on the [roadmap](./ROADMAP.md).
-Until then, please manually verify affected flows and note what you tested in your PR.
+We use [Vitest](https://vitest.dev/) for unit tests on **core, non-UI logic** — the
+collaboration state machine, market-data batching/caching, message parsing, and
+geometry. Run them with:
+
+```bash
+npm test          # single run (also runs in CI)
+npm run test:watch
+```
+
+**Convention:** when you add or change core logic, add or update a colocated
+`*.test.ts` next to it (see `src/server/collab/room.test.ts` or
+`src/server/market/service.test.ts` for the mock/stub patterns). Keep tests
+deterministic — mock providers/clients rather than hitting the network, real
+WebSockets, or the DOM. React/UI components are intentionally **not** unit-tested;
+verify those manually and note what you checked in your PR.
