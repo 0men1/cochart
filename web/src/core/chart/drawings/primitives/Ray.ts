@@ -108,7 +108,7 @@ class RayPaneView implements IPrimitivePaneView {
 			this._p2.y = series.priceToCoordinate(this._source._p2.price);
 		}
 
-		this._renderer._isSelected = this._source.isSelected();
+		this._renderer._isSelected = this._source.showControlPoints();
 		this._renderer._options = this._source.options;
 	}
 
@@ -119,7 +119,7 @@ class RayPaneView implements IPrimitivePaneView {
 
 const defaultOptions: BaseOptions = {
 	color: '#ffffff',
-	width: 3,
+	width: 2,
 };
 
 export class Ray extends BaseDrawing {

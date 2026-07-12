@@ -104,29 +104,18 @@ export const DrawingEditor = () => {
 
 				{numberOptions?.map(option => (
 					<div key={option.key} className="flex items-center space-x-1">
-						<Button
-							size="sm"
-							variant="ghost"
-							className="w-8 h-8 p-0"
-							onClick={() => {
-								updateOption(option.key, Math.max(1, (values[option.key] || 1) - 1));
-							}}
-							title="Decrease Width"
-						>
-							-
-						</Button>
-						<span className="text-xs">{values[option.key] || 1}</span>
-						<Button
-							size="sm"
-							variant="ghost"
-							className="w-8 h-8 p-0"
-							onClick={() => {
-								updateOption(option.key, (values[option.key] || 1) + 1);
-							}}
-							title="Increase Width"
-						>
-							+
-						</Button>
+						{[1, 2, 3, 4].map(w => (
+							<Button
+								key={w}
+								size="sm"
+								variant={(values[option.key] ?? 2) === w ? "default" : "ghost"}
+								className="w-7 h-8 p-0"
+								onClick={() => updateOption(option.key, w)}
+								title={`Thickness ${w}`}
+							>
+								{w}
+							</Button>
+						))}
 					</div>
 				))}
 

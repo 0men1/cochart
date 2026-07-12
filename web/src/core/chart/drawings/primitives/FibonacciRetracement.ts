@@ -151,7 +151,7 @@ class FibonacciPaneView implements IPrimitivePaneView {
 		}
 
 		this._renderer._levels = this._levels;
-		this._renderer._isSelected = this._source.isSelected();
+		this._renderer._isSelected = this._source.showControlPoints();
 		this._renderer._options = this._source.options;
 	}
 
@@ -162,7 +162,7 @@ class FibonacciPaneView implements IPrimitivePaneView {
 
 const defaultOptions: BaseOptions = {
 	color: '#787b86',
-	width: 1,
+	width: 2,
 	fillOpacity: 0.08,
 	levels: DEFAULT_LEVELS,
 };

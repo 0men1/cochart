@@ -1,5 +1,6 @@
 import { Coordinate, IChartApi, ISeriesApi, SeriesType } from 'cochart-charts';
 import { coordinateToTimeExtrapolated } from '../interval';
+import { isSnapEnabled, snapPriceToCandle, snapYToCandle } from '../snap';
 import { DrawingConstructor, DrawingType, Point } from '../types';
 import { TrendLine } from './primitives/TrendLine';
 import { VertLine } from './primitives/VertLine';
@@ -75,8 +76,11 @@ export class BaseDrawingHandler {
 				if (c.x === null || c.y === null) return;
 				screen.push({ x: c.x, y: c.y });
 			}
+			// Snap the live cursor point to the candle while magnet is on; committed
+			// anchors were already snapped when they were placed.
+			const cursorY = isSnapEnabled() ? snapYToCandle(this._chart, this._series, x, y) : y;
 			while (screen.length < required) {
-				screen.push({ x, y });
+				screen.push({ x, y: cursorY });
 			}
 
 			this._preview.setPreviewPoints(screen);
@@ -96,7 +100,10 @@ export class BaseDrawingHandler {
 	onClick(x: Coordinate, y: Coordinate): BaseDrawing | null {
 		try {
 			const timePoint = coordinateToTimeExtrapolated(this._chart, this._series, x);
-			const price = this._series.coordinateToPrice(y);
+			// With magnet on, snap the price to the candle's nearest OHLC value.
+			const price = isSnapEnabled()
+				? (snapPriceToCandle(this._chart, this._series, x, y) ?? this._series.coordinateToPrice(y))
+				: this._series.coordinateToPrice(y);
 
 			if (!timePoint || price === null) return null;
 

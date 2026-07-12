@@ -63,6 +63,10 @@ export function useChartDrawings() {
   // chart recreation, so re-attaching must not re-subscribe them.
   const wiredRef = useRef(new WeakSet<BaseDrawing>());
 
+  // Id of the drawing currently under the cursor, so we can clear its hover
+  // highlight when the cursor moves off it.
+  const hoveredRef = useRef<string | null>(null);
+
   const attachListeners = useCallback((drawing: BaseDrawing) => {
     drawing.subscribe(DrawingOperation.DELETE, () => {
       deleteDrawing(drawing.id);
@@ -143,6 +147,13 @@ export function useChartDrawings() {
           wiredRef.current.add(inst);
           addDrawing(inst); // reducer should serialize internally
           cancelTool();
+          // Drop the freshly placed drawing straight into edit mode so its
+          // editor opens instead of it being silently placed.
+          if (drawings.selected && drawings.selected !== inst.id) {
+            drawings.collection.get(drawings.selected)?.setSelected(false);
+          }
+          inst.setSelected(true);
+          selectDrawing(inst.id);
         }
         return;
       }
@@ -162,26 +173,43 @@ export function useChartDrawings() {
   }, [tools.activeHandler, drawings, seriesApi]);
 
   const mouseMoveHandler = useCallback((param: MouseEventParams) => {
+    const clearHover = () => {
+      if (hoveredRef.current) {
+        drawings.collection.get(hoveredRef.current)?.setHovered(false);
+        hoveredRef.current = null;
+      }
+    };
     try {
-      if (!param.point || !param.logical) return;
+      // Cursor left the chart pane — drop any hover highlight.
+      if (!param.point || !param.logical) { clearHover(); return; }
       const el = chartApi?.chartElement();
 
       // While placing a drawing, drive the live preview and keep the crosshair
       // cursor — the hoverable preview primitive would otherwise flip us to
       // 'pointer' mid-draw.
       if (tools.activeHandler) {
+        clearHover();
         tools.activeHandler.onMove(param.point.x, param.point.y);
         if (el) setCursor('', el);
         return;
       }
 
-      const hoveredId = param.hoveredObjectId as string;
+      const hoveredId = (param.hoveredObjectId as string) ?? null;
+
+      // Toggle the hover highlight so control points appear under the cursor and
+      // disappear when it moves away (a still-selected drawing keeps them).
+      if (hoveredId !== hoveredRef.current) {
+        if (hoveredRef.current) drawings.collection.get(hoveredRef.current)?.setHovered(false);
+        if (hoveredId) drawings.collection.get(hoveredId)?.setHovered(true);
+        hoveredRef.current = hoveredId;
+      }
+
       // Scope the cursor to the chart element so it can't leak onto the rest of
       // the UI. '' clears the inline cursor, falling back to the container's
       // `cursor-crosshair`; 'pointer' overrides it on a draggable drawing.
       if (el) setCursor(hoveredId ? 'pointer' : '', el);
     } catch (e) { console.error(e); }
-  }, [tools.activeHandler, chartApi]);
+  }, [tools.activeHandler, chartApi, drawings]);
 
   useEffect(() => {
     chartApi?.subscribeCrosshairMove(mouseMoveHandler);

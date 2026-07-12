@@ -1,6 +1,7 @@
 import { IChartApi, ISeriesApi, SeriesType, ISeriesPrimitive, Time, Coordinate, IPrimitivePaneView, SeriesAttachedParameter, ISeriesPrimitiveAxisView, PrimitiveHoveredItem, PrimitivePaneViewZOrder } from 'cochart-charts';
 import { Point } from '@/core/chart/types';
 import { coordinateToTimeExtrapolated, timeToCoordinateExtrapolated } from '@/core/chart/interval';
+import { isSnapEnabled, snapYToCandle } from '@/core/chart/snap';
 import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, SerializedDrawing } from '../types';
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
@@ -10,6 +11,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 
 	protected _isDestroyed: boolean = false;
 	protected _isSelected: boolean = false;
+	protected _isHovered: boolean = false;
 
 	protected _chart!: IChartApi;
 	protected _series!: ISeriesApi<SeriesType>;
@@ -96,10 +98,14 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 		if (this._activeControlPoint !== null) {
 			const newScreenPoints = this._initialScreenPoints.map((p, i) => {
 				if (i === this._activeControlPoint) {
-					return {
-						x: (p.x + deltaX) as Coordinate,
-						y: (p.y + deltaY) as Coordinate
-					}
+					const targetX = (p.x + deltaX) as Coordinate;
+					const targetY = (p.y + deltaY) as Coordinate;
+					// Magnet: snap the dragged control point's price to the candle's
+					// nearest OHLC value (time/x snaps to the bar on commit).
+					const snappedY = isSnapEnabled()
+						? snapYToCandle(this._chart, this._series, targetX, targetY)
+						: targetY;
+					return { x: targetX, y: snappedY };
 				}
 				return {
 					x: p.x as Coordinate,
@@ -177,7 +183,8 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 	}
 
 	getControlPointsAt(x: Coordinate, y: Coordinate): number | null {
-		if (!this._isSelected) return null;
+		// Control points are grabbable whenever they're visible (selected OR hovered).
+		if (!this.showControlPoints()) return null;
 		const threshold = 8;
 		for (let i = 0; i < this._points.length; ++i) {
 			const screenCoords = this.getScreenCoordinates(this._points[i])
@@ -200,6 +207,25 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 			this._series.applyOptions(this._series.options());
 			this.notify(DrawingOperation.SELECT);
 		}
+	}
+
+	isHovered(): boolean {
+		return this._isHovered;
+	}
+
+	// Transient hover highlight. Uses requestUpdate() (not applyOptions) so it's
+	// cheap and safe to toggle from the crosshair-move handler on every move.
+	setHovered(hovered: boolean): void {
+		if (this._isHovered !== hovered) {
+			this._isHovered = hovered;
+			this.requestUpdate();
+		}
+	}
+
+	// Control points render (and are grabbable) when the drawing is selected or
+	// merely hovered.
+	showControlPoints(): boolean {
+		return this._isSelected || this._isHovered;
 	}
 
 	updateOptions(options: Record<string, any>): void {

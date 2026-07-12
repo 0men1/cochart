@@ -9,7 +9,7 @@ import { BaseOptions, EditableOption, SerializedDrawing } from "@/core/chart/dra
 const defaultOptions: BaseOptions = {
 	color: '#00FF00',
 	labelText: '',
-	width: 3,
+	width: 2,
 	labelBackgroundColor: 'green',
 	labelTextColor: 'white',
 	showLabel: false,

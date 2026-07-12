@@ -1,14 +1,30 @@
 "use client"
 import { useCallback, useEffect } from "react";
+import { CrosshairMode } from "cochart-charts";
 import { useUIStore } from "@/stores/useUIStore";
 import { useCollabStore } from "@/stores/useCollabStore";
 import { useChartStore } from "@/stores/useChartStore";
+import { isSnapEnabled, setSnapEnabled } from "@/core/chart/snap";
 
 export function useChartInteraction() {
   const { toggleTickerSearch } = useUIStore();
   const { cancelTool, deselectDrawing, deleteDrawing, undo, redo } = useChartStore();
 
+  // Cmd (Mac) / Ctrl toggles "magnet" snapping: drawing control points snap to
+  // candle OHLC. We also flip the crosshair to MagnetOHLC so the visual aid
+  // matches; when off we restore the user's configured cursor mode.
+  const syncSnap = useCallback((active: boolean) => {
+    if (isSnapEnabled() === active) return;
+    setSnapEnabled(active);
+    const { chartApi, chartSettings } = useChartStore.getState();
+    chartApi?.applyOptions({
+      crosshair: { mode: active ? CrosshairMode.MagnetOHLC : chartSettings.cursor },
+    });
+  }, []);
+
   const keyDownHandler = useCallback((event: KeyboardEvent) => {
+    syncSnap(event.metaKey || event.ctrlKey);
+
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
     }
@@ -55,12 +71,24 @@ export function useChartInteraction() {
     if (/^[a-zA-Z]$/.test(event.key)) {
       toggleTickerSearch(true, event.key);
     }
-  }, [toggleTickerSearch])
+  }, [toggleTickerSearch, syncSnap])
+
+  // Release the magnet as soon as the modifier is let go, or when the window
+  // loses focus (e.g. Cmd+Tab) so it can't get stuck on.
+  const keyUpHandler = useCallback((event: KeyboardEvent) => {
+    syncSnap(event.metaKey || event.ctrlKey);
+  }, [syncSnap]);
+
+  const blurHandler = useCallback(() => syncSnap(false), [syncSnap]);
 
   useEffect(() => {
     window.addEventListener('keydown', keyDownHandler)
+    window.addEventListener('keyup', keyUpHandler)
+    window.addEventListener('blur', blurHandler)
     return () => {
       window.removeEventListener('keydown', keyDownHandler)
+      window.removeEventListener('keyup', keyUpHandler)
+      window.removeEventListener('blur', blurHandler)
     }
-  }, [keyDownHandler])
+  }, [keyDownHandler, keyUpHandler, blurHandler])
 }
