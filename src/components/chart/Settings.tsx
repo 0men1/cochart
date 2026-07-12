@@ -58,7 +58,7 @@ const TabButton = ({ active, onClick, icon: Icon, label }: any) => (
 
 // --- Main Component ---
 
-export default function chartSettings() {
+export default function SettingsPanel() {
 	const {
 		toggleChartSettings,
 		setChartSettings,
