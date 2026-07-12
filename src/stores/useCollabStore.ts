@@ -88,7 +88,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
           : data;
 
         const { syncChart, syncModifyDrawing,
-          syncAddDrawing, syncDeleteDrawing, syncSnapshot } = useChartStore.getState();
+          syncAddDrawing, syncDeleteDrawing } = useChartStore.getState();
 
         // Presence is independent of chart state — always apply the latest
         // roster, even while a snapshot decision is pending.

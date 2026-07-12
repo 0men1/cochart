@@ -5,7 +5,7 @@ import { Client } from "./client";
 import { Room } from "./room";
 import type { RoomManager } from "./roomManager";
 
-var i = 1;
+let i = 1;
 
 // Fallback colors for connections that don't supply one (older clients).
 const FALLBACK_COLORS = [
