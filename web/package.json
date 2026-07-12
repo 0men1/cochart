@@ -2,6 +2,22 @@
   "name": "cochart",
   "version": "0.1.0",
   "private": true,
+  "description": "A real-time collaborative financial charting platform with advanced drawing tools and live market data.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0men1/cochart.git"
+  },
+  "keywords": [
+    "charting",
+    "financial-charts",
+    "candlestick",
+    "collaborative",
+    "realtime",
+    "websocket",
+    "nextjs",
+    "trading"
+  ],
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx watch server.ts",
     "build": "next build",
@@ -19,7 +35,7 @@
     "@vercel/analytics": "^1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cochart-charts": "file:cochart-charts-1.0.0.tgz",
+    "cochart-charts": "^1.0.0",
     "immer": "^11.1.3",
     "lucide-react": "^0.511.0",
     "next": "^16.0.10",
