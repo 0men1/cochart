@@ -9,8 +9,9 @@ import { useChartDrawings } from './hooks/useChartDrawings';
 import { useChartInteraction } from './hooks/useChartInteractions';
 import TickerSearchBox from './TickerSearchBox';
 import ChartFooter from './ChartFooter';
-import FeatureSpotlight from '../onboarding/FeatureSpotlight';
+import WelcomeTour from '../onboarding/WelcomeTour';
 import { useUIStore } from '@/stores/useUIStore';
+import { hasSeenIntro, markIntroSeen } from '@/lib/onboarding';
 import { DrawingEditor } from './DrawingEditor';
 import CollabStatus from './CollabStatus';
 import SnapshotPrompt from './SnapshotPrompt';
@@ -29,7 +30,7 @@ export default function ClientChart() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const {
     toggleTickerSearch,
-    toggleFeatureSpotlight,
+    toggleWelcomeTour,
   } = useUIStore();
 
   const initIdentity = useIdentityStore((s) => s.init);
@@ -37,7 +38,15 @@ export default function ClientChart() {
     useChartStore.persist.rehydrate();
     // Assign this browser an anonymous identity the moment the app opens.
     initIdentity();
-  }, [initIdentity]);
+    // Greet first-time visitors with the guided tour (once per browser).
+    if (!hasSeenIntro()) toggleWelcomeTour(true);
+  }, [initIdentity, toggleWelcomeTour]);
+
+  // Close the tour and remember it was seen, however it was dismissed.
+  const handleTourClose = () => {
+    toggleWelcomeTour(false);
+    markIntroSeen();
+  };
 
   // Drive the whole UI's light/dark theme off the user's chart setting by
   // toggling the `dark` class on <html>, which all design tokens key off of.
@@ -85,9 +94,7 @@ export default function ClientChart() {
 
         </div>
 
-        <FeatureSpotlight
-          onClose={() => toggleFeatureSpotlight(false)}
-        />
+        <WelcomeTour onClose={handleTourClose} />
         <TickerSearchBox
           onClose={() => toggleTickerSearch(false)}
         />

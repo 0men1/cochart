@@ -6,11 +6,11 @@ interface UIState {
 		isOpen: boolean;
 		searchTerm: string
 	};
-	featureSpotlight: {
+	welcomeTour: {
 		isOpen: boolean;
 	};
 	toggleTickerSearch: (isOpen: boolean, term?: string) => void;
-	toggleFeatureSpotlight: (isOpen: boolean) => void;
+	toggleWelcomeTour: (isOpen: boolean) => void;
 }
 
 
@@ -19,8 +19,8 @@ export const useUIStore = create<UIState>((set) => ({
 		isOpen: false,
 		searchTerm: ""
 	},
-	featureSpotlight: { isOpen: false },
-	toggleFeatureSpotlight: (isOpen: boolean) => set(({ featureSpotlight: { isOpen } })),
+	welcomeTour: { isOpen: false },
+	toggleWelcomeTour: (isOpen: boolean) => set(({ welcomeTour: { isOpen } })),
 	toggleTickerSearch: (isOpen: boolean, term?: string) => set((state) => ({
 		tickerSearchBox: {
 			...state.tickerSearchBox,
