@@ -1,4 +1,5 @@
 import { RoomManager } from "./collab/roomManager";
+import { logger } from "../lib/logger";
 import { CoinbaseProvider } from "./market/coinbase";
 import { SearchEngine } from "./market/search";
 import { MarketService } from "./market/service";
@@ -22,7 +23,7 @@ let indexReady: Promise<void> | null = null;
 export function ensureSearchIndex(): Promise<void> {
 	if (!indexReady) {
 		indexReady = searchEngine.buildIndex(providers).catch((err) => {
-			console.error("Failed to build search index:", err);
+			logger.error("Failed to build search index:", err);
 			// Reset so a later request can retry.
 			indexReady = null;
 		});

@@ -1,4 +1,5 @@
 import { CanvasRenderingTarget2D } from "fancy-canvas";
+import { logger } from "@/lib/logger";
 import { Coordinate, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitiveAxisView } from "cochart-charts";
 import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";
@@ -146,7 +147,7 @@ export class HorizontalLine extends BaseDrawing {
 			this._paneViews = [new HorizontalLinePaneView(this)];
 			this._priceAxisViews = [new HorizontalLinePriceAxisView(this)];
 		} catch (error) {
-			console.error("Failed to initialize HorizontalLine: ", error);
+			logger.error("Failed to initialize HorizontalLine: ", error);
 		}
 	}
 

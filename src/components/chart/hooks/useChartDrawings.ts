@@ -1,4 +1,5 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
+import { logger } from "@/lib/logger";
 import { TrendLine } from "@/core/chart/drawings/primitives/TrendLine";
 import { VertLine } from "@/core/chart/drawings/primitives/VertLine";
 import { HorizontalLine } from "@/core/chart/drawings/primitives/HorizontalLine";
@@ -44,7 +45,7 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
       return restoredDrawing;
     }
   } catch (error) {
-    console.error(`failed to restore drawing ${drawing.id}: `, error)
+    logger.error(`failed to restore drawing ${drawing.id}: `, error)
   }
   return null;
 }
@@ -130,7 +131,7 @@ export function useChartDrawings() {
       });
 
       isInitializedRef.current = id;
-    })().catch(console.error);
+    })().catch(logger.error);
 
     return () => {
       active = false;
@@ -206,7 +207,7 @@ export function useChartDrawings() {
       } else {
         deselectDrawing();
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error(e); }
   }, [tools.activeHandler, drawings, seriesApi]);
 
   // Point the hover highlight at `targetId` (or null). The actual flag flip +
@@ -224,7 +225,7 @@ export function useChartDrawings() {
       for (const drawing of d.collection.values()) {
         drawing.setHovered(drawing.id === hoveredRef.current);
       }
-      try { s?.applyOptions(s.options()); } catch (e) { console.error(e); }
+      try { s?.applyOptions(s.options()); } catch (e) { logger.error(e); }
     });
   }, []);
 
@@ -253,7 +254,7 @@ export function useChartDrawings() {
       // the UI. '' clears the inline cursor, falling back to the container's
       // `cursor-crosshair`; 'pointer' overrides it on a draggable drawing.
       if (el) setCursor(hoveredId ? 'pointer' : '', el);
-    } catch (e) { console.error(e); }
+    } catch (e) { logger.error(e); }
   }, [tools.activeHandler, chartApi, applyHover]);
 
   useEffect(() => {
@@ -268,7 +269,7 @@ export function useChartDrawings() {
         chartApi?.unsubscribeCrosshairMove(mouseMoveHandler);
         chartApi?.unsubscribeClick(mouseClickHandler);
       } catch (error) {
-        console.error('Error during event cleanup (likely disposed chart):', error);
+        logger.error('Error during event cleanup (likely disposed chart):', error);
       }
     };
   }, [chartApi, mouseClickHandler, mouseMoveHandler]);

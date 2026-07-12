@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { logger } from "@/lib/logger";
 import {
 	createChart,
 	CandlestickSeries,
@@ -139,7 +140,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 				currentCandle.current = sortedCandles[sortedCandles.length - 1];
 			}
 		} catch (error) {
-			console.error(`Error fetching candles: `, error);
+			logger.error(`Error fetching candles: `, error);
 		}
 	}, [product.symbol, timeframe, seriesRef]);
 
@@ -235,7 +236,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 					setDataConnectionState({ status: ConnectionStatus.CONNECTED, reconnectAttempts: 0 });
 				}
 			} catch (error) {
-				console.error("failed to fetch tick data: ", error);
+				logger.error("failed to fetch tick data: ", error);
 				setDataConnectionState({ status: ConnectionStatus.ERROR, reconnectAttempts: 0 });
 			}
 		};

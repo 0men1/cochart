@@ -1,4 +1,5 @@
 import { ExchangeAdapter } from "@/core/chart/market-data/ExchangeAdapter";
+import { logger } from "@/lib/logger";
 import { ConnectionState, TickData } from "@/core/chart/market-data/types";
 
 // CACHE
@@ -15,7 +16,7 @@ const exchangeRegistry: Partial<Record<string, () => Promise<ExchangeAdapter>>> 
 
 async function loadAndCacheAdapter(exchange: string): Promise<ExchangeAdapter | null> {
 	if (!exchangeRegistry[exchange]) {
-		console.error("(DNE) failed to load exchange")
+		logger.error("(DNE) failed to load exchange")
 		return null;
 	}
 
@@ -36,7 +37,7 @@ async function loadAndCacheAdapter(exchange: string): Promise<ExchangeAdapter | 
 			return obj;
 		})
 		.catch(error => {
-			console.error("failed to load exchange: ", error)
+			logger.error("failed to load exchange: ", error)
 			return null;
 		})
 

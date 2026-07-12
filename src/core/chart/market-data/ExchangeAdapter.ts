@@ -1,4 +1,5 @@
 import { ExchangeConfig, ConnectionStatus, TickData, ConnectionState } from "./types";
+import { logger } from "@/lib/logger";
 
 export abstract class ExchangeAdapter {
 	private ws: WebSocket | null = null;
@@ -97,7 +98,7 @@ export abstract class ExchangeAdapter {
 					this.subscriptions.get(ticker.symbol)?.forEach(cb => cb(ticker));
 				}
 			} catch (e) {
-				console.error(`[${this.config.name}] Parse error`, e);
+				logger.error(`[${this.config.name}] Parse error`, e);
 			}
 		};
 

@@ -1,4 +1,5 @@
 import { CollabSocket } from "@/core/chart/collaboration/collabSocket";
+import { logger } from "@/lib/logger";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { SerializedDrawing } from "@/core/chart/drawings/types";
 import { getDrawings } from "@/lib/indexdb";
@@ -181,7 +182,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
                 get().resolvePendingSnapshot('replace');
               }
             }).catch((e) => {
-              console.error("failed to check saved drawings: ", e);
+              logger.error("failed to check saved drawings: ", e);
               get().resolvePendingSnapshot('replace');
             });
             break;
@@ -205,7 +206,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
         set({ status: ConnectionStatus.DISCONNECTED });
       },
       onError: (error) => {
-        console.error("connection error: ", error);
+        logger.error("connection error: ", error);
         set({ status: ConnectionStatus.ERROR });
       }
     });

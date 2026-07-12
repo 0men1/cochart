@@ -1,4 +1,5 @@
 import { CanvasRenderingTarget2D } from 'fancy-canvas';
+import { logger } from "@/lib/logger";
 import { IPrimitivePaneRenderer, IPrimitivePaneView, Coordinate } from 'cochart-charts';
 import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
@@ -134,7 +135,7 @@ export class TrendLine extends BaseDrawing {
 		try {
 			this._paneViews = [new TrendLinePaneView(this)];
 		} catch (error) {
-			console.error(`Failed to initialize trenline ${this._id}: `, error)
+			logger.error(`Failed to initialize trenline ${this._id}: `, error)
 		}
 	}
 

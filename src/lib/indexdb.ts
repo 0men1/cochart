@@ -1,4 +1,5 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
+import { logger } from "@/lib/logger";
 import { SerializedDrawing } from "@/core/chart/drawings/types";
 
 const DATABASE_NAME = "COCHART";
@@ -17,7 +18,7 @@ function initDatabase(): Promise<IDBDatabase> {
 		const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
 
 		request.onerror = (error: Event) => {
-			console.error(error);
+			logger.error(error);
 			reject(request.error);
 		}
 
@@ -36,7 +37,7 @@ function initDatabase(): Promise<IDBDatabase> {
 		}
 
 		request.onblocked = () => {
-			console.warn("Database upgrade blocked.")
+			logger.warn("Database upgrade blocked.")
 		}
 	})
 
@@ -50,7 +51,7 @@ async function ensureDatabase(): Promise<IDBDatabase> {
 
 export async function setDrawings(chartId: string, drawings: BaseDrawing[]): Promise<void> {
 	if (!chartId || typeof chartId !== "string") {
-		console.error("Invalid chartId");
+		logger.error("Invalid chartId");
 		return;
 	}
 
@@ -77,23 +78,23 @@ export async function setDrawings(chartId: string, drawings: BaseDrawing[]): Pro
 			}
 
 			request.onerror = () => {
-				console.error("Failed to store drawings: ", request.error)
+				logger.error("Failed to store drawings: ", request.error)
 				reject(request.error);
 			}
 			tx.onerror = () => {
-				console.error("Transaction error: ", tx.error);
+				logger.error("Transaction error: ", tx.error);
 				reject(tx.error);
 			}
 		})
 	} catch (error) {
-		console.error("Error storing drawings: ", error);
+		logger.error("Error storing drawings: ", error);
 		throw error;
 	}
 }
 
 export async function getDrawings(chartId: string): Promise<SerializedDrawing[]> {
 	if (!chartId || typeof chartId !== "string") {
-		console.error("Invalid chartId");
+		logger.error("Invalid chartId");
 		return [];
 	}
 	try {
@@ -113,12 +114,12 @@ export async function getDrawings(chartId: string): Promise<SerializedDrawing[]>
 			};
 
 			request.onerror = () => {
-				console.error("Failed to retrieve drawings: ", request.error);
+				logger.error("Failed to retrieve drawings: ", request.error);
 				reject(request.error);
 			}
 		})
 	} catch (error) {
-		console.error("Error getting drawings: ", error)
+		logger.error("Error getting drawings: ", error)
 		throw error;
 	}
 }

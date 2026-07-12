@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 export class LocalStorage {
 	static getItem<T>(key: string): T | null {
 		if (typeof window === 'undefined') {
@@ -8,7 +9,7 @@ export class LocalStorage {
 			const value = localStorage.getItem(key);
 			return value ? JSON.parse(value) : null;
 		} catch (error) {
-			console.error(`[LocalStorage] JSON Parse error for key ${key}:`, error);
+			logger.error(`[LocalStorage] JSON Parse error for key ${key}:`, error);
 			return null;
 		}
 	}
@@ -19,7 +20,7 @@ export class LocalStorage {
 		try {
 			localStorage.setItem(key, JSON.stringify(value));
 		} catch (error) {
-			console.error("error: failed to set item in localStorage", error);
+			logger.error("error: failed to set item in localStorage", error);
 		}
 	}
 
@@ -27,7 +28,7 @@ export class LocalStorage {
 		try {
 			localStorage.removeItem(key);
 		} catch (error) {
-			console.error("error: failed to remove item from localStorage, ", error)
+			logger.error("error: failed to remove item from localStorage, ", error)
 		}
 	}
 
@@ -35,7 +36,7 @@ export class LocalStorage {
 		try {
 			localStorage.clear();
 		} catch (error) {
-			console.error("error: failed to clear localStorage, ", error)
+			logger.error("error: failed to clear localStorage, ", error)
 		}
 	}
 }

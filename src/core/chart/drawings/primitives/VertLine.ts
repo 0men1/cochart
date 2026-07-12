@@ -1,4 +1,5 @@
 import { CanvasRenderingTarget2D } from "fancy-canvas";
+import { logger } from "@/lib/logger";
 import { Coordinate, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitiveAxisView } from "cochart-charts";
 import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";
@@ -147,7 +148,7 @@ export class VertLine extends BaseDrawing {
 			this._paneViews = [new VertLinePaneView(this)];
 			this._timeAxisViews = [new VertLineTimeAxisView(this)]
 		} catch (error) {
-			console.error("Failed to initialized Vertline: ", error)
+			logger.error("Failed to initialized Vertline: ", error)
 		}
 	}
 

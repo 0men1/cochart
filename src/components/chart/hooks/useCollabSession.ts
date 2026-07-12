@@ -1,6 +1,7 @@
 'use client'
 
 import { useCollabStore } from "@/stores/useCollabStore";
+import { logger } from "@/lib/logger";
 import { useState } from "react";
 
 export function useCollabSession() {
@@ -29,7 +30,7 @@ export function useCollabSession() {
       toggleCollabWindow(false);
       window.history.pushState({}, '', result.url);
     } catch (error) {
-      console.error("error: failed to create session, ", error);
+      logger.error("error: failed to create session, ", error);
       setError(error as string);
     } finally {
       setIsCreating(false);

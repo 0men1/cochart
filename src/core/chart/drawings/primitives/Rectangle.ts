@@ -1,4 +1,5 @@
 import { CanvasRenderingTarget2D } from 'fancy-canvas';
+import { logger } from "@/lib/logger";
 import { IPrimitivePaneRenderer, IPrimitivePaneView, Coordinate } from 'cochart-charts';
 import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
@@ -140,7 +141,7 @@ export class Rectangle extends BaseDrawing {
 		try {
 			this._paneViews = [new RectanglePaneView(this)];
 		} catch (error) {
-			console.error(`Failed to initialize rectangle ${this._id}: `, error);
+			logger.error(`Failed to initialize rectangle ${this._id}: `, error);
 		}
 	}
 

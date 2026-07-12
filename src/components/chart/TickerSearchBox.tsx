@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
+import { logger } from "@/lib/logger";
 import TickerSearchItem from "./TickerSearchItem";
 import { Modal } from "@/components/ui/modal";
 import { useUIStore } from "@/stores/useUIStore";
@@ -134,7 +135,7 @@ export default function TickerSearchBox({ onClose }: TickerSearchBoxProps) {
 				}
 			} catch (error: any) {
 				if (error.name !== 'AbortError') {
-					console.error("Search failed", error);
+					logger.error("Search failed", error);
 				}
 			} finally {
 				if (!signal.aborted) {

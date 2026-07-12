@@ -1,4 +1,5 @@
 import { Coordinate, IChartApi, ISeriesApi, SeriesType } from 'cochart-charts';
+import { logger } from "@/lib/logger";
 import { coordinateToTimeExtrapolated } from '../interval';
 import { isSnapEnabled, snapPriceToCandle, snapYToCandle } from '../snap';
 import { DrawingConstructor, DrawingType, Point } from '../types';
@@ -86,13 +87,13 @@ export class BaseDrawingHandler {
 			this._preview.setPreviewPoints(screen);
 			this._preview.requestUpdate();
 		} catch (error) {
-			console.error("failed to update drawing preview: ", error)
+			logger.error("failed to update drawing preview: ", error)
 		}
 	}
 
 	private _clearPreview(): void {
 		if (this._preview) {
-			try { this._preview.delete(); } catch (e) { console.error(e); }
+			try { this._preview.delete(); } catch (e) { logger.error(e); }
 			this._preview = null;
 		}
 	}
@@ -118,7 +119,7 @@ export class BaseDrawingHandler {
 			}
 			return null;
 		} catch (error) {
-			console.error("failed to create trendline: ", error)
+			logger.error("failed to create trendline: ", error)
 			return null;
 		}
 	}
@@ -142,7 +143,7 @@ export class DrawingHandlerFactory {
 		const drawingClass = DRAWING_CLASSES[tool];
 
 		if (!drawingClass) {
-			console.error("Invalid drawing tool: ", tool);
+			logger.error("Invalid drawing tool: ", tool);
 			return null;
 		}
 

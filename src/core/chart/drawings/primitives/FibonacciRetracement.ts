@@ -1,4 +1,5 @@
 import { CanvasRenderingTarget2D } from 'fancy-canvas';
+import { logger } from "@/lib/logger";
 import { IPrimitivePaneRenderer, IPrimitivePaneView, Coordinate } from 'cochart-charts';
 import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
@@ -203,7 +204,7 @@ export class FibonacciRetracement extends BaseDrawing {
 		try {
 			this._paneViews = [new FibonacciPaneView(this)];
 		} catch (error) {
-			console.error(`Failed to initialize fibonacci ${this._id}: `, error);
+			logger.error(`Failed to initialize fibonacci ${this._id}: `, error);
 		}
 	}
 

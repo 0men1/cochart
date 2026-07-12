@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { logger } from "../../lib/logger";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { WebSocket } from "ws";
 import { Client } from "./client";
@@ -22,7 +23,7 @@ export function handleCreateRoom(
   const room = new Room(roomId, manager);
   manager.addRoom(room);
 
-  console.log(`Created room: ${roomId}`);
+  logger.debug(`Created room: ${roomId}`);
 
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ roomId, url: `/chart/room/${roomId}` }));
@@ -43,7 +44,7 @@ export function handleJoinRoom(
 
   const room = manager.getRoom(roomId);
   if (!room) {
-    console.log(`Room not found: ${roomId}`);
+    logger.debug(`Room not found: ${roomId}`);
     ws.close(1008, "Room not found");
     return;
   }

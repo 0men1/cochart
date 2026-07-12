@@ -1,4 +1,5 @@
 import { DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFactory";
+import { logger } from "@/lib/logger";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChartStore } from "@/stores/useChartStore";
@@ -17,7 +18,7 @@ function Toolbox() {
 
   function setTool(tool: DrawingType) {
     if (!chartApi || !seriesApi) {
-      console.warn("Chart API not ready yet");
+      logger.warn("Chart API not ready yet");
       return;
     }
 
@@ -33,7 +34,7 @@ function Toolbox() {
         startTool(tool, handler);
       }
     } catch (error) {
-      console.error("failed to set tool: ", error);
+      logger.error("failed to set tool: ", error);
       cancelTool();
     }
   }

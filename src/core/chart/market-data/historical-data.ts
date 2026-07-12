@@ -1,4 +1,5 @@
 import { UTCTimestamp } from "cochart-charts";
+import { logger } from "@/lib/logger";
 import { Candlestick } from "./types";
 
 export async function fetchHistoricalCandles(ticker: string, provider: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
@@ -6,13 +7,13 @@ export async function fetchHistoricalCandles(ticker: string, provider: string, t
 	const e = Math.floor(end);
 
 	if (s > e) {
-		console.error("Invalid start/end time: ", s, e);
+		logger.error("Invalid start/end time: ", s, e);
 		return [];
 	}
 
 	const raw: Candlestick[] = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&provider=${provider}&start=${s}&end=${e}`)
 		.then(res => {
-			if (!res.ok) console.error("Failed to fetch candles: ", res.statusText);
+			if (!res.ok) logger.error("Failed to fetch candles: ", res.statusText);
 			return res.json();
 		});
 

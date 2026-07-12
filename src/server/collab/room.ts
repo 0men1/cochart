@@ -1,4 +1,5 @@
 import type { Client } from "./client";
+import { logger } from "../../lib/logger";
 import {
   type ChartSelection,
   CollabAction,
@@ -32,7 +33,7 @@ export class Room {
     this.clients.add(client);
     client.start();
 
-    console.log(
+    logger.debug(
       `User joined: ${client.displayName} (Room: ${this.id}, Total: ${this.clients.size})`,
     );
 
@@ -56,7 +57,7 @@ export class Room {
     }
 
     if (this.clients.size === 0) {
-      console.log(`Room ${this.id} empty, cleaning up`);
+      logger.debug(`Room ${this.id} empty, cleaning up`);
       this.manager.removeRoom(this.id);
       return;
     }

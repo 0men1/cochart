@@ -1,4 +1,5 @@
 import { SerializedDrawing } from "@/core/chart/drawings/types";
+import { logger } from "@/lib/logger";
 import { CollabAction, Product } from "./types";
 import { ConnectionState, ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { CrosshairMode, IChartApi, ISeriesApi, SeriesType } from "cochart-charts";
@@ -131,7 +132,7 @@ setAutoFreeze(false);
 function detachAndClearDrawings(state: Draft<ChartState>) {
   for (const drawing of state.drawings.collection.values()) {
     if (drawing.isAttached && drawing.series === state.seriesApi) {
-      try { drawing.delete(); } catch (e) { console.error(e); }
+      try { drawing.delete(); } catch (e) { logger.error(e); }
     }
   }
   state.drawings.collection.clear();
@@ -309,7 +310,7 @@ export const useChartStore = create<ChartState>()(
           if (mode === 'replace') {
             for (const drawing of state.drawings.collection.values()) {
               if (drawing.isAttached && drawing.series === state.seriesApi) {
-                try { drawing.delete(); } catch (e) { console.error(e); }
+                try { drawing.delete(); } catch (e) { logger.error(e); }
               }
             }
             state.drawings.collection.clear();
@@ -325,7 +326,7 @@ export const useChartStore = create<ChartState>()(
             if (!inst) continue;
             const existing = state.drawings.collection.get(inst.id);
             if (existing && existing.isAttached && existing.series === state.seriesApi) {
-              try { existing.delete(); } catch (e) { console.error(e); }
+              try { existing.delete(); } catch (e) { logger.error(e); }
             }
             state.drawings.collection.set(inst.id, inst);
           }
@@ -407,7 +408,7 @@ export const useChartStore = create<ChartState>()(
         }
       }),
       selectDrawing: (drawingId: string | null) => set((state) => {
-        console.log("selecting drawing " + drawingId)
+        logger.debug("selecting drawing " + drawingId)
         state.drawings.selected = drawingId;
       }),
       deselectDrawing: () => {
@@ -448,7 +449,7 @@ export const useChartStore = create<ChartState>()(
       }),
       cancelTool: () => set((state) => {
         // Let the handler tear down any in-progress preview before we drop it.
-        try { state.tools.activeHandler?.onCancel(); } catch (e) { console.error(e); }
+        try { state.tools.activeHandler?.onCancel(); } catch (e) { logger.error(e); }
         state.tools.activeTool = null;
         state.tools.activeHandler = null;
       }),

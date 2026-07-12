@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { logger } from "../../lib/logger";
 import type { SearchEngine } from "./search";
 import type { MarketService } from "./service";
 
@@ -54,7 +55,7 @@ export async function handleCandles(
 		res.writeHead(200, { "Content-Type": "application/json" });
 		res.end(JSON.stringify(candles));
 	} catch (err) {
-		console.error("Fetch error:", err);
+		logger.error("Fetch error:", err);
 		res.writeHead(500);
 		res.end("Failed to fetch candles");
 	}
