@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
 import { MouseEventParams } from "cochart-charts";
 import { setCursor } from "@/core/chart/cursor";
-import { useChartStore } from "@/stores/useChartStore";
+import { useChartStore, suppressHistory } from "@/stores/useChartStore";
 import { useCollabStore } from "@/stores/useCollabStore";
 import { DrawingType } from "@/core/chart/types";
 
@@ -51,7 +51,7 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
 
 export function useChartDrawings() {
   const { id, drawings, tools, chartApi, seriesApi } = useChartStore();
-  const { addDrawing, modifyDrawing, deleteDrawing, selectDrawing, cancelTool } = useChartStore();
+  const { addDrawing, modifyDrawing, deleteDrawing, selectDrawing, cancelTool, deselectDrawing } = useChartStore();
 
   // While in a collab room the server snapshot is the sole source of truth, so
   // local IndexedDB restore/persist is paused (it must never merge into a room).
@@ -83,12 +83,15 @@ export function useChartDrawings() {
       if (!seriesApi || isInitializedRef.current === id || !active) return;
       const recovered = await getDrawings(id)
 
-      // 2) restore + attach concrete instances immediately
-      for (const sd of recovered) {
-        const inst = restoreDrawing(sd);
-        if (!inst) continue;
-        addDrawing(inst);
-      }
+      // 2) restore + attach concrete instances immediately. Suppressed so a
+      // page load doesn't fill the undo stack with the restored drawings.
+      suppressHistory(() => {
+        for (const sd of recovered) {
+          const inst = restoreDrawing(sd);
+          if (!inst) continue;
+          addDrawing(inst);
+        }
+      });
 
       // 3) mark init complete for this chart id
       isInitializedRef.current = id;
@@ -153,7 +156,7 @@ export function useChartDrawings() {
         selectDrawing(hit.id);
       } else if (drawings.selected) {
         drawings.collection.get(drawings.selected)?.setSelected(false);
-        selectDrawing(null);
+        deselectDrawing();
       }
     } catch (e) { console.error(e); }
   }, [tools.activeHandler, drawings, seriesApi]);

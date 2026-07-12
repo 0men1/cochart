@@ -19,8 +19,19 @@ const LEVEL_COLORS: Record<number, string> = {
 	1: '#787b86',
 };
 
+// Default `color`. While it holds this value the per-level palette is used; once
+// the user picks a different color in the editor, every level is drawn in it.
+const PALETTE_SENTINEL = '#787b86';
+
 function colorForLevel(level: number): string {
-	return LEVEL_COLORS[level] ?? '#787b86';
+	return LEVEL_COLORS[level] ?? PALETTE_SENTINEL;
+}
+
+// A user-chosen uniform color overrides the palette; the sentinel keeps it.
+function resolveColor(options: BaseOptions, level: number): string {
+	return options.color && options.color !== PALETTE_SENTINEL
+		? options.color
+		: colorForLevel(level);
 }
 
 interface FibLevelView {
@@ -62,7 +73,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
 				const yA = drawable[i].y! * vp;
 				const yB = drawable[i + 1].y! * vp;
 				ctx.globalAlpha = this._options.fillOpacity ?? 0.08;
-				ctx.fillStyle = colorForLevel(drawable[i].level);
+				ctx.fillStyle = resolveColor(this._options, drawable[i].level);
 				ctx.fillRect(xLeft, Math.min(yA, yB), xRight - xLeft, Math.abs(yB - yA));
 			}
 			ctx.globalAlpha = 1;
@@ -75,13 +86,14 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
 
 			for (const lv of drawable) {
 				const y = Math.round(lv.y! * vp);
-				ctx.strokeStyle = colorForLevel(lv.level);
+				const levelColor = resolveColor(this._options, lv.level);
+				ctx.strokeStyle = levelColor;
 				ctx.beginPath();
 				ctx.moveTo(xLeft, y);
 				ctx.lineTo(xRight, y);
 				ctx.stroke();
 
-				ctx.fillStyle = colorForLevel(lv.level);
+				ctx.fillStyle = levelColor;
 				const label = `${lv.level.toFixed(3)} (${lv.price.toFixed(2)})`;
 				ctx.fillText(label, xRight + 4 * hp, y);
 			}
@@ -197,6 +209,12 @@ export class FibonacciRetracement extends BaseDrawing {
 
 	getEditableOptions(): EditableOption[] {
 		return [
+			{
+				key: 'color',
+				label: 'Level Color',
+				type: 'color',
+				currentValue: this._options.color
+			},
 			{
 				key: 'width',
 				label: 'Line Width',

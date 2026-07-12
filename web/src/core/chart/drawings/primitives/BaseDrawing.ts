@@ -213,6 +213,15 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 		this._series.applyOptions(this._series.options());
 	}
 
+	// Apply a remote/authoritative state (points + options) without emitting a
+	// MODIFY notification — the change originated elsewhere, so re-notifying would
+	// rebroadcast it in a loop. Used by collab sync and undo/redo.
+	syncFrom(newPoints: Point[], newOptions: Record<string, any>): void {
+		this._points = newPoints;
+		this._options = { ...this._options, ...newOptions };
+		this._series.applyOptions(this._series.options());
+	}
+
 	// Single chokepoint for time -> x mapping. Snaps the point's time to the
 	// current candle interval first, so drawings placed at sub-interval times (or
 	// carried across timeframe changes) still resolve to a real candle coordinate

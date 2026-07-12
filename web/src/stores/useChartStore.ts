@@ -94,10 +94,14 @@ interface ChartState {
   setDataConnectionState: (state: ConnectionState) => void;
   addDrawing: (drawing: BaseDrawing) => void;
   deleteDrawing: (drawingId: string) => void;
+  deleteSelectedDrawing: () => void;
   selectDrawing: (drawingId: string | null) => void;
+  deselectDrawing: () => void;
   modifyDrawing: (newDrawing: BaseDrawing) => void;
   startTool: (tool: DrawingType, handler: BaseDrawingHandler) => void;
   cancelTool: () => void;
+  undo: () => void;
+  redo: () => void;
   syncChart: (product: Product, timeframe: IntervalKey) => void;
   syncSnapshot: (product: Product, timeframe: IntervalKey, drawings: SerializedDrawing[], mode?: 'replace' | 'keep') => void;
   clearDrawings: () => void;
@@ -133,6 +137,63 @@ function detachAndClearDrawings(state: Draft<ChartState>) {
   state.drawings.collection.clear();
   state.drawings.selected = null;
   state.drawings.updatedAt = Date.now();
+  // History is per-ticker/room; don't let undo resurrect a prior context's drawings.
+  resetHistory();
+}
+
+// ---------------------------------------------------------------------------
+// Undo/redo history (module-scoped, non-reactive). Records ONLY local drawing
+// actions (add/modify/delete); remote `sync*` actions are never recorded so
+// undo can't fight collaborators. `snapshots` holds the last-committed
+// serialized state per drawing id, used to compute a modify's "before".
+// ---------------------------------------------------------------------------
+type DrawCommand =
+  | { op: 'add'; after: SerializedDrawing }
+  | { op: 'delete'; before: SerializedDrawing }
+  | { op: 'modify'; before: SerializedDrawing; after: SerializedDrawing };
+
+const historyUndo: DrawCommand[] = [];
+const historyRedo: DrawCommand[] = [];
+const snapshots = new Map<string, SerializedDrawing>();
+let applyingHistory = false;
+
+// Suppress recording while inverting a command or restoring from storage, so
+// undo/redo and load don't push new history entries.
+export function suppressHistory<T>(fn: () => T): T {
+  const prev = applyingHistory;
+  applyingHistory = true;
+  try { return fn(); } finally { applyingHistory = prev; }
+}
+
+function resetHistory() {
+  historyUndo.length = 0;
+  historyRedo.length = 0;
+  snapshots.clear();
+}
+
+function recordAdd(drawing: BaseDrawing) {
+  const after = drawing.serialize();
+  snapshots.set(after.id, after);
+  if (applyingHistory) return;
+  historyUndo.push({ op: 'add', after });
+  historyRedo.length = 0;
+}
+
+function recordModify(drawing: BaseDrawing) {
+  const after = drawing.serialize();
+  const before = snapshots.get(after.id);
+  snapshots.set(after.id, after);
+  if (applyingHistory || !before) return;
+  historyUndo.push({ op: 'modify', before, after });
+  historyRedo.length = 0;
+}
+
+function recordDelete(before: SerializedDrawing | undefined) {
+  if (!before) return;
+  snapshots.delete(before.id);
+  if (applyingHistory) return;
+  historyUndo.push({ op: 'delete', before });
+  historyRedo.length = 0;
 }
 
 export const useChartStore = create<ChartState>()(
@@ -253,6 +314,8 @@ export const useChartStore = create<ChartState>()(
             }
             state.drawings.collection.clear();
             state.drawings.selected = null;
+            // Undo shouldn't cross the boundary into the replaced room state.
+            resetHistory();
           }
 
           // Room drawings win on id collision; detach the displaced local
@@ -281,6 +344,9 @@ export const useChartStore = create<ChartState>()(
           state.drawings.collection.set(drawing.id, baseDrawing);
           state.drawings.updatedAt = Date.now();
         });
+        // Keep the snapshot in sync with remote state so a later local modify
+        // computes a correct "before" for undo.
+        snapshots.set(drawing.id, drawing);
       },
       syncDeleteDrawing: (drawingId: string) => {
         set((state) => {
@@ -292,12 +358,16 @@ export const useChartStore = create<ChartState>()(
             state.drawings.selected = null;
           }
         });
+        snapshots.delete(drawingId);
       },
       syncModifyDrawing: (drawing: SerializedDrawing) => {
         set((state) => {
           const existingDrawing = state.drawings.collection.get(drawing.id);
-          existingDrawing?.updatePoints(drawing.points);
+          // Apply both points AND options so remote color/width edits land, not
+          // just position changes.
+          existingDrawing?.syncFrom(drawing.points, drawing.options);
           state.drawings.updatedAt = Date.now();
+          snapshots.set(drawing.id, drawing);
         })
       },
       setInstances: (chartApi, seriesApi) => set((state) => {
@@ -312,6 +382,7 @@ export const useChartStore = create<ChartState>()(
           state.drawings.collection.set(drawing.id, drawing);
           state.drawings.updatedAt = Date.now();
         });
+        recordAdd(drawing);
 
         const { socket, status } = useCollabStore.getState();
         if (status === ConnectionStatus.CONNECTED && socket) {
@@ -322,6 +393,7 @@ export const useChartStore = create<ChartState>()(
         }
       },
       modifyDrawing: (newDrawing: BaseDrawing) => set((state) => {
+        recordModify(newDrawing);
         const existingDrawing = state.drawings.collection.get(newDrawing.id);
         existingDrawing?.updatePoints(newDrawing.points);
         state.drawings.updatedAt = Date.now();
@@ -335,14 +407,27 @@ export const useChartStore = create<ChartState>()(
         }
       }),
       selectDrawing: (drawingId: string | null) => set((state) => {
+        console.log("selecting drawing " + drawingId)
         state.drawings.selected = drawingId;
       }),
+      deselectDrawing: () => {
+        const selected = useChartStore.getState().drawings.selected;
+        if (!selected) return;
+        // Clear the instance's selected flag so its control points stop
+        // rendering. setSelected(false) fires a SELECT notification whose
+        // listener re-selects in the store, so null the store selection right
+        // after (sequential top-level sets — never nested inside one recipe).
+        useChartStore.getState().drawings.collection.get(selected)?.setSelected(false);
+        set((state) => { state.drawings.selected = null; });
+      },
       deleteDrawing: (drawingId: string) => set((state) => {
         const drawing = state.drawings.collection.get(drawingId);
+        const before = drawing?.serialize();
         if (drawing) { drawing.delete(); }
         state.drawings.collection.delete(drawingId);
         state.drawings.selected = null;
         state.drawings.updatedAt = Date.now();
+        recordDelete(before);
 
         const { socket, status } = useCollabStore.getState();
         if (status === ConnectionStatus.CONNECTED && socket) {
@@ -350,6 +435,11 @@ export const useChartStore = create<ChartState>()(
             type: CollabAction.DELETE_DRAWING,
             payload: { drawingId: drawingId }
           });
+        }
+      }),
+      deleteSelectedDrawing: () => set((state) => {
+        if (state.drawings.selected) {
+          state.deleteDrawing(state.drawings.selected)
         }
       }),
       startTool: (tool, handler) => set((state) => {
@@ -362,6 +452,49 @@ export const useChartStore = create<ChartState>()(
         state.tools.activeTool = null;
         state.tools.activeHandler = null;
       }),
+      // Undo/redo invert a recorded command by replaying the existing store
+      // actions (so broadcast + persistence + the reconcile effect all run),
+      // with recording suppressed to avoid re-pushing history.
+      undo: () => {
+        const cmd = historyUndo.pop();
+        if (!cmd) return;
+        const store = useChartStore.getState();
+        suppressHistory(() => {
+          if (cmd.op === 'add') {
+            store.deleteDrawing(cmd.after.id);
+          } else if (cmd.op === 'delete') {
+            const inst = restoreDrawing(cmd.before);
+            if (inst) store.addDrawing(inst);
+          } else {
+            const inst = store.drawings.collection.get(cmd.after.id);
+            if (inst) {
+              inst.syncFrom(cmd.before.points, cmd.before.options);
+              store.modifyDrawing(inst);
+            }
+          }
+        });
+        historyRedo.push(cmd);
+      },
+      redo: () => {
+        const cmd = historyRedo.pop();
+        if (!cmd) return;
+        const store = useChartStore.getState();
+        suppressHistory(() => {
+          if (cmd.op === 'add') {
+            const inst = restoreDrawing(cmd.after);
+            if (inst) store.addDrawing(inst);
+          } else if (cmd.op === 'delete') {
+            store.deleteDrawing(cmd.before.id);
+          } else {
+            const inst = store.drawings.collection.get(cmd.after.id);
+            if (inst) {
+              inst.syncFrom(cmd.after.points, cmd.after.options);
+              store.modifyDrawing(inst);
+            }
+          }
+        });
+        historyUndo.push(cmd);
+      },
     })),
     {
       name: 'cochart-settings',

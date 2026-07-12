@@ -79,7 +79,7 @@ export default function ChartHeader() {
         <Button
           variant="outline"
           size="icon" // Use icon size on mobile for better fit
-          className="rounded-md w-9 h-9 md:w-10 md:h-10"
+          className="rounded-md w-9 h-9 md:w-10 md:h-8"
           onClick={() => toggleChartSettings(true)}
         >
           <Settings size={18} />

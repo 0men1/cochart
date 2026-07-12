@@ -54,9 +54,15 @@ export const DrawingEditor = () => {
 	const colorOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'color');
 	const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'number');
 
-	const lineColorOption = colorOptions?.find(o => o.key === 'color');
 	const labelTextColorOption = colorOptions?.find(o => o.key === 'labelTextColor');
 	const labelBackgroundColorOption = colorOptions?.find(o => o.key === 'labelBackgroundColor');
+
+	// Every color option except the label colors (which live in the label panel)
+	// gets a top-level swatch — this surfaces Rectangle's fill color, Fibonacci's
+	// color, etc., not just the single 'color' key.
+	const primaryColorOptions = colorOptions?.filter(
+		o => o.key !== 'labelTextColor' && o.key !== 'labelBackgroundColor'
+	);
 
 	const applyTextChanges = () => {
 		if (colorPickerActive.current) {
@@ -71,15 +77,16 @@ export const DrawingEditor = () => {
 	return (
 		<div ref={editorRef} className="bg-card border border-border rounded-lg shadow-lg">
 			<div className="p-2 flex items-center space-x-2">
-				{lineColorOption && (
+				{primaryColorOptions?.map(option => (
 					<Input
+						key={option.key}
 						type="color"
-						value={values[lineColorOption.key] || '#000000'}
-						onChange={(e) => updateOption(lineColorOption.key, e.target.value)}
+						value={values[option.key] || '#000000'}
+						onChange={(e) => updateOption(option.key, e.target.value)}
 						className="w-8 h-8 p-0 rounded-full cursor-pointer"
-						title="Line Color"
+						title={option.label}
 					/>
-				)}
+				))}
 
 				<Button
 					size="sm"
