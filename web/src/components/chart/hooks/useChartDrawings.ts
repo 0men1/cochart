@@ -99,15 +99,28 @@ export function useChartDrawings() {
   }, [addDrawing, modifyDrawing, selectDrawing, drawings.selected])
 
   useEffect(() => {
-    if (!seriesApi || roomId) return;
+    if (!seriesApi) return;
+
+    // In a collab room the server snapshot owns the drawings, so skip the local
+    // restore — but mark it not-done so LEAVING the room re-restores from IndexedDB.
+    if (roomId) {
+      isInitializedRef.current = null;
+      return;
+    }
+
+    // Restore exactly once per ticker id. Do NOT key this on seriesApi: switching
+    // timeframe (or any chart recreation) produces a new series but must not
+    // re-run the restore, or every drawing gets a duplicate instance ("clone")
+    // that lingers attached to the series while orphaned from the collection.
+    if (isInitializedRef.current === id) return;
+
     let active = true;
-
     (async () => {
-      if (!seriesApi || isInitializedRef.current === id || !active) return;
-      const recovered = await getDrawings(id)
+      const recovered = await getDrawings(id);
+      // Bail if superseded (dep change) or another run already restored this id.
+      if (!active || isInitializedRef.current === id) return;
 
-      // 2) restore + attach concrete instances immediately. Suppressed so a
-      // page load doesn't fill the undo stack with the restored drawings.
+      // Suppressed so a page load doesn't fill the undo stack with the restores.
       suppressHistory(() => {
         for (const sd of recovered) {
           const inst = restoreDrawing(sd);
@@ -116,13 +129,11 @@ export function useChartDrawings() {
         }
       });
 
-      // 3) mark init complete for this chart id
       isInitializedRef.current = id;
     })().catch(console.error);
 
     return () => {
       active = false;
-      isInitializedRef.current = null;
     };
   }, [id, seriesApi, roomId]);
 
