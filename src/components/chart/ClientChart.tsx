@@ -5,6 +5,7 @@ import { useCandleChart } from './hooks/useCandleChart';
 import ChartHeader from './ChartHeader';
 import Toolbox from './ToolBox';
 import Settings from './Settings';
+import DrawingSettings from './DrawingSettings';
 import { useChartDrawings } from './hooks/useChartDrawings';
 import { useChartInteraction } from './hooks/useChartInteractions';
 import TickerSearchBox from './TickerSearchBox';
@@ -93,6 +94,7 @@ export default function ClientChart() {
         />
         <CollabStatus />
         <Settings />
+        <DrawingSettings />
         <ChartFooter />
       </main>
     </div>
