@@ -14,6 +14,10 @@ interface RoomState {
   drawings: Map<string, Drawing>;
 }
 
+// Caps on user-supplied identity fields relayed to the whole room.
+const MAX_DISPLAY_NAME_LENGTH = 32;
+const MAX_COLOR_LENGTH = 32;
+
 export class Room {
   clients = new Set<Client>();
 
@@ -128,6 +132,21 @@ export class Room {
         const drawingId = action.payload?.drawingId;
         if (drawingId) this.state.drawings.delete(drawingId);
         break;
+      }
+      case CollabAction.UPDATE_PRESENCE: {
+        // The sender is renaming/recoloring itself mid-session. Update its
+        // roster entry and hand everyone the refreshed presence; don't relay
+        // the raw delta (peers only ever consume the full roster).
+        const displayName = action.payload?.displayName;
+        const color = action.payload?.color;
+        if (typeof displayName === "string" && displayName.trim()) {
+          sender.displayName = displayName.trim().slice(0, MAX_DISPLAY_NAME_LENGTH);
+        }
+        if (typeof color === "string" && color.trim()) {
+          sender.color = color.trim().slice(0, MAX_COLOR_LENGTH);
+        }
+        this.broadcastToAll(this.presenceMessage());
+        return;
       }
       default:
         break;

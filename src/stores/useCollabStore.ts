@@ -34,6 +34,7 @@ interface CollabState {
   disconnectSocket: () => void;
   toggleCollabWindow: (isOpen: boolean) => void;
   resolvePendingSnapshot: (mode: 'replace' | 'keep') => void;
+  broadcastPresence: () => void;
 }
 
 export const useCollabStore = create<CollabState>((set, get) => ({
@@ -209,6 +210,23 @@ export const useCollabStore = create<CollabState>((set, get) => ({
         logger.error("connection error: ", error);
         set({ status: ConnectionStatus.ERROR });
       }
+    });
+  },
+  // Push this browser's current identity (name + color) to the room so peers'
+  // rosters update live. No-op when not connected — the next join carries the
+  // updated identity via the connection params instead.
+  broadcastPresence: () => {
+    const socket = get().socket;
+    if (!socket) return;
+    const identity = useIdentityStore.getState().identity;
+    if (!identity) return;
+    socket.send({
+      type: CollabAction.UPDATE_PRESENCE,
+      payload: {
+        userId: identity.userId,
+        displayName: identity.displayName,
+        color: identity.color,
+      },
     });
   },
   resolvePendingSnapshot: (mode: 'replace' | 'keep') => {

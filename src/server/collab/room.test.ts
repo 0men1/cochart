@@ -228,6 +228,70 @@ describe("Room broadcasting", () => {
   });
 });
 
+describe("Room presence updates", () => {
+  it("updates the sender's name and color, then broadcasts to everyone", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    const b = fakeClient("b");
+    room.register(asClient(a));
+    room.register(asClient(b));
+    a.sent.length = 0;
+    b.sent.length = 0;
+
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.UPDATE_PRESENCE,
+        payload: { displayName: "Renamed", color: "#123456" },
+      }),
+      asClient(a),
+    );
+
+    // Both the sender and the peer receive the refreshed roster.
+    for (const c of [a, b]) {
+      const presence = lastMessageOfType(c, CollabAction.PRESENCE);
+      const me = presence.payload.users.find((u: any) => u.userId === "a");
+      expect(me.displayName).toBe("Renamed");
+      expect(me.color).toBe("#123456");
+    }
+  });
+
+  it("ignores an empty display name and keeps the previous value", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.UPDATE_PRESENCE,
+        payload: { displayName: "   ", color: "#abcdef" },
+      }),
+      asClient(a),
+    );
+
+    const presence = lastMessageOfType(a, CollabAction.PRESENCE);
+    const me = presence.payload.users.find((u: any) => u.userId === "a");
+    expect(me.displayName).toBe("user-a");
+    expect(me.color).toBe("#abcdef");
+  });
+
+  it("does not relay the raw UPDATE_PRESENCE delta to peers", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    const b = fakeClient("b");
+    room.register(asClient(a));
+    room.register(asClient(b));
+    b.sent.length = 0;
+
+    const raw = JSON.stringify({
+      type: CollabAction.UPDATE_PRESENCE,
+      payload: { displayName: "Renamed" },
+    });
+    room.handleMessage(raw, asClient(a));
+
+    expect(b.sent).not.toContain(raw);
+  });
+});
+
 describe("Room lifecycle", () => {
   it("removes itself from the manager when the last client leaves", () => {
     const manager = fakeManager();

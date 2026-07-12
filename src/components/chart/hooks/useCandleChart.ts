@@ -9,15 +9,47 @@ import {
 	ColorType,
 	IChartApi,
 	ISeriesApi,
+	LineWidth,
 	SeriesType,
 } from "cochart-charts";
 import { ThemeConfig } from "@/constants/theme";
+import { ChartSettings } from "@/stores/types";
 import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickData } from "@/core/chart/market-data/types";
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
 import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
 import { useChartStore } from "@/stores/useChartStore";
 import { IntervalKey } from "@/core/chart/market-data/types";
 import { setActiveIntervalSeconds } from "@/core/chart/interval";
+
+// Maps our stored crosshair settings onto the library's crosshair options,
+// narrowing the user-facing `width: number` to the library's LineWidth union.
+function toCrosshairOptions(settings: ChartSettings) {
+	const line = (l: ChartSettings['crosshair']['vertLine']) => ({
+		visible: l.visible,
+		color: l.color,
+		width: l.width as LineWidth,
+		style: l.style,
+	});
+	return {
+		mode: settings.cursor,
+		vertLine: line(settings.crosshair.vertLine),
+		horzLine: line(settings.crosshair.horzLine),
+	};
+}
+
+// Maps our stored candle settings onto the candlestick series style options.
+function toCandleOptions(settings: ChartSettings) {
+	return {
+		upColor: settings.candles.upColor,
+		downColor: settings.candles.downColor,
+		wickVisible: settings.candles.wickVisible,
+		wickUpColor: settings.candles.wickupColor,
+		wickDownColor: settings.candles.wickDownColor,
+		borderVisible: settings.candles.borderVisible,
+		borderUpColor: settings.candles.borderUpColor,
+		borderDownColor: settings.candles.borderDownColor,
+	};
+}
 
 // Builds the time-axis + crosshair label formatters for a given timezone. The
 // candle data stays UTC; only the displayed labels are shifted to `tz`.
@@ -153,10 +185,11 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			height: containerRef.current.clientHeight,
 			layout: {
 				attributionLogo: false,
+				fontSize: chartSettings.layout.fontSize,
 				textColor: chartSettings.background.theme === 'light' ? 'black' : 'white',
 				background: chartSettings.background.theme === 'light' ? ThemeConfig.light.background : ThemeConfig.dark.background,
 			},
-			crosshair: { mode: chartSettings.cursor }, // Normal=0, Magnet=1, Hidden=2, MagentOHLC=3
+			crosshair: toCrosshairOptions(chartSettings),
 			grid: {
 				vertLines: chartSettings.background.grid.vertLines,
 				horzLines: chartSettings.background.grid.horzLines
@@ -171,13 +204,7 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 			}
 		});
 
-		const series = chart.addSeries(CandlestickSeries, {
-			upColor: chartSettings.candles.upColor,
-			downColor: chartSettings.candles.downColor,
-			borderVisible: chartSettings.candles.borderVisible,
-			wickUpColor: chartSettings.candles.wickupColor,
-			wickDownColor: chartSettings.candles.wickDownColor,
-		});
+		const series = chart.addSeries(CandlestickSeries, toCandleOptions(chartSettings));
 
 		chartRef.current = chart;
 		seriesRef.current = series;
@@ -272,23 +299,18 @@ export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | nu
 					color: chartSettings.background.theme === 'dark' ? '#09090b' : '#ffffff'
 				},
 				textColor: chartSettings.background.theme === 'dark' ? '#d4d4d8' : '#18181b',
+				fontSize: chartSettings.layout.fontSize,
 			},
 			grid: {
 				vertLines: chartSettings.background.grid.vertLines,
 				horzLines: chartSettings.background.grid.horzLines
 			},
-			crosshair: { mode: chartSettings.cursor },
+			crosshair: toCrosshairOptions(chartSettings),
 			// Re-time axis + crosshair labels when the timezone changes.
 			timeScale: { tickMarkFormatter },
 			localization: { timeFormatter },
 		});
-		seriesRef.current.applyOptions({
-			upColor: chartSettings.candles.upColor,
-			downColor: chartSettings.candles.downColor,
-			borderVisible: chartSettings.candles.borderVisible,
-			wickUpColor: chartSettings.candles.wickupColor,
-			wickDownColor: chartSettings.candles.wickDownColor,
-		});
+		seriesRef.current.applyOptions(toCandleOptions(chartSettings));
 	}, [chartSettings, timeframe]);
 
 	return {
