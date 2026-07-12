@@ -3,6 +3,7 @@ import { Point } from '@/core/chart/types';
 import { coordinateToTimeExtrapolated, timeToCoordinateExtrapolated } from '@/core/chart/interval';
 import { isSnapEnabled, snapYToCandle } from '@/core/chart/snap';
 import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, SerializedDrawing } from '../types';
+import { randomUUID } from '@/lib/utils';
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
 	protected readonly _id: string;
@@ -43,7 +44,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 		axisViews: ISeriesPrimitiveAxisView[],
 		id?: string,
 	) {
-		this._id = id ? id : crypto.randomUUID();
+		this._id = id ? id : randomUUID();
 		this.externalId = this._id;
 		this._paneViews = paneViews;
 		this._timeAxisViews = axisViews;

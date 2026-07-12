@@ -3,6 +3,8 @@
 // persisted per browser (localStorage) so refreshes and return visits keep the
 // same identity. Nothing is ever sent to or stored on the server as an account.
 
+import { randomUUID } from "./utils";
+
 export interface Identity {
 	userId: string;
 	displayName: string;
@@ -33,7 +35,7 @@ function pick<T>(arr: T[]): T {
 
 function createIdentity(): Identity {
 	return {
-		userId: crypto.randomUUID(),
+		userId: randomUUID(),
 		displayName: `${pick(ADJECTIVES)} ${pick(ANIMALS)}`,
 		color: pick(IDENTITY_COLORS),
 	};
