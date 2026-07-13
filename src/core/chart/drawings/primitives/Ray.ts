@@ -5,7 +5,7 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, EditableOption, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 
 // Extend the p1 -> p2 direction until it leaves the [0, width] x-range, so the
 // ray visually continues to the canvas edge. Returns the far endpoint in the
@@ -166,15 +166,18 @@ export class Ray extends BaseDrawing {
 	getEditableOptions(): EditableOption[] {
 		return [
 			{
-				key: 'color',
+				key: DrawingOptionKey.COLOR,
 				label: 'Line Color',
 				type: 'color',
 				currentValue: this._options.color
 			},
 			{
-				key: 'width',
+				key: DrawingOptionKey.WIDTH,
 				label: 'Line Width',
 				type: 'number',
+				min: 1,
+				max: 4,
+				step: 1,
 				currentValue: this._options.width
 			},
 		];

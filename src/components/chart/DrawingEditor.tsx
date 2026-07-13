@@ -5,188 +5,189 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Trash, Type } from 'lucide-react';
 import { useChartStore } from '@/stores/useChartStore';
+import { DrawingOptionKey } from '@/core/chart/drawings/types';
 
 export const DrawingEditor = () => {
-	const [values, setValues] = useState<Record<string, any>>({});
-	const [showTextInput, setShowTextInput] = useState(false);
-	const [textInput, setTextInput] = useState('');
-	const editorRef = useRef<HTMLDivElement>(null);
-	const colorPickerActive = useRef(false);
+  const [values, setValues] = useState<Record<string, any>>({});
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const editorRef = useRef<HTMLDivElement>(null);
+  const colorPickerActive = useRef(false);
 
-	const { deleteDrawing, drawings } = useChartStore();
-	const { selected } = drawings
+  const { deleteDrawing, drawings } = useChartStore();
+  const { selected } = drawings
 
-	const selectedDrawing = useMemo(() => {
-		if (!selected) return null;
-		return drawings.collection.get(selected)
-	}, [selected, drawings]);
-
-
-	const handleDelete = async () => {
-		if (!selected) return;
-		selectedDrawing?.delete();
-		deleteDrawing(selected);
-	}
-
-	useEffect(() => {
-		if (selected && selectedDrawing) {
-			const initialValues: Record<string, any> = {};
-			selectedDrawing?.getEditableOptions().forEach(option => {
-				initialValues[option.key] = option.currentValue;
-			});
-			setValues(initialValues);
-
-			const textOption = selectedDrawing?.getEditableOptions().find(o => o.key === 'labelText');
-			if (textOption) {
-				setTextInput(textOption.currentValue?.toString() || '');
-			}
-		}
-	}, [selected, selectedDrawing]);
-
-	if (!selectedDrawing) return null;
-
-	const updateOption = (key: string, value: any) => {
-		const newValues = { ...values, [key]: value };
-		setValues(newValues);
-		selectedDrawing?.updateOptions({ [key]: value });
-	};
-
-	const colorOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'color');
-	const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'number');
-
-	const labelTextColorOption = colorOptions?.find(o => o.key === 'labelTextColor');
-	const labelBackgroundColorOption = colorOptions?.find(o => o.key === 'labelBackgroundColor');
-
-	// Every color option except the label colors (which live in the label panel)
-	// gets a top-level swatch — this surfaces Rectangle's fill color, Fibonacci's
-	// color, etc., not just the single 'color' key.
-	const primaryColorOptions = colorOptions?.filter(
-		o => o.key !== 'labelTextColor' && o.key !== 'labelBackgroundColor'
-	);
-
-	const applyTextChanges = () => {
-		if (colorPickerActive.current) {
-			return;
-		}
-
-		updateOption('labelText', textInput);
-		updateOption('showLabel', textInput.trim() !== '');
-		setShowTextInput(false);
-	};
-
-	return (
-		<div ref={editorRef} className="bg-card border border-border rounded-lg shadow-lg">
-			<div className="p-2 flex items-center space-x-2">
-				{primaryColorOptions?.map(option => (
-					<Input
-						key={option.key}
-						type="color"
-						value={values[option.key] || '#000000'}
-						onChange={(e) => updateOption(option.key, e.target.value)}
-						className="w-8 h-8 p-0 rounded-full cursor-pointer"
-						title={option.label}
-					/>
-				))}
-
-				<Button
-					size="sm"
-					variant={showTextInput ? "default" : "ghost"}
-					className="h-8 px-2"
-					onClick={() => setShowTextInput(!showTextInput)}
-					title="Edit Label Text"
-				>
-					<Type size={16} className="mr-1" />
-					{textInput && !showTextInput ?
-						<span className="text-xs max-w-20 truncate">{textInput}</span> :
-						null
-					}
-				</Button>
-
-				{numberOptions?.map(option => (
-					<div key={option.key} className="flex items-center space-x-1">
-						{[1, 2, 3, 4].map(w => (
-							<Button
-								key={w}
-								size="sm"
-								variant={(values[option.key] ?? 2) === w ? "default" : "ghost"}
-								className="w-7 h-8 p-0"
-								onClick={() => updateOption(option.key, w)}
-								title={`Thickness ${w}`}
-							>
-								{w}
-							</Button>
-						))}
-					</div>
-				))}
-
-				<div className="flex-1"></div>
-
-				<Button
-					size="sm"
-					variant="ghost"
-					className="text-destructive hover:text-destructive hover:bg-destructive/10 w-8 h-8 p-0"
-					onClick={handleDelete}
-					title="Delete Drawing"
-				>
-					<Trash size={16} />
-				</Button>
-			</div>
-
-			{showTextInput && (
-				<div className="p-2 pt-0 border-t border-border">
-					<div className="flex flex-col space-y-2 mt-2">
-						<Input
-							value={textInput}
-							onChange={e => setTextInput(e.target.value)}
-							className="text-sm h-8"
-							placeholder="Enter label text..."
-							onBlur={applyTextChanges}
-							onKeyDown={e => e.key === 'Enter' && applyTextChanges()}
-							autoFocus
-						/>
+  const selectedDrawing = useMemo(() => {
+    if (!selected) return null;
+    return drawings.collection.get(selected)
+  }, [selected, drawings]);
 
 
-						<div className="flex items-center space-x-2">
+  const handleDelete = async () => {
+    if (!selected) return;
+    selectedDrawing?.delete();
+    deleteDrawing(selected);
+  }
 
-							{labelTextColorOption && (
-								<div className="flex items-center">
-									<span className="text-xs mr-1">Text:</span>
-									<Input
-										type="color"
-										value={values[labelTextColorOption.key] || '#ffffff'}
-										onChange={e => updateOption(labelTextColorOption.key, e.target.value)}
-										className="w-6 h-6 p-0 cursor-pointer"
-										title="Text Color"
-										onMouseDown={() => { colorPickerActive.current = true; }}
-										onMouseUp={() => {
-											// Use timeout to ensure this happens after blur would be processed
-											setTimeout(() => { colorPickerActive.current = false; }, 100);
-										}}
-									/>
-								</div>
-							)}
+  useEffect(() => {
+    if (selected && selectedDrawing) {
+      const initialValues: Record<string, any> = {};
+      selectedDrawing?.getEditableOptions().forEach(option => {
+        initialValues[option.key] = option.currentValue;
+      });
+      setValues(initialValues);
+
+      const textOption = selectedDrawing?.getEditableOptions().find(o => o.key === DrawingOptionKey.LABEL_TEXT);
+      if (textOption) {
+        setTextInput(textOption.currentValue?.toString() || '');
+      }
+    }
+  }, [selected, selectedDrawing]);
+
+  if (!selectedDrawing) return null;
+
+  const updateOption = (key: string, value: any) => {
+    const newValues = { ...values, [key]: value };
+    setValues(newValues);
+    selectedDrawing?.updateOptions({ [key]: value });
+  };
+
+  const colorOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'color');
+  const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'number');
+
+  const labelTextColorOption = colorOptions?.find(o => o.key === DrawingOptionKey.LABEL_TEXT_COLOR);
+  const labelBackgroundColorOption = colorOptions?.find(o => o.key === DrawingOptionKey.LABEL_BACKGROUND_COLOR);
+
+  // Every color option except the label colors (which live in the label panel)
+  // gets a top-level swatch — this surfaces Rectangle's fill color, Fibonacci's
+  // color, etc., not just the single 'color' key.
+  const primaryColorOptions = colorOptions?.filter(
+    o => o.key !== DrawingOptionKey.LABEL_TEXT_COLOR && o.key !== DrawingOptionKey.LABEL_BACKGROUND_COLOR
+  );
+
+  const applyTextChanges = () => {
+    if (colorPickerActive.current) {
+      return;
+    }
+
+    updateOption('labelText', textInput);
+    updateOption('showLabel', textInput.trim() !== '');
+    setShowTextInput(false);
+  };
+
+  return (
+    <div ref={editorRef} className="bg-card border border-border rounded-lg shadow-lg">
+      <div className="p-2 flex items-center space-x-2">
+        {primaryColorOptions?.map(option => (
+          <Input
+            key={option.key}
+            type="color"
+            value={values[option.key] || '#000000'}
+            onChange={(e) => updateOption(option.key, e.target.value)}
+            className="w-8 h-8 p-0 rounded-full cursor-pointer"
+            title={option.label}
+          />
+        ))}
+
+        <Button
+          size="sm"
+          variant={showTextInput ? "default" : "ghost"}
+          className="h-8 px-2"
+          onClick={() => setShowTextInput(!showTextInput)}
+          title="Edit Label Text"
+        >
+          <Type size={16} className="mr-1" />
+          {textInput && !showTextInput ?
+            <span className="text-xs max-w-20 truncate">{textInput}</span> :
+            null
+          }
+        </Button>
+
+        {numberOptions?.map(option => (
+          <div key={option.key} className="flex items-center space-x-1">
+            {[1, 2, 3, 4].map(w => (
+              <Button
+                key={w}
+                size="sm"
+                variant={(values[option.key] ?? 2) === w ? "default" : "ghost"}
+                className="w-7 h-8 p-0"
+                onClick={() => updateOption(option.key, w)}
+                title={`Thickness ${w}`}
+              >
+                {w}
+              </Button>
+            ))}
+          </div>
+        ))}
+
+        <div className="flex-1"></div>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 w-8 h-8 p-0"
+          onClick={handleDelete}
+          title="Delete Drawing"
+        >
+          <Trash size={16} />
+        </Button>
+      </div>
+
+      {showTextInput && (
+        <div className="p-2 pt-0 border-t border-border">
+          <div className="flex flex-col space-y-2 mt-2">
+            <Input
+              value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              className="text-sm h-8"
+              placeholder="Enter label text..."
+              onBlur={applyTextChanges}
+              onKeyDown={e => e.key === 'Enter' && applyTextChanges()}
+              autoFocus
+            />
 
 
-							{labelBackgroundColorOption && (
-								<div className="flex items-center">
-									<span className="text-xs mr-1">Background:</span>
-									<Input
-										type="color"
-										value={values[labelBackgroundColorOption.key] || '#000000'}
-										onChange={e => updateOption(labelBackgroundColorOption.key, e.target.value)}
-										className="w-6 h-6 p-0 cursor-pointer"
-										title="Background Color"
-										onMouseDown={() => { colorPickerActive.current = true; }}
-										onMouseUp={() => {
-											setTimeout(() => { colorPickerActive.current = false; }, 100);
-										}}
-									/>
-								</div>
-							)}
-						</div>
-					</div>
-				</div>
-			)}
-		</div>
-	);
+            <div className="flex items-center space-x-2">
+
+              {labelTextColorOption && (
+                <div className="flex items-center">
+                  <span className="text-xs mr-1">Text:</span>
+                  <Input
+                    type="color"
+                    value={values[labelTextColorOption.key] || '#ffffff'}
+                    onChange={e => updateOption(labelTextColorOption.key, e.target.value)}
+                    className="w-6 h-6 p-0 cursor-pointer"
+                    title="Text Color"
+                    onMouseDown={() => { colorPickerActive.current = true; }}
+                    onMouseUp={() => {
+                      // Use timeout to ensure this happens after blur would be processed
+                      setTimeout(() => { colorPickerActive.current = false; }, 100);
+                    }}
+                  />
+                </div>
+              )}
+
+
+              {labelBackgroundColorOption && (
+                <div className="flex items-center">
+                  <span className="text-xs mr-1">Background:</span>
+                  <Input
+                    type="color"
+                    value={values[labelBackgroundColorOption.key] || '#000000'}
+                    onChange={e => updateOption(labelBackgroundColorOption.key, e.target.value)}
+                    className="w-6 h-6 p-0 cursor-pointer"
+                    title="Background Color"
+                    onMouseDown={() => { colorPickerActive.current = true; }}
+                    onMouseUp={() => {
+                      setTimeout(() => { colorPickerActive.current = false; }, 100);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };

@@ -5,7 +5,7 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, EditableOption, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 
 class RectanglePaneRenderer implements IPrimitivePaneRenderer {
 	_p1: ViewPoint;
@@ -148,22 +148,38 @@ export class Rectangle extends BaseDrawing {
 	getEditableOptions(): EditableOption[] {
 		return [
 			{
-				key: 'color',
+				key: DrawingOptionKey.COLOR,
 				label: 'Border Color',
 				type: 'color',
+				group: 'Border',
 				currentValue: this._options.color
 			},
 			{
-				key: 'fillColor',
+				key: DrawingOptionKey.WIDTH,
+				label: 'Border Width',
+				type: 'number',
+				min: 1,
+				max: 4,
+				step: 1,
+				group: 'Border',
+				currentValue: this._options.width
+			},
+			{
+				key: DrawingOptionKey.FILL_COLOR,
 				label: 'Fill Color',
 				type: 'color',
+				group: 'Fill',
 				currentValue: this._options.fillColor
 			},
 			{
-				key: 'width',
-				label: 'Border Width',
+				key: DrawingOptionKey.FILL_OPACITY,
+				label: 'Fill Opacity',
 				type: 'number',
-				currentValue: this._options.width
+				min: 0,
+				max: 1,
+				step: 0.05,
+				group: 'Fill',
+				currentValue: this._options.fillOpacity
 			},
 		];
 	}
