@@ -1,26 +1,45 @@
-import { CrosshairMode } from "cochart-charts";
+import { CrosshairMode, LineStyle } from "cochart-charts";
+
+export interface GridLineSettings {
+	visible: boolean;
+	color: string;
+	style: LineStyle;
+}
+
+export interface CrosshairLineSettings {
+	visible: boolean;
+	color: string;
+	width: number;
+	style: LineStyle;
+}
 
 export interface ChartSettings {
 	isOpen: boolean
 	cursor: CrosshairMode;
 	timezone: string;
+	layout: {
+		fontSize: number;
+	};
 	background: {
 		theme: "dark" | "light";
 		grid: {
-			vertLines: {
-				visible: boolean;
-			};
-			horzLines: {
-				visible: boolean;
-			};
+			vertLines: GridLineSettings;
+			horzLines: GridLineSettings;
 		};
+	};
+	crosshair: {
+		vertLine: CrosshairLineSettings;
+		horzLine: CrosshairLineSettings;
 	};
 	candles: {
 		upColor: string;
 		downColor: string;
-		borderVisible: boolean;
+		wickVisible: boolean;
 		wickupColor: string;
 		wickDownColor: string;
+		borderVisible: boolean;
+		borderUpColor: string;
+		borderDownColor: string;
 	};
 
 }
@@ -39,6 +58,7 @@ export enum CollabAction {
 	DELETE_DRAWING = 'DELETE_DRAWING',
 	MODIFY_DRAWING = 'MODIFY_DRAWING',
 	PRESENCE = 'PRESENCE',
+	UPDATE_PRESENCE = 'UPDATE_PRESENCE',
 }
 
 export interface PresenceUser {

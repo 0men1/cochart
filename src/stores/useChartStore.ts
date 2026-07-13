@@ -1,8 +1,8 @@
 import { SerializedDrawing } from "@/core/chart/drawings/types";
 import { logger } from "@/lib/logger";
-import { CollabAction, Product } from "./types";
+import { CollabAction, ChartSettings, Product } from "./types";
 import { ConnectionState, ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
-import { CrosshairMode, IChartApi, ISeriesApi, SeriesType } from "cochart-charts";
+import { CrosshairMode, LineStyle, IChartApi, ISeriesApi, SeriesType } from "cochart-charts";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { persist, createJSONStorage } from "zustand/middleware";
@@ -12,6 +12,7 @@ import { restoreDrawing } from "@/components/chart/hooks/useChartDrawings";
 import { enableMapSet, setAutoFreeze, Draft } from "immer";
 import { DrawingType } from "@/core/chart/types";
 import { BaseDrawingHandler } from "@/core/chart/drawings/DrawingHandlerFactory";
+import { deepMerge } from "./mergeSettings";
 
 interface DataState {
   product: Product
@@ -25,51 +26,51 @@ interface ToolState {
   activeHandler: BaseDrawingHandler | null,
 }
 
-export interface ChartSettings {
-  isOpen: boolean
-  cursor: CrosshairMode;
-  timezone: string;
-  background: {
-    theme: "dark" | "light";
-    grid: {
-      vertLines: {
-        visible: boolean;
-      };
-      horzLines: {
-        visible: boolean;
-      };
-    };
-  };
-  candles: {
-    upColor: string;
-    downColor: string;
-    borderVisible: boolean;
-    wickupColor: string;
-    wickDownColor: string;
-  };
-}
-
-const defaultSettings: ChartSettings = {
+export const defaultSettings: ChartSettings = {
   isOpen: false,
   cursor: CrosshairMode.Normal,
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  layout: {
+    fontSize: 12,
+  },
   background: {
     theme: "dark",
     grid: {
       vertLines: {
-        visible: true
+        visible: true,
+        color: '#D6DCDE',
+        style: LineStyle.Solid,
       },
       horzLines: {
-        visible: true
+        visible: true,
+        color: '#D6DCDE',
+        style: LineStyle.Solid,
       }
+    },
+  },
+  crosshair: {
+    vertLine: {
+      visible: true,
+      color: '#758696',
+      width: 1,
+      style: LineStyle.LargeDashed,
+    },
+    horzLine: {
+      visible: true,
+      color: '#758696',
+      width: 1,
+      style: LineStyle.LargeDashed,
     },
   },
   candles: {
     upColor: '#26a69a',
     downColor: '#ef5350',
-    borderVisible: false,
+    wickVisible: true,
     wickupColor: '#26a69a',
-    wickDownColor: '#ef5350'
+    wickDownColor: '#ef5350',
+    borderVisible: false,
+    borderUpColor: '#26a69a',
+    borderDownColor: '#ef5350',
   },
 }
 
@@ -502,6 +503,20 @@ export const useChartStore = create<ChartState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ chartSettings: state.chartSettings }),
       skipHydration: true,
+      // Deep-merge persisted settings over the current defaults so settings
+      // added after a user's localStorage was written still get their default
+      // values instead of coming back `undefined`. The modal always opens
+      // closed regardless of what was persisted.
+      merge: (persisted, current) => {
+        const persistedSettings = (persisted as { chartSettings?: Partial<ChartSettings> } | undefined)?.chartSettings;
+        return {
+          ...current,
+          chartSettings: {
+            ...deepMerge(defaultSettings, persistedSettings ?? {}),
+            isOpen: false,
+          },
+        };
+      },
     }
   )
 );

@@ -1,16 +1,33 @@
 'use client'
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Copy, Loader2, LogOut, Users } from "lucide-react";
 import { useCollabSession } from "./hooks/useCollabSession";
 import { useCollabStore } from "@/stores/useCollabStore";
+import { useIdentityStore } from "@/stores/useIdentityStore";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { Modal, ModalClose } from "../ui/modal";
 
 export default function CollabStatus() {
 	const session = useCollabSession();
 	const { isOpen, roomId } = useCollabStore();
+	const broadcastPresence = useCollabStore((s) => s.broadcastPresence);
+	const identity = useIdentityStore((s) => s.identity);
+	const setDisplayName = useIdentityStore((s) => s.setDisplayName);
+	const setColor = useIdentityStore((s) => s.setColor);
 	const [copied, setCopied] = useState(false);
+
+	// Coalesce rapid name keystrokes / color-picker drags into a single
+	// presence broadcast to peers.
+	const broadcastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const scheduleBroadcast = () => {
+		if (broadcastTimer.current) clearTimeout(broadcastTimer.current);
+		broadcastTimer.current = setTimeout(() => broadcastPresence(), 250);
+	};
+	useEffect(() => () => {
+		if (broadcastTimer.current) clearTimeout(broadcastTimer.current);
+	}, []);
 
 	if (!isOpen) return null;
 
@@ -22,6 +39,16 @@ export default function CollabStatus() {
 		await navigator.clipboard.writeText(inviteUrl);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 1500);
+	}
+
+	function handleNameChange(value: string) {
+		setDisplayName(value);
+		scheduleBroadcast();
+	}
+
+	function handleColorChange(value: string) {
+		setColor(value);
+		scheduleBroadcast();
 	}
 
 	return (
@@ -48,6 +75,42 @@ export default function CollabStatus() {
 					</p>
 				)}
 			</div>
+
+			{/* Your identity — editable name + color, persisted locally and, while
+			    connected, pushed live to the room's roster. */}
+			{identity && (
+				<div className="space-y-2 mb-6">
+					<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+						You
+					</label>
+					<div className="flex items-center gap-3">
+						<div className="relative group shrink-0" title="Change your color">
+							<div
+								className="flex h-10 w-10 items-center justify-center rounded-full border border-border shadow-sm text-sm font-semibold text-white transition-transform group-hover:scale-105"
+								style={{ backgroundColor: identity.color }}
+								aria-hidden
+							>
+								{identity.displayName.charAt(0).toUpperCase()}
+							</div>
+							<input
+								type="color"
+								value={identity.color}
+								onChange={(e) => handleColorChange(e.target.value)}
+								className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+								aria-label="Your color"
+							/>
+						</div>
+						<Input
+							value={identity.displayName}
+							onChange={(e) => handleNameChange(e.target.value)}
+							maxLength={32}
+							placeholder="Your name"
+							aria-label="Your display name"
+							className="flex-1"
+						/>
+					</div>
+				</div>
+			)}
 
 			{/* Content */}
 			{isConnected ? (

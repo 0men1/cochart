@@ -13,6 +13,7 @@ import { MouseEventParams } from "cochart-charts";
 import { setCursor } from "@/core/chart/cursor";
 import { useChartStore, suppressHistory } from "@/stores/useChartStore";
 import { useCollabStore } from "@/stores/useCollabStore";
+import { useUIStore } from "@/stores/useUIStore";
 import { DrawingType } from "@/core/chart/types";
 
 /**
@@ -57,6 +58,7 @@ export function useChartDrawings() {
   // While in a collab room the server snapshot is the sole source of truth, so
   // local IndexedDB restore/persist is paused (it must never merge into a room).
   const roomId = useCollabStore((s) => s.roomId);
+  const openDrawingSettings = useUIStore((s) => s.openDrawingSettings);
 
   const isInitializedRef = useRef<string | null>(null);
 
@@ -210,6 +212,24 @@ export function useChartDrawings() {
     } catch (e) { logger.error(e); }
   }, [tools.activeHandler, drawings, seriesApi]);
 
+  // Double-clicking a drawing opens its dedicated settings page. Resolve the
+  // target the same way a single click does (via the library's hoveredObjectId)
+  // and keep selection in sync so the drawing stays highlighted behind the modal.
+  const mouseDblClickHandler = useCallback((param: MouseEventParams) => {
+    try {
+      const hoveredId = param.hoveredObjectId as string | undefined;
+      if (!hoveredId) return;
+      const hit = drawings.collection.get(hoveredId);
+      if (!hit) return;
+      for (const d of drawings.collection.values()) {
+        if (d.id !== hit.id && d.isSelected()) d.setSelected(false);
+      }
+      hit.setSelected(true);
+      selectDrawing(hit.id);
+      openDrawingSettings(hit.id);
+    } catch (e) { logger.error(e); }
+  }, [drawings, selectDrawing, openDrawingSettings]);
+
   // Point the hover highlight at `targetId` (or null). The actual flag flip +
   // repaint is batched onto an animation frame so it runs OUTSIDE the
   // crosshair-move dispatch — a repaint requested synchronously inside that
@@ -260,6 +280,7 @@ export function useChartDrawings() {
   useEffect(() => {
     chartApi?.subscribeCrosshairMove(mouseMoveHandler);
     chartApi?.subscribeClick(mouseClickHandler);
+    chartApi?.subscribeDblClick(mouseDblClickHandler);
     return () => {
       if (hoverFrameRef.current !== null) {
         cancelAnimationFrame(hoverFrameRef.current);
@@ -268,9 +289,10 @@ export function useChartDrawings() {
       try {
         chartApi?.unsubscribeCrosshairMove(mouseMoveHandler);
         chartApi?.unsubscribeClick(mouseClickHandler);
+        chartApi?.unsubscribeDblClick(mouseDblClickHandler);
       } catch (error) {
         logger.error('Error during event cleanup (likely disposed chart):', error);
       }
     };
-  }, [chartApi, mouseClickHandler, mouseMoveHandler]);
+  }, [chartApi, mouseClickHandler, mouseMoveHandler, mouseDblClickHandler]);
 }

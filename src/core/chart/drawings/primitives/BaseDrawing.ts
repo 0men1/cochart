@@ -6,298 +6,298 @@ import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, Seriali
 import { randomUUID } from '@/lib/utils';
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
-	protected readonly _id: string;
-	externalId: string;
-	zOrder: PrimitivePaneViewZOrder = "top";
+  protected readonly _id: string;
+  externalId: string;
+  zOrder: PrimitivePaneViewZOrder = "top";
 
-	protected _isDestroyed: boolean = false;
-	protected _isSelected: boolean = false;
-	protected _isHovered: boolean = false;
+  protected _isDestroyed: boolean = false;
+  protected _isSelected: boolean = false;
+  protected _isHovered: boolean = false;
 
-	protected _chart!: IChartApi;
-	protected _series!: ISeriesApi<SeriesType>;
+  protected _chart!: IChartApi;
+  protected _series!: ISeriesApi<SeriesType>;
 
-	// Primitive-scoped repaint callback handed to us on attach. Lets us request a
-	// redraw without series.applyOptions() — safe to call inside a crosshair-move
-	// handler (applyOptions re-emits crosshair-move and would recurse).
-	protected _requestUpdate: (() => void) | null = null;
+  // Primitive-scoped repaint callback handed to us on attach. Lets us request a
+  // redraw without series.applyOptions() — safe to call inside a crosshair-move
+  // handler (applyOptions re-emits crosshair-move and would recurse).
+  protected _requestUpdate: (() => void) | null = null;
 
-	protected _visibleRangeUpdateHandler: (() => void) | null = null;
+  protected _visibleRangeUpdateHandler: (() => void) | null = null;
 
-	public _paneViews: IPrimitivePaneView[];
-	public _timeAxisViews: ISeriesPrimitiveAxisView[];
+  public _paneViews: IPrimitivePaneView[];
+  public _timeAxisViews: ISeriesPrimitiveAxisView[];
 
-	protected _previewPoints: { x: Coordinate, y: Coordinate }[] | null = null;
+  protected _previewPoints: { x: Coordinate, y: Coordinate }[] | null = null;
 
-	private _dragStartPoint: { x: number, y: number } | null = null;
-	private _initialScreenPoints: { x: number, y: number }[] | null = null;
-	private _activeControlPoint: number | null = null;
+  private _dragStartPoint: { x: number, y: number } | null = null;
+  private _initialScreenPoints: { x: number, y: number }[] | null = null;
+  private _activeControlPoint: number | null = null;
 
-	private _listeners: Map<DrawingOperation, Set<DrawingListener>> = new Map();
+  private _listeners: Map<DrawingOperation, Set<DrawingListener>> = new Map();
 
-	private _attached: boolean = false;
+  private _attached: boolean = false;
 
-	constructor(
-		protected _points: Point[],
-		protected _options: BaseOptions,
-		paneViews: IPrimitivePaneView[],
-		axisViews: ISeriesPrimitiveAxisView[],
-		id?: string,
-	) {
-		this._id = id ? id : randomUUID();
-		this.externalId = this._id;
-		this._paneViews = paneViews;
-		this._timeAxisViews = axisViews;
-		this.initialize();
-	}
+  constructor(
+    protected _points: Point[],
+    protected _options: BaseOptions,
+    paneViews: IPrimitivePaneView[],
+    axisViews: ISeriesPrimitiveAxisView[],
+    id?: string,
+  ) {
+    this._id = id ? id : randomUUID();
+    this.externalId = this._id;
+    this._paneViews = paneViews;
+    this._timeAxisViews = axisViews;
+    this.initialize();
+  }
 
-	public subscribe(operation: DrawingOperation, listener: DrawingListener): () => void {
-		if (!this._listeners.has(operation)) {
-			this._listeners.set(operation, new Set());
-		}
-		this._listeners.get(operation)?.add(listener);
-		return () => {
-			const listeners = this._listeners.get(operation);
-			if (listeners) {
-				listeners.delete(listener);
-			}
-		}
-	}
+  public subscribe(operation: DrawingOperation, listener: DrawingListener): () => void {
+    if (!this._listeners.has(operation)) {
+      this._listeners.set(operation, new Set());
+    }
+    this._listeners.get(operation)?.add(listener);
+    return () => {
+      const listeners = this._listeners.get(operation);
+      if (listeners) {
+        listeners.delete(listener);
+      }
+    }
+  }
 
-	protected notify(operation: DrawingOperation) {
-		const listeners = this._listeners?.get(operation);
-		if (listeners) {
-			listeners.forEach(listener => listener(this));
-		}
-	}
+  protected notify(operation: DrawingOperation) {
+    const listeners = this._listeners?.get(operation);
+    if (listeners) {
+      listeners.forEach(listener => listener(this));
+    }
+  }
 
-	onDragStart(x: number, y: number): boolean {
-		const hitPointIndex = this.getControlPointsAt(x as Coordinate, y as Coordinate);
-		if (hitPointIndex !== null) { this._activeControlPoint = hitPointIndex; }
-		else if (this.isPointOnDrawing(x, y)) { this._activeControlPoint = null; }
-		else { return false; }
+  onDragStart(x: number, y: number): boolean {
+    const hitPointIndex = this.getControlPointsAt(x as Coordinate, y as Coordinate);
+    if (hitPointIndex !== null) { this._activeControlPoint = hitPointIndex; }
+    else if (this.isPointOnDrawing(x, y)) { this._activeControlPoint = null; }
+    else { return false; }
 
-		this.setSelected(true);
-		this._dragStartPoint = { x, y };
-		this._initialScreenPoints = this._points.map(p => {
-			const coords = this.getScreenCoordinates(p);
-			return {
-				x: coords.x ?? 0,
-				y: coords.y ?? 0
-			};
-		});
+    this.setSelected(true);
+    this._dragStartPoint = { x, y };
+    this._initialScreenPoints = this._points.map(p => {
+      const coords = this.getScreenCoordinates(p);
+      return {
+        x: coords.x ?? 0,
+        y: coords.y ?? 0
+      };
+    });
 
-		return true;
-	}
+    return true;
+  }
 
-	onDrag(x: number, y: number): void {
-		if (!this._dragStartPoint || !this._initialScreenPoints) return;
+  onDrag(x: number, y: number): void {
+    if (!this._dragStartPoint || !this._initialScreenPoints) return;
 
-		const deltaX = x - this._dragStartPoint.x;
-		const deltaY = y - this._dragStartPoint.y;
+    const deltaX = x - this._dragStartPoint.x;
+    const deltaY = y - this._dragStartPoint.y;
 
-		if (this._activeControlPoint !== null) {
-			const newScreenPoints = this._initialScreenPoints.map((p, i) => {
-				if (i === this._activeControlPoint) {
-					const targetX = (p.x + deltaX) as Coordinate;
-					const targetY = (p.y + deltaY) as Coordinate;
-					// Magnet: snap the dragged control point's price to the candle's
-					// nearest OHLC value (time/x snaps to the bar on commit).
-					const snappedY = isSnapEnabled()
-						? snapYToCandle(this._chart, this._series, targetX, targetY)
-						: targetY;
-					return { x: targetX, y: snappedY };
-				}
-				return {
-					x: p.x as Coordinate,
-					y: p.y as Coordinate
-				};
-			})
-			this.setPreviewPoints(newScreenPoints);
-			return;
-		}
+    if (this._activeControlPoint !== null) {
+      const newScreenPoints = this._initialScreenPoints.map((p, i) => {
+        if (i === this._activeControlPoint) {
+          const targetX = (p.x + deltaX) as Coordinate;
+          const targetY = (p.y + deltaY) as Coordinate;
+          // Magnet: snap the dragged control point's price to the candle's
+          // nearest OHLC value (time/x snaps to the bar on commit).
+          const snappedY = isSnapEnabled()
+            ? snapYToCandle(this._chart, this._series, targetX, targetY)
+            : targetY;
+          return { x: targetX, y: snappedY };
+        }
+        return {
+          x: p.x as Coordinate,
+          y: p.y as Coordinate
+        };
+      })
+      this.setPreviewPoints(newScreenPoints);
+      return;
+    }
 
-		const newScreenPoints = this._initialScreenPoints.map(p => ({
-			x: (p.x + deltaX) as Coordinate,
-			y: (p.y + deltaY) as Coordinate
-		}));
+    const newScreenPoints = this._initialScreenPoints.map(p => ({
+      x: (p.x + deltaX) as Coordinate,
+      y: (p.y + deltaY) as Coordinate
+    }));
 
-		this.setPreviewPoints(newScreenPoints);
-	}
+    this.setPreviewPoints(newScreenPoints);
+  }
 
-	onDragEnd(): void {
-		if (this._previewPoints && this._chart && this._series) {
-			const newPoints = this._previewPoints.map(p => ({
-				time: coordinateToTimeExtrapolated(this._chart, this._series, p.x) as Time,
-				price: this._series.coordinateToPrice(p.y) as number
-			}));
+  onDragEnd(): void {
+    if (this._previewPoints && this._chart && this._series) {
+      const newPoints = this._previewPoints.map(p => ({
+        time: coordinateToTimeExtrapolated(this._chart, this._series, p.x) as Time,
+        price: this._series.coordinateToPrice(p.y) as number
+      }));
 
-			if (newPoints.every(p => p.time !== null && p.price !== null)) {
-				this.updatePoints(newPoints);
-			}
-		}
+      if (newPoints.every(p => p.time !== null && p.price !== null)) {
+        this.updatePoints(newPoints);
+      }
+    }
 
-		this._dragStartPoint = null;
-		this._initialScreenPoints = null;
-		this._previewPoints = null;
-		this.notify(DrawingOperation.MODIFY);
-	}
+    this._dragStartPoint = null;
+    this._initialScreenPoints = null;
+    this._previewPoints = null;
+    this.notify(DrawingOperation.MODIFY);
+  }
 
 
-	setPreviewPoints(points: { x: Coordinate, y: Coordinate }[] | null) {
-		this._previewPoints = points;
-	}
+  setPreviewPoints(points: { x: Coordinate, y: Coordinate }[] | null) {
+    this._previewPoints = points;
+  }
 
-	async delete(): Promise<void> {
-		if (this._isDestroyed) return;
-		this._isDestroyed = true;
-		this._series.detachPrimitive(this)
-		this._series.applyOptions(this._series.options())
-		this.updateAllViews();
-	}
+  async delete(): Promise<void> {
+    if (this._isDestroyed) return;
+    this._isDestroyed = true;
+    this._series.detachPrimitive(this)
+    this._series.applyOptions(this._series.options())
+    this.updateAllViews();
+  }
 
-	attached(param: SeriesAttachedParameter<Time>) {
-		this._chart = param.chart;
-		this._series = param.series;
-		this._requestUpdate = param.requestUpdate ?? null;
-		this._attached = true;
-	}
+  attached(param: SeriesAttachedParameter<Time>) {
+    this._chart = param.chart;
+    this._series = param.series;
+    this._requestUpdate = param.requestUpdate ?? null;
+    this._attached = true;
+  }
 
-	// Schedule a repaint of this primitive without touching series options.
-	requestUpdate(): void {
-		this._requestUpdate?.();
-	}
+  // Schedule a repaint of this primitive without touching series options.
+  requestUpdate(): void {
+    this._requestUpdate?.();
+  }
 
-	detached() {
-		if (this._visibleRangeUpdateHandler) {
-			this._chart.timeScale().unsubscribeVisibleLogicalRangeChange(this._visibleRangeUpdateHandler);
-			this._visibleRangeUpdateHandler = null;
-		}
-		this._attached = false;
-	}
+  detached() {
+    if (this._visibleRangeUpdateHandler) {
+      this._chart.timeScale().unsubscribeVisibleLogicalRangeChange(this._visibleRangeUpdateHandler);
+      this._visibleRangeUpdateHandler = null;
+    }
+    this._attached = false;
+  }
 
-	hitTest(x: number, y: number): PrimitiveHoveredItem | null {
-		if (this.isPointOnDrawing(x, y)) {
-			return this;
-		};
-		return null;
-	}
+  hitTest(x: number, y: number): PrimitiveHoveredItem | null {
+    if (this.isPointOnDrawing(x, y)) {
+      return this;
+    };
+    return null;
+  }
 
-	getControlPointsAt(x: Coordinate, y: Coordinate): number | null {
-		// Control points are grabbable whenever they're visible (selected OR hovered).
-		if (!this.showControlPoints()) return null;
-		const threshold = 8;
-		for (let i = 0; i < this._points.length; ++i) {
-			const screenCoords = this.getScreenCoordinates(this._points[i])
-			if (screenCoords.x === undefined || screenCoords.y === undefined || screenCoords.x === null || screenCoords.y === null) {
-				return null;
-			}
-			const distance = Math.sqrt(Math.pow(x - screenCoords.x, 2) + Math.pow(y - screenCoords.y, 2));
-			if (distance <= threshold) { return i; }
-		}
-		return null;
-	}
+  getControlPointsAt(x: Coordinate, y: Coordinate): number | null {
+    // Control points are grabbable whenever they're visible (selected OR hovered).
+    if (!this.showControlPoints()) return null;
+    const threshold = 8;
+    for (let i = 0; i < this._points.length; ++i) {
+      const screenCoords = this.getScreenCoordinates(this._points[i])
+      if (screenCoords.x === undefined || screenCoords.y === undefined || screenCoords.x === null || screenCoords.y === null) {
+        return null;
+      }
+      const distance = Math.sqrt(Math.pow(x - screenCoords.x, 2) + Math.pow(y - screenCoords.y, 2));
+      if (distance <= threshold) { return i; }
+    }
+    return null;
+  }
 
-	isSelected(): boolean {
-		return this._isSelected;
-	}
+  isSelected(): boolean {
+    return this._isSelected;
+  }
 
-	setSelected(selected: boolean): void {
-		if (this._isSelected !== selected) {
-			this._isSelected = selected;
-			this._series.applyOptions(this._series.options());
-			this.notify(DrawingOperation.SELECT);
-		}
-	}
+  setSelected(selected: boolean): void {
+    if (this._isSelected !== selected) {
+      this._isSelected = selected;
+      this._series.applyOptions(this._series.options());
+      this.notify(DrawingOperation.SELECT);
+    }
+  }
 
-	isHovered(): boolean {
-		return this._isHovered;
-	}
+  isHovered(): boolean {
+    return this._isHovered;
+  }
 
-	// Transient hover highlight — flag only. The repaint is owned by the batched
-	// hover applicator in useChartDrawings (a lone requestUpdate/applyOptions
-	// fired from inside the crosshair-move dispatch gets coalesced away, which
-	// left control points stuck on screen).
-	setHovered(hovered: boolean): void {
-		this._isHovered = hovered;
-	}
+  // Transient hover highlight — flag only. The repaint is owned by the batched
+  // hover applicator in useChartDrawings (a lone requestUpdate/applyOptions
+  // fired from inside the crosshair-move dispatch gets coalesced away, which
+  // left control points stuck on screen).
+  setHovered(hovered: boolean): void {
+    this._isHovered = hovered;
+  }
 
-	// Control points render (and are grabbable) when the drawing is selected or
-	// merely hovered.
-	showControlPoints(): boolean {
-		return this._isSelected || this._isHovered;
-	}
+  // Control points render (and are grabbable) when the drawing is selected or
+  // merely hovered.
+  showControlPoints(): boolean {
+    return this._isSelected || this._isHovered;
+  }
 
-	updateOptions(options: Record<string, any>): void {
-		this._options = { ...this._options, ...options };
-		this._series.applyOptions(this._series.options());
-		this.notify(DrawingOperation.MODIFY);
-	}
+  updateOptions(options: Record<string, any>): void {
+    this._options = { ...this._options, ...options };
+    this._series.applyOptions(this._series.options());
+    this.notify(DrawingOperation.MODIFY);
+  }
 
-	updatePoints(newPoints: Point[]): void {
-		this._points = newPoints;
-		this._series.applyOptions(this._series.options());
-	}
+  updatePoints(newPoints: Point[]): void {
+    this._points = newPoints;
+    this._series.applyOptions(this._series.options());
+  }
 
-	// Apply a remote/authoritative state (points + options) without emitting a
-	// MODIFY notification — the change originated elsewhere, so re-notifying would
-	// rebroadcast it in a loop. Used by collab sync and undo/redo.
-	syncFrom(newPoints: Point[], newOptions: Record<string, any>): void {
-		this._points = newPoints;
-		this._options = { ...this._options, ...newOptions };
-		this._series.applyOptions(this._series.options());
-	}
+  // Apply a remote/authoritative state (points + options) without emitting a
+  // MODIFY notification — the change originated elsewhere, so re-notifying would
+  // rebroadcast it in a loop. Used by collab sync and undo/redo.
+  syncFrom(newPoints: Point[], newOptions: Record<string, any>): void {
+    this._points = newPoints;
+    this._options = { ...this._options, ...newOptions };
+    this._series.applyOptions(this._series.options());
+  }
 
-	// Single chokepoint for time -> x mapping. Snaps the point's time to the
-	// current candle interval first, so drawings placed at sub-interval times (or
-	// carried across timeframe changes) still resolve to a real candle coordinate
-	// instead of null (which the renderers drop).
-	public timeToX(time: Time): Coordinate | null {
-		return timeToCoordinateExtrapolated(this._chart, this._series, time);
-	}
+  // Single chokepoint for time -> x mapping. Snaps the point's time to the
+  // current candle interval first, so drawings placed at sub-interval times (or
+  // carried across timeframe changes) still resolve to a real candle coordinate
+  // instead of null (which the renderers drop).
+  public timeToX(time: Time): Coordinate | null {
+    return timeToCoordinateExtrapolated(this._chart, this._series, time);
+  }
 
-	getScreenCoordinates(point: Point): { x: Coordinate | null, y: Coordinate | null } {
-		const x = this.timeToX(point.time);
-		const y = this._series.priceToCoordinate(point.price);
-		return { x, y };
-	}
+  getScreenCoordinates(point: Point): { x: Coordinate | null, y: Coordinate | null } {
+    const x = this.timeToX(point.time);
+    const y = this._series.priceToCoordinate(point.price);
+    return { x, y };
+  }
 
-	updateAllViews(): void {
-		const updateData = { selected: this._isSelected, points: this._points, options: this._options };
-		this._paneViews.forEach(view => {
-			if ('update' in view && typeof (view as any).update === 'function') {
-				(view as any).update(updateData);
-			}
-		});
-	}
+  updateAllViews(): void {
+    const updateData = { selected: this._isSelected, points: this._points, options: this._options };
+    this._paneViews.forEach(view => {
+      if ('update' in view && typeof (view as any).update === 'function') {
+        (view as any).update(updateData);
+      }
+    });
+  }
 
-	get id(): string {
-		return this._id
-	}
+  get id(): string {
+    return this._id
+  }
 
-	get chart(): IChartApi {
-		return this._chart;
-	}
+  get chart(): IChartApi {
+    return this._chart;
+  }
 
-	get series(): ISeriesApi<SeriesType> {
-		return this._series;
-	}
+  get series(): ISeriesApi<SeriesType> {
+    return this._series;
+  }
 
-	get options(): BaseOptions {
-		return this._options;
-	}
+  get options(): BaseOptions {
+    return this._options;
+  }
 
-	get points(): Point[] {
-		return this._points;
-	}
+  get points(): Point[] {
+    return this._points;
+  }
 
-	get isAttached(): boolean {
-		return this._attached;
-	}
+  get isAttached(): boolean {
+    return this._attached;
+  }
 
-	abstract isPointOnDrawing(x: number, y: number): boolean;
-	abstract serialize(): SerializedDrawing;
-	abstract paneViews(): IPrimitivePaneView[];
-	abstract getEditableOptions(): EditableOption[];
-	protected abstract initialize(): void;
+  abstract isPointOnDrawing(x: number, y: number): boolean;
+  abstract serialize(): SerializedDrawing;
+  abstract paneViews(): IPrimitivePaneView[];
+  abstract getEditableOptions(): EditableOption[];
+  protected abstract initialize(): void;
 }

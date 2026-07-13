@@ -43,7 +43,7 @@ function getStatusDiv(status: ConnectionStatus) {
   }
 }
 export default function ChartFooter() {
-  const { toggleFeatureSpotlight } = useUIStore();
+  const { toggleWelcomeTour } = useUIStore();
   const { data, chartSettings, setTimezone } = useChartStore();
   const { status } = useCollabStore();
   const currentTimezone = chartSettings.timezone || "UTC";
@@ -93,7 +93,7 @@ export default function ChartFooter() {
 
       <div
         className="ml-3 flex items-center justify-center w-5 h-5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground cursor-pointer transition-colors"
-        onClick={() => toggleFeatureSpotlight(true)}
+        onClick={() => toggleWelcomeTour(true)}
       >
         <span className="text-[10px] font-bold">?</span>
       </div>

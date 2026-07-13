@@ -5,7 +5,7 @@ import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";
 import { positionsLine } from "./positions";
 import { DrawingType, Point, ViewPoint } from "@/core/chart/types";
-import { BaseOptions, EditableOption, SerializedDrawing } from "@/core/chart/drawings/types";
+import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from "@/core/chart/drawings/types";
 
 const defaultOptions: BaseOptions = {
 	color: '#00FF00',
@@ -155,16 +155,49 @@ export class VertLine extends BaseDrawing {
 	getEditableOptions(): EditableOption[] {
 		return [
 			{
-				key: 'color',
+				key: DrawingOptionKey.COLOR,
 				label: 'Line Color',
 				type: 'color',
+				group: 'Line',
 				currentValue: this._options.color
 			},
 			{
-				key: 'width',
+				key: DrawingOptionKey.WIDTH,
 				label: 'Line Width',
 				type: 'number',
+				min: 1,
+				max: 4,
+				step: 1,
+				group: 'Line',
 				currentValue: this._options.width
+			},
+			{
+				key: DrawingOptionKey.SHOW_LABEL,
+				label: 'Show Label',
+				type: 'boolean',
+				group: 'Label',
+				currentValue: this._options.showLabel
+			},
+			{
+				key: DrawingOptionKey.LABEL_TEXT,
+				label: 'Label Text',
+				type: 'text',
+				group: 'Label',
+				currentValue: this._options.labelText
+			},
+			{
+				key: DrawingOptionKey.LABEL_BACKGROUND_COLOR,
+				label: 'Label Background',
+				type: 'color',
+				group: 'Label',
+				currentValue: this._options.labelBackgroundColor
+			},
+			{
+				key: DrawingOptionKey.LABEL_TEXT_COLOR,
+				label: 'Label Text Color',
+				type: 'color',
+				group: 'Label',
+				currentValue: this._options.labelTextColor
 			},
 		];
 	}
