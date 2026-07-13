@@ -53,7 +53,7 @@ export const DrawingEditor = () => {
   };
 
   const colorOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'color');
-  const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'number');
+  const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.label === 'Line Width');
 
   const labelTextColorOption = colorOptions?.find(o => o.key === DrawingOptionKey.LABEL_TEXT_COLOR);
   const labelBackgroundColorOption = colorOptions?.find(o => o.key === DrawingOptionKey.LABEL_BACKGROUND_COLOR);
