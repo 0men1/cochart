@@ -148,6 +148,12 @@ export class Room {
         this.broadcastToAll(this.presenceMessage());
         return;
       }
+      case CollabAction.CURSOR: {
+        // Ephemeral live-cursor position: relay to peers verbatim but never
+        // fold into the room's truth, so it stays out of the snapshot.
+        this.broadcastToOthers(raw, sender);
+        return;
+      }
       default:
         break;
     }

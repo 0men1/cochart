@@ -17,6 +17,9 @@ import { DrawingEditor } from './DrawingEditor';
 import CollabStatus from './CollabStatus';
 import SnapshotPrompt from './SnapshotPrompt';
 import PresenceStack from './PresenceStack';
+import PeerCursors from './PeerCursors';
+import ConnectionBanner from './ConnectionBanner';
+import { useCursorBroadcast } from './hooks/useCursorBroadcast';
 import { useCollabStore } from '@/stores/useCollabStore';
 import { useIdentityStore } from '@/stores/useIdentityStore';
 import { ConnectionStatus } from '@/core/chart/market-data/types';
@@ -62,6 +65,7 @@ export default function ClientChart() {
   useCandleChart(chartContainerRef);
   useChartDrawings();
   useChartInteraction()
+  useCursorBroadcast();
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -77,6 +81,10 @@ export default function ClientChart() {
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
               <DrawingEditor />
             </div>
+
+            <PeerCursors />
+
+            <ConnectionBanner />
 
             <PresenceStack />
 

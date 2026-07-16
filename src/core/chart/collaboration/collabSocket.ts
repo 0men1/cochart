@@ -14,6 +14,7 @@ export class CollabSocket {
     onMessage: (data: any) => void;
     onClose: () => void;
     onError: (error: Event) => void;
+    onReconnecting?: () => void;
   }) {
     const params = new URLSearchParams({ roomId });
     if (identity) {
@@ -44,6 +45,9 @@ export class CollabSocket {
 
       // Auto-reconnect with exponential backoff
       if (!this.intentionalClose && this.reconnectAttempts < this.maxReconnectAttempts) {
+        // Signal that a retry is pending so the UI can distinguish a transient
+        // drop from a terminal failure (which leaves status at ERROR).
+        callbacks.onReconnecting?.();
         const delay = Math.pow(2, this.reconnectAttempts) * 1000;
         setTimeout(() => {
           this.reconnectAttempts++;

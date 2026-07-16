@@ -19,12 +19,18 @@ interface PendingSnapshot {
   awaitingLocalCheck?: boolean;
 }
 
+export interface PeerCursor {
+  time: number;
+  price: number;
+}
+
 interface CollabState {
   isOpen: boolean;
   roomId: string | null,
   isHost: boolean,
   isLoading: boolean,
   activeUsers: PresenceUser[]
+  peerCursors: Record<string, PeerCursor>;
   socket: CollabSocket | null;
   status: ConnectionStatus;
   pendingSnapshot: PendingSnapshot | null;
@@ -35,6 +41,7 @@ interface CollabState {
   toggleCollabWindow: (isOpen: boolean) => void;
   resolvePendingSnapshot: (mode: 'replace' | 'keep') => void;
   broadcastPresence: () => void;
+  broadcastCursor: (time: number, price: number, hidden?: boolean) => void;
 }
 
 export const useCollabStore = create<CollabState>((set, get) => ({
@@ -43,6 +50,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
   isLoading: false,
   isHost: false,
   activeUsers: [],
+  peerCursors: {},
   socket: null,
   status: ConnectionStatus.DISCONNECTED,
   pendingSnapshot: null,
@@ -93,9 +101,32 @@ export const useCollabStore = create<CollabState>((set, get) => ({
           syncAddDrawing, syncDeleteDrawing } = useChartStore.getState();
 
         // Presence is independent of chart state — always apply the latest
-        // roster, even while a snapshot decision is pending.
+        // roster, even while a snapshot decision is pending. Prune cursors for
+        // anyone who has left so departed peers don't leave a stale marker.
         if (incomingAction.type === CollabAction.PRESENCE) {
-          set({ activeUsers: incomingAction.payload?.users ?? [] });
+          const users: PresenceUser[] = incomingAction.payload?.users ?? [];
+          const present = new Set(users.map((u) => u.userId));
+          const peerCursors = get().peerCursors;
+          const pruned = Object.fromEntries(
+            Object.entries(peerCursors).filter(([id]) => present.has(id)),
+          );
+          set({ activeUsers: users, peerCursors: pruned });
+          return;
+        }
+
+        // Live cursor updates are ephemeral and independent of chart/snapshot
+        // state — apply them straight away and never persist.
+        if (incomingAction.type === CollabAction.CURSOR) {
+          const { userId, time, price, hidden } = incomingAction.payload ?? {};
+          const myId = useIdentityStore.getState().identity?.userId;
+          if (!userId || userId === myId) return;
+          const peerCursors = { ...get().peerCursors };
+          if (hidden || typeof time !== 'number' || typeof price !== 'number') {
+            delete peerCursors[userId];
+          } else {
+            peerCursors[userId] = { time, price };
+          }
+          set({ peerCursors });
           return;
         }
 
@@ -209,12 +240,12 @@ export const useCollabStore = create<CollabState>((set, get) => ({
       onError: (error) => {
         logger.error("connection error: ", error);
         set({ status: ConnectionStatus.ERROR });
+      },
+      onReconnecting: () => {
+        set({ status: ConnectionStatus.RECONNECTING });
       }
     });
   },
-  // Push this browser's current identity (name + color) to the room so peers'
-  // rosters update live. No-op when not connected — the next join carries the
-  // updated identity via the connection params instead.
   broadcastPresence: () => {
     const socket = get().socket;
     if (!socket) return;
@@ -227,6 +258,16 @@ export const useCollabStore = create<CollabState>((set, get) => ({
         displayName: identity.displayName,
         color: identity.color,
       },
+    });
+  },
+  broadcastCursor: (time: number, price: number, hidden?: boolean) => {
+    const socket = get().socket;
+    if (!socket) return;
+    const identity = useIdentityStore.getState().identity;
+    if (!identity) return;
+    socket.send({
+      type: CollabAction.CURSOR,
+      payload: { userId: identity.userId, time, price, hidden },
     });
   },
   resolvePendingSnapshot: (mode: 'replace' | 'keep') => {
@@ -252,6 +293,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
         status: ConnectionStatus.DISCONNECTED,
         pendingSnapshot: null,
         activeUsers: [],
+        peerCursors: {},
       });
       // Drop the room's drawings; the IndexedDB restore effect re-runs on
       // roomId -> null and brings back the user's own saved drawings.
