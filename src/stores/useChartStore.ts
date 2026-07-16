@@ -37,12 +37,12 @@ export const defaultSettings: ChartSettings = {
     theme: "dark",
     grid: {
       vertLines: {
-        visible: true,
+        visible: false,
         color: '#D6DCDE',
         style: LineStyle.Solid,
       },
       horzLines: {
-        visible: true,
+        visible: false,
         color: '#D6DCDE',
         style: LineStyle.Solid,
       }
@@ -63,11 +63,11 @@ export const defaultSettings: ChartSettings = {
     },
   },
   candles: {
-    upColor: '#26a69a',
-    downColor: '#ef5350',
+    upColor: '#179b21',
+    downColor: '#9f0a16',
     wickVisible: true,
-    wickupColor: '#26a69a',
-    wickDownColor: '#ef5350',
+    wickupColor: '#adb3b2',
+    wickDownColor: '#adb3b2',
     borderVisible: false,
     borderUpColor: '#26a69a',
     borderDownColor: '#ef5350',
@@ -449,14 +449,10 @@ export const useChartStore = create<ChartState>()(
         state.tools.activeHandler = handler;
       }),
       cancelTool: () => set((state) => {
-        // Let the handler tear down any in-progress preview before we drop it.
         try { state.tools.activeHandler?.onCancel(); } catch (e) { logger.error(e); }
         state.tools.activeTool = null;
         state.tools.activeHandler = null;
       }),
-      // Undo/redo invert a recorded command by replaying the existing store
-      // actions (so broadcast + persistence + the reconcile effect all run),
-      // with recording suppressed to avoid re-pushing history.
       undo: () => {
         const cmd = historyUndo.pop();
         if (!cmd) return;
@@ -503,10 +499,6 @@ export const useChartStore = create<ChartState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ chartSettings: state.chartSettings }),
       skipHydration: true,
-      // Deep-merge persisted settings over the current defaults so settings
-      // added after a user's localStorage was written still get their default
-      // values instead of coming back `undefined`. The modal always opens
-      // closed regardless of what was persisted.
       merge: (persisted, current) => {
         const persistedSettings = (persisted as { chartSettings?: Partial<ChartSettings> } | undefined)?.chartSettings;
         return {

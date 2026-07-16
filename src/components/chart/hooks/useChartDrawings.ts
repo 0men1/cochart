@@ -19,13 +19,8 @@ import { useCollabStore } from "@/stores/useCollabStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { DrawingType } from "@/core/chart/types";
 
-// Screen-space nudge (pixels) applied to a pasted clone so it lands visibly
-// offset from the original — a little to the right and up.
 const PASTE_OFFSET_PX = { dx: 16, dy: -16 };
 
-/**
- * This hook will be solely responsible for drawing and removing and storing drawings
- */
 export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
   try {
     let restoredDrawing: BaseDrawing | null = null;
@@ -206,11 +201,6 @@ export function useChartDrawings() {
       const hoveredId = param.hoveredObjectId as string;
       const hit = drawings.collection.get(hoveredId);
 
-      // Deselect every OTHER drawing based on its own live `isSelected()` flag —
-      // the source of truth for control-point rendering. Relying on the store's
-      // `selected` id (from this memoized closure) could leave a previously
-      // selected drawing's control points stuck when clicking straight onto a
-      // different drawing.
       for (const d of drawings.collection.values()) {
         if (d.id !== hit?.id && d.isSelected()) d.setSelected(false);
       }
@@ -242,11 +232,6 @@ export function useChartDrawings() {
     } catch (e) { logger.error(e); }
   }, [drawings, selectDrawing, openDrawingSettings]);
 
-  // Point the hover highlight at `targetId` (or null). The actual flag flip +
-  // repaint is batched onto an animation frame so it runs OUTSIDE the
-  // crosshair-move dispatch — a repaint requested synchronously inside that
-  // dispatch gets coalesced away, which left control points stuck on screen.
-  // Every drawing is set each frame (self-healing), then one reliable repaint.
   const applyHover = useCallback((targetId: string | null) => {
     if (hoveredRef.current === targetId) return;
     hoveredRef.current = targetId;
