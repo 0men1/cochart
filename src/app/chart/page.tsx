@@ -1,6 +1,7 @@
 'use client'
 
 import ClientChart from "@/components/chart/ClientChart";
+import LoadingScreen from "@/components/chart/LoadingScreen";
 import { useEffect, useState } from "react";
 
 
@@ -12,7 +13,7 @@ export default function SoloChart() {
 	}, []);
 
 	if (!isLoaded) {
-		return <div>Loading...</div>;
+		return <LoadingScreen />;
 	}
 
 	return (

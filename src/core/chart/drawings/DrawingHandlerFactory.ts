@@ -3,21 +3,26 @@ import { logger } from "@/lib/logger";
 import { coordinateToTimeExtrapolated } from '../interval';
 import { isSnapEnabled, snapPriceToCandle, snapYToCandle } from '../snap';
 import { DrawingConstructor, DrawingType, Point } from '../types';
+import { getLastDrawingOptions } from './drawingDefaults';
 import { TrendLine } from './primitives/TrendLine';
 import { VertLine } from './primitives/VertLine';
 import { HorizontalLine } from './primitives/HorizontalLine';
 import { Ray } from './primitives/Ray';
 import { Rectangle } from './primitives/Rectangle';
 import { FibonacciRetracement } from './primitives/FibonacciRetracement';
+import { TextLabel } from './primitives/TextLabel';
 import { BaseDrawing } from './primitives/BaseDrawing';
 
-const DRAWING_CLASSES: Record<DrawingType, DrawingConstructor> = {
+// Click-to-place tools only. FREEHAND is intentionally absent — it's drawn by
+// dragging (see the pencil handling in useChartDrawings), not via this handler.
+const DRAWING_CLASSES: Partial<Record<DrawingType, DrawingConstructor>> = {
 	TREND_LINE: TrendLine,
 	VERTICAL_LINE: VertLine,
 	HORIZONTAL_LINE: HorizontalLine,
 	RAY: Ray,
 	RECTANGLE: Rectangle,
 	FIBONACCI: FibonacciRetracement,
+	TEXT: TextLabel,
 }
 
 export class BaseDrawingHandler {
@@ -30,11 +35,19 @@ export class BaseDrawingHandler {
 	// user is placing points; never added to the store, wired, broadcast, or
 	// persisted. Cleared on finalize/cancel.
 	private _preview: BaseDrawing | null = null;
+	private _type: DrawingType;
 
-	constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, drawingClass: DrawingConstructor) {
+	constructor(chart: IChartApi, series: ISeriesApi<SeriesType>, drawingClass: DrawingConstructor, type: DrawingType) {
 		this._chart = chart;
 		this._series = series;
 		this._DrawingClass = drawingClass;
+		this._type = type;
+	}
+
+	// The user's last-used style options for this drawing type (color, width,
+	// fill, …), or undefined the first time, in which case the class defaults win.
+	private lastOptions() {
+		return getLastDrawingOptions(this._type);
 	}
 
 	onStart(): void {
@@ -65,7 +78,7 @@ export class BaseDrawingHandler {
 				while (seed.length < required) {
 					seed.push(this._collectedPoints[this._collectedPoints.length - 1]);
 				}
-				this._preview = new this._DrawingClass(seed);
+				this._preview = new this._DrawingClass(seed, this.lastOptions());
 				this._series.attachPrimitive(this._preview);
 			}
 
@@ -113,7 +126,7 @@ export class BaseDrawingHandler {
 
 			if (this._collectedPoints.length === this._DrawingClass.requiredPoints) {
 				this._clearPreview();
-				const drawing = new this._DrawingClass(this._collectedPoints);
+				const drawing = new this._DrawingClass(this._collectedPoints, this.lastOptions());
 				this._collectedPoints = [];
 				return drawing;
 			}
@@ -147,6 +160,6 @@ export class DrawingHandlerFactory {
 			return null;
 		}
 
-		return new BaseDrawingHandler(this.chart, this.series, drawingClass);
+		return new BaseDrawingHandler(this.chart, this.series, drawingClass, tool);
 	}
 }

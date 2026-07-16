@@ -6,15 +6,25 @@ import { HorizontalLine } from "@/core/chart/drawings/primitives/HorizontalLine"
 import { Ray } from "@/core/chart/drawings/primitives/Ray";
 import { Rectangle } from "@/core/chart/drawings/primitives/Rectangle";
 import { FibonacciRetracement } from "@/core/chart/drawings/primitives/FibonacciRetracement";
+import { TextLabel } from "@/core/chart/drawings/primitives/TextLabel";
+import { Freehand } from "@/core/chart/drawings/primitives/Freehand";
 import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types";
 import { useCallback, useEffect, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
-import { MouseEventParams } from "cochart-charts";
+import { Coordinate, MouseEventParams } from "cochart-charts";
 import { setCursor } from "@/core/chart/cursor";
+import { pixelNudgeDeltas, shiftPoints } from "@/core/chart/drawings/clipboard";
+import { coordinateToTimeExtrapolated } from "@/core/chart/interval";
+import { randomUUID } from "@/lib/utils";
+import { Point } from "@/core/chart/types";
 import { useChartStore, suppressHistory } from "@/stores/useChartStore";
 import { useCollabStore } from "@/stores/useCollabStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { DrawingType } from "@/core/chart/types";
+
+// Screen-space nudge (pixels) applied to a pasted clone so it lands visibly
+// offset from the original — a little to the right and up.
+const PASTE_OFFSET_PX = { dx: 16, dy: -16 };
 
 /**
  * This hook will be solely responsible for drawing and removing and storing drawings
@@ -40,6 +50,12 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
         break;
       case DrawingType.FIBONACCI:
         restoredDrawing = new FibonacciRetracement(drawing.points, drawing.options, drawing.id);
+        break;
+      case DrawingType.TEXT:
+        restoredDrawing = new TextLabel(drawing.points, drawing.options, drawing.id);
+        break;
+      case DrawingType.FREEHAND:
+        restoredDrawing = new Freehand(drawing.points, drawing.options, drawing.id);
         break;
     }
     if (restoredDrawing) {
@@ -172,6 +188,9 @@ export function useChartDrawings() {
   const mouseClickHandler = useCallback((param: MouseEventParams) => {
     try {
       if (!param.point || !param.logical) return;
+      // The pencil owns its own pointer capture; a stray click must not select
+      // or place anything while it's active.
+      if (useChartStore.getState().tools.activeTool === DrawingType.FREEHAND) return;
       if (tools.activeHandler) {
         const inst = tools.activeHandler.onClick(param.point.x, param.point.y);
         if (inst && seriesApi) {
@@ -276,6 +295,167 @@ export function useChartDrawings() {
       if (el) setCursor(hoveredId ? 'pointer' : '', el);
     } catch (e) { logger.error(e); }
   }, [tools.activeHandler, chartApi, applyHover]);
+
+  // Serialized copy of the drawing captured by Cmd/Ctrl-C, reused by Cmd/Ctrl-V.
+  const clipboardRef = useRef<SerializedDrawing | null>(null);
+
+  // Copy the selected drawing into the in-hook clipboard. Returns whether there
+  // was a selection to copy, so the key handler knows if it owned the event.
+  const copySelectedDrawing = useCallback((): boolean => {
+    const { selected, collection } = useChartStore.getState().drawings;
+    if (!selected) return false;
+    const drawing = collection.get(selected);
+    if (!drawing) return false;
+    clipboardRef.current = drawing.serialize();
+    return true;
+  }, []);
+
+  // Paste the clipboard as a brand-new drawing (fresh id) nudged off the
+  // original, then run the same lifecycle as placing a fresh drawing: attach,
+  // wire listeners, record/broadcast via addDrawing, and select it so its
+  // editor opens.
+  const pasteDrawing = useCallback(() => {
+    const clip = clipboardRef.current;
+    if (!clip || clip.points.length === 0) return;
+    const { seriesApi: series, chartApi: chart } = useChartStore.getState();
+    if (!series) return;
+
+    let points = clip.points;
+    if (chart) {
+      const deltas = pixelNudgeDeltas(chart, series, clip.points[0], PASTE_OFFSET_PX.dx, PASTE_OFFSET_PX.dy);
+      if (deltas) points = shiftPoints(clip.points, deltas.timeDelta, deltas.priceDelta);
+    }
+
+    const inst = restoreDrawing({ ...clip, id: randomUUID(), points, isDeleted: false });
+    if (!inst) return;
+
+    series.attachPrimitive(inst);
+    attachListeners(inst);
+    wiredRef.current.add(inst);
+    addDrawing(inst);
+
+    for (const d of useChartStore.getState().drawings.collection.values()) {
+      if (d.id !== inst.id && d.isSelected()) d.setSelected(false);
+    }
+    inst.setSelected(true);
+    selectDrawing(inst.id);
+  }, [attachListeners, addDrawing, selectDrawing]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      // Never hijack copy/paste while the user is typing in a field.
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      const key = event.key.toLowerCase();
+      if (key === 'c') {
+        if (copySelectedDrawing()) event.preventDefault();
+      } else if (key === 'v') {
+        if (clipboardRef.current) {
+          event.preventDefault();
+          pasteDrawing();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [copySelectedDrawing, pasteDrawing]);
+
+  // Pencil / freehand: capture a pointer drag on the chart canvas into a
+  // Freehand path. Active only while the pencil tool is selected; chart pan/zoom
+  // is disabled for the duration so dragging draws instead of scrolling. Stays
+  // active across strokes so several can be drawn in a row (Escape / re-clicking
+  // the tool exits).
+  useEffect(() => {
+    if (tools.activeTool !== DrawingType.FREEHAND || !chartApi || !seriesApi) return;
+    const el = chartApi.chartElement();
+    if (!el) return;
+
+    chartApi.applyOptions({ handleScroll: false, handleScale: false });
+
+    let preview: Freehand | null = null;
+    let points: Point[] = [];
+    let screenPoints: { x: Coordinate; y: Coordinate }[] = [];
+
+    const toCoords = (e: PointerEvent) => {
+      const rect = el.getBoundingClientRect();
+      return { x: (e.clientX - rect.left) as Coordinate, y: (e.clientY - rect.top) as Coordinate };
+    };
+    const toPoint = (c: { x: Coordinate; y: Coordinate }): Point | null => {
+      const time = coordinateToTimeExtrapolated(chartApi, seriesApi, c.x);
+      const price = seriesApi.coordinateToPrice(c.y);
+      if (time === null || price === null) return null;
+      return { time, price };
+    };
+    const clearPreview = () => {
+      if (preview) {
+        try { preview.delete(); } catch (e) { logger.error(e); }
+        preview = null;
+      }
+      points = [];
+      screenPoints = [];
+    };
+
+    // While the button is held the chart isn't panning and so doesn't repaint on
+    // its own; force a redraw (the same idiom the hover/reconcile code uses) so
+    // the stroke is visible live instead of only on release.
+    const forceRepaint = () => {
+      try { seriesApi.applyOptions(seriesApi.options()); } catch (e) { logger.error(e); }
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const c = toCoords(e);
+      const p = toPoint(c);
+      if (!p) return;
+      points = [p];
+      screenPoints = [c];
+      preview = new Freehand(points);
+      seriesApi.attachPrimitive(preview);
+      preview.setPreviewPoints(screenPoints);
+      forceRepaint();
+      try { el.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!preview) return;
+      const c = toCoords(e);
+      const p = toPoint(c);
+      if (!p) return;
+      points.push(p);
+      screenPoints.push(c);
+      preview.setPreviewPoints(screenPoints);
+      forceRepaint();
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      try { el.releasePointerCapture(e.pointerId); } catch { /* not captured */ }
+      const collected = points;
+      const wasDrawing = preview !== null;
+      clearPreview();
+      // Ignore a click / trivial dab — a real stroke needs a couple of points.
+      if (!wasDrawing || collected.length < 2) return;
+
+      const inst = new Freehand(collected);
+      seriesApi.attachPrimitive(inst);
+      attachListeners(inst);
+      wiredRef.current.add(inst);
+      addDrawing(inst);
+    };
+
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('pointermove', onPointerMove);
+    el.addEventListener('pointerup', onPointerUp);
+    el.addEventListener('pointercancel', clearPreview);
+
+    return () => {
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('pointermove', onPointerMove);
+      el.removeEventListener('pointerup', onPointerUp);
+      el.removeEventListener('pointercancel', clearPreview);
+      clearPreview();
+      chartApi.applyOptions({ handleScroll: true, handleScale: true });
+    };
+  }, [tools.activeTool, chartApi, seriesApi, attachListeners, addDrawing]);
 
   useEffect(() => {
     chartApi?.subscribeCrosshairMove(mouseMoveHandler);

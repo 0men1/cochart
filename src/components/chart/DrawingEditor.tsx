@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Trash, Type } from 'lucide-react';
 import { useChartStore } from '@/stores/useChartStore';
 import { DrawingOptionKey } from '@/core/chart/drawings/types';
+import { rememberDrawingOptions } from '@/core/chart/drawings/drawingDefaults';
+import { DrawingType } from '@/core/chart/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const DrawingEditor = () => {
   const [values, setValues] = useState<Record<string, any>>({});
@@ -50,10 +53,18 @@ export const DrawingEditor = () => {
     const newValues = { ...values, [key]: value };
     setValues(newValues);
     selectedDrawing?.updateOptions({ [key]: value });
+    // Remember this look so the next new drawing of the same type inherits it.
+    if (selectedDrawing) {
+      rememberDrawingOptions(selectedDrawing.serialize().type as DrawingType, selectedDrawing.options);
+    }
   };
 
   const colorOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'color');
-  const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.label === 'Line Width');
+  // Only line width belongs in the inline toolbar as [1..4] thickness buttons.
+  // Other number options (fill opacity, font size) are 0–1 / large-range values
+  // that these buttons would corrupt — they live on the double-click settings page.
+  const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.key === DrawingOptionKey.WIDTH);
+  const lineStyleOption = selectedDrawing?.getEditableOptions().find(o => o.type === 'lineStyle');
 
   const labelTextColorOption = colorOptions?.find(o => o.key === DrawingOptionKey.LABEL_TEXT_COLOR);
   const labelBackgroundColorOption = colorOptions?.find(o => o.key === DrawingOptionKey.LABEL_BACKGROUND_COLOR);
@@ -120,8 +131,23 @@ export const DrawingEditor = () => {
           </div>
         ))}
 
-        <div className="flex-1"></div>
+        {lineStyleOption && (
+          <Select
+            value={(values.lineStyle as string) ?? 'solid'}
+            onValueChange={(v) => updateOption(lineStyleOption.key, v)}
+          >
+            <SelectTrigger size="sm" className="h-8 w-28" title="Line Style">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="solid">Solid</SelectItem>
+              <SelectItem value="dashed">Dashed</SelectItem>
+              <SelectItem value="dotted">Dotted</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
 
+        <div className="flex-1"></div>
         <Button
           size="sm"
           variant="ghost"
@@ -131,7 +157,7 @@ export const DrawingEditor = () => {
         >
           <Trash size={16} />
         </Button>
-      </div>
+      </div >
 
       {showTextInput && (
         <div className="p-2 pt-0 border-t border-border">
@@ -188,6 +214,6 @@ export const DrawingEditor = () => {
           </div>
         </div>
       )}
-    </div>
+    </div >
   );
 };
