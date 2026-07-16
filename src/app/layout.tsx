@@ -92,7 +92,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
-        <script defer src="https://cloud.umami.is/script.js" data-website-id="7fc2d4c6-1937-4382-b506-07b237b9cc73"></script>
+        <script
+          defer
+          src="/stats/script.js"
+          data-website-id="7fc2d4c6-1937-4382-b506-07b237b9cc73"
+          data-host-url="https://cochart.app/stats"
+        ></script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
