@@ -3,16 +3,18 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Trash } from 'lucide-react';
+import { Settings, Trash } from 'lucide-react';
 import { useChartStore } from '@/stores/useChartStore';
 import { DrawingOptionKey } from '@/core/chart/drawings/types';
 import { rememberDrawingOptions } from '@/core/chart/drawings/drawingDefaults';
 import { DrawingType } from '@/core/chart/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useUIStore } from '@/stores/useUIStore';
 
 export const DrawingEditor = () => {
   const [values, setValues] = useState<Record<string, any>>({});
   const editorRef = useRef<HTMLDivElement>(null);
+  const { openDrawingSettings } = useUIStore();
 
   const { deleteDrawing, drawings } = useChartStore();
   const { selected } = drawings
@@ -27,6 +29,10 @@ export const DrawingEditor = () => {
     if (!selected) return;
     selectedDrawing?.delete();
     deleteDrawing(selected);
+  }
+  const handleOpenSettings = async () => {
+    if (!selected) return;
+    openDrawingSettings(selected)
   }
 
   useEffect(() => {
@@ -105,6 +111,17 @@ export const DrawingEditor = () => {
             </SelectContent>
           </Select>
         )}
+
+        <div className="flex-1"></div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="w-8 h-8 p-0"
+          onClick={handleOpenSettings}
+          title="Open Settings"
+        >
+          <Settings size={16} />
+        </Button>
 
         <div className="flex-1"></div>
         <Button

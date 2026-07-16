@@ -64,7 +64,6 @@ export function useChartDrawings() {
   // local IndexedDB restore/persist is paused (it must never merge into a room).
   const roomId = useCollabStore((s) => s.roomId);
   const openDrawingSettings = useUIStore((s) => s.openDrawingSettings);
-
   const isInitializedRef = useRef<string | null>(null);
 
   // Drawings whose store listeners are already subscribed. Instances survive
@@ -85,19 +84,12 @@ export function useChartDrawings() {
       deleteDrawing(drawing.id);
     })
     drawing.subscribe(DrawingOperation.SELECT, () => {
-      // Enforce exclusive selection at the single point every selection change
-      // flows through. This covers selecting by click AND by grabbing another
-      // drawing's control point to drag it (onDragStart -> setSelected(true)),
-      // which the click handler never sees — so the previously selected drawing
-      // is turned off immediately instead of lingering until you click away.
       if (drawing.isSelected()) {
         for (const d of useChartStore.getState().drawings.collection.values()) {
           if (d.id !== drawing.id && d.isSelected()) d.setSelected(false);
         }
         selectDrawing(drawing.id);
       } else if (useChartStore.getState().drawings.selected === drawing.id) {
-        // This drawing was deselected; its instance flag is already off, so just
-        // clear the store id (no setSelected -> no re-entrant notify loop).
         selectDrawing(null);
       }
     })
@@ -116,10 +108,6 @@ export function useChartDrawings() {
       return;
     }
 
-    // Restore exactly once per ticker id. Do NOT key this on seriesApi: switching
-    // timeframe (or any chart recreation) produces a new series but must not
-    // re-run the restore, or every drawing gets a duplicate instance ("clone")
-    // that lingers attached to the series while orphaned from the collection.
     if (isInitializedRef.current === id) return;
 
     let active = true;
@@ -145,11 +133,6 @@ export function useChartDrawings() {
     };
   }, [id, seriesApi, roomId]);
 
-  // Reconcile the collection against the CURRENT series. `isAttached` alone is
-  // not enough: chart.remove() never calls detached() on series primitives, so
-  // after a chart recreation drawings still claim to be attached — to a dead
-  // series. Comparing series identity catches both never-attached (undefined)
-  // and stale-series drawings.
   useEffect(() => {
     if (!seriesApi) return;
     let dirty = false;
