@@ -14,6 +14,7 @@ import WelcomeTour from '../onboarding/WelcomeTour';
 import { useUIStore } from '@/stores/useUIStore';
 import { hasSeenIntro, markIntroSeen } from '@/lib/onboarding';
 import { DrawingEditor } from './DrawingEditor';
+import ChartInfoBanner from './ChartInfoBanner';
 import CollabStatus from './CollabStatus';
 import SnapshotPrompt from './SnapshotPrompt';
 import PresenceStack from './PresenceStack';
@@ -77,6 +78,8 @@ export default function ClientChart() {
           <Toolbox />
           <div className="flex-1 relative">
             <div ref={chartContainerRef} className="w-full h-full cursor-crosshair" />
+
+            <ChartInfoBanner />
 
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
               <DrawingEditor />
