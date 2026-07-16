@@ -168,34 +168,6 @@ export class VertLine extends BaseDrawing {
         group: 'Line',
         currentValue: this._options.width
       },
-      {
-        key: DrawingOptionKey.SHOW_LABEL,
-        label: 'Show Label',
-        type: 'boolean',
-        group: 'Label',
-        currentValue: this._options.showLabel
-      },
-      {
-        key: DrawingOptionKey.LABEL_TEXT,
-        label: 'Label Text',
-        type: 'text',
-        group: 'Label',
-        currentValue: this._options.labelText
-      },
-      {
-        key: DrawingOptionKey.LABEL_BACKGROUND_COLOR,
-        label: 'Label Background',
-        type: 'color',
-        group: 'Label',
-        currentValue: this._options.labelBackgroundColor
-      },
-      {
-        key: DrawingOptionKey.LABEL_TEXT_COLOR,
-        label: 'Label Text Color',
-        type: 'color',
-        group: 'Label',
-        currentValue: this._options.labelTextColor
-      },
       lineStyleOption(this._options.lineStyle),
     ];
   }
