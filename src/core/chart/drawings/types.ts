@@ -1,11 +1,6 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { Point } from "@/core/chart/types";
 
-export type EditableOptionType = 'text' | 'color' | 'number' | 'boolean' | 'levels';
-
-// Stable identity for each editable drawing option. Values MUST equal the
-// corresponding `BaseOptions` property name so `updateOptions({ [key]: value })`
-// and reads stay correct. The settings page picks a control component per key.
 export enum DrawingOptionKey {
   COLOR = 'color',
   WIDTH = 'width',
@@ -16,7 +11,14 @@ export enum DrawingOptionKey {
   LABEL_BACKGROUND_COLOR = 'labelBackgroundColor',
   LABEL_TEXT_COLOR = 'labelTextColor',
   LEVELS = 'levels',
+  LINE_STYLE = 'lineStyle',
+  FONT_SIZE = 'fontSize',
 }
+export type EditableOptionType = 'text' | 'color' | 'number' | 'boolean' | 'levels' | 'lineStyle';
+
+// How a line is stroked. Stored in options so it serializes, syncs to peers, and
+// is remembered as the last-used style per drawing type.
+export type DrawingLineStyle = 'solid' | 'dashed' | 'dotted';
 
 export enum DrawingOperation {
   CREATE = 'CREATE',
@@ -51,6 +53,8 @@ export interface SerializedDrawing {
 export interface BaseOptions {
   color: string,
   width: number,
+  lineStyle?: DrawingLineStyle;
+  fontSize?: number;
   labelText?: string
   labelBackgroundColor?: string;
   labelTextColor?: string;
@@ -60,7 +64,5 @@ export interface BaseOptions {
   extendLeft?: boolean,
   extendRight?: boolean,
   levels?: number[];
-  // Per-level colors, index-aligned with `levels`. A missing entry falls back to
-  // the uniform `color` (when set) or the built-in Fibonacci palette.
   levelColors?: string[];
 }

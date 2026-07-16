@@ -100,7 +100,7 @@ interface ChartState {
   selectDrawing: (drawingId: string | null) => void;
   deselectDrawing: () => void;
   modifyDrawing: (newDrawing: BaseDrawing) => void;
-  startTool: (tool: DrawingType, handler: BaseDrawingHandler) => void;
+  startTool: (tool: DrawingType, handler: BaseDrawingHandler | null) => void;
   cancelTool: () => void;
   undo: () => void;
   redo: () => void;

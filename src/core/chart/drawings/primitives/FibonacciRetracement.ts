@@ -6,6 +6,7 @@ import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
+import { applyLineDash } from './lineStyle';
 
 const DEFAULT_LEVELS = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
 
@@ -94,10 +95,12 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
         const y = Math.round(lv.y! * vp);
         const levelColor = fibLevelColor(this._options, lv.index, lv.level);
         ctx.strokeStyle = levelColor;
+        applyLineDash(ctx, this._options.lineStyle, this._options.width, hp);
         ctx.beginPath();
         ctx.moveTo(xLeft, y);
         ctx.lineTo(xRight, y);
         ctx.stroke();
+        ctx.setLineDash([]);
 
         ctx.fillStyle = levelColor;
         const label = `${lv.level.toFixed(3)} (${lv.price.toFixed(2)})`;

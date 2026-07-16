@@ -5,7 +5,8 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Input } from '../../ui/input';
 import { Checkbox } from '../../ui/checkbox';
 import { Button } from '../../ui/button';
-import { DrawingOptionKey, EditableOption } from '@/core/chart/drawings/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { DrawingOptionKey, DrawingLineStyle, EditableOption } from '@/core/chart/drawings/types';
 import { BaseDrawing } from '@/core/chart/drawings/primitives/BaseDrawing';
 import { fibLevelColor } from '@/core/chart/drawings/primitives/FibonacciRetracement';
 
@@ -80,6 +81,28 @@ function TextControl({ value, onChange }: ControlProps) {
       onChange={(e) => onChange(e.target.value)}
       className="w-48"
     />
+  );
+}
+
+const LINE_STYLES: { value: DrawingLineStyle; label: string }[] = [
+  { value: 'solid', label: 'Solid' },
+  { value: 'dashed', label: 'Dashed' },
+  { value: 'dotted', label: 'Dotted' },
+];
+
+function LineStyleControl({ value, onChange }: ControlProps) {
+  const current = typeof value === 'string' ? value : 'solid';
+  return (
+    <Select value={current} onValueChange={(v) => onChange(v)}>
+      <SelectTrigger size="sm" className="w-32">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {LINE_STYLES.map((s) => (
+          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -160,7 +183,9 @@ export const CONTROL_BY_KEY: Partial<Record<DrawingOptionKey, React.FC<ControlPr
   [DrawingOptionKey.LABEL_TEXT_COLOR]: ColorControl,
   [DrawingOptionKey.WIDTH]: NumberControl,
   [DrawingOptionKey.FILL_OPACITY]: NumberControl,
+  [DrawingOptionKey.FONT_SIZE]: NumberControl,
   [DrawingOptionKey.SHOW_LABEL]: ToggleControl,
   [DrawingOptionKey.LABEL_TEXT]: TextControl,
   [DrawingOptionKey.LEVELS]: LevelsControl,
+  [DrawingOptionKey.LINE_STYLE]: LineStyleControl,
 };
