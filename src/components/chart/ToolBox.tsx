@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChartStore } from "@/stores/useChartStore";
-import { MoveDiagonal, MoveUp, Minus, MoveUpRight, RectangleHorizontal, AlignJustify, Type, Pencil } from "lucide-react";
+import { MoveDiagonal, MoveUp, Minus, MoveUpRight, RectangleHorizontal, AlignJustify, Type } from "lucide-react";
 import { DrawingType } from "@/core/chart/types";
 
 function Toolbox() {
@@ -28,12 +28,6 @@ function Toolbox() {
     }
 
     try {
-      // Freehand isn't a click-to-place tool — it's captured by dragging in
-      // useChartDrawings, so just activate it without a click handler.
-      if (tool === DrawingType.FREEHAND) {
-        startTool(tool, null);
-        return;
-      }
       const handlerFactory = new DrawingHandlerFactory(chartApi, seriesApi);
       const handler = handlerFactory.createHandler(tool);
       if (handler) {
@@ -53,7 +47,6 @@ function Toolbox() {
     { tool: DrawingType.RECTANGLE, icon: RectangleHorizontal, label: "Rectangle" },
     { tool: DrawingType.FIBONACCI, icon: AlignJustify, label: "Fib Retracement" },
     { tool: DrawingType.TEXT, icon: Type, label: "Text" },
-    { tool: DrawingType.FREEHAND, icon: Pencil, label: "Pencil" },
   ];
 
   return (
