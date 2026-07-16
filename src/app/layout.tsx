@@ -91,6 +91,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <script defer src="https://cloud.umami.is/script.js" data-website-id="7fc2d4c6-1937-4382-b506-07b237b9cc73"></script>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
