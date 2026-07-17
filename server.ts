@@ -3,6 +3,7 @@ import next from "next";
 import { WebSocketServer, type WebSocket } from "ws";
 import { handleCreateRoom, handleJoinRoom } from "./src/server/collab/routes";
 import { handleCandles, handleSearch } from "./src/server/market/routes";
+import { handleCreateSuggestion } from "./src/server/feedback/routes";
 import {
   ensureSearchIndex,
   marketService,
@@ -42,6 +43,10 @@ async function main(): Promise<void> {
       }
       if (pathname === "/api/rooms/create" && req.method === "POST") {
         handleCreateRoom(res, roomManager);
+        return;
+      }
+      if (pathname === "/api/suggestions" && req.method === "POST") {
+        await handleCreateSuggestion(req, res);
         return;
       }
 
