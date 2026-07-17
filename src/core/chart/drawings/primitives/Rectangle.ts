@@ -6,7 +6,7 @@ import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
-import { applyLineDash, lineStyleOption } from './lineStyle';
+import { applyLineDash } from './lineStyle';
 
 class RectanglePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
@@ -42,6 +42,7 @@ class RectanglePaneRenderer implements IPrimitivePaneRenderer {
       const w = Math.abs(x2 - x1);
       const h = Math.abs(y2 - y1);
 
+
       // Semi-transparent fill.
       ctx.globalAlpha = this._options.fillOpacity ?? 0.2;
       ctx.fillStyle = this._options.fillColor ?? this._options.color;
@@ -49,11 +50,13 @@ class RectanglePaneRenderer implements IPrimitivePaneRenderer {
       ctx.globalAlpha = 1;
 
       // Border.
-      ctx.lineWidth = this._options.width;
-      ctx.strokeStyle = this._options.color;
-      applyLineDash(ctx, this._options.lineStyle, this._options.width, scope.horizontalPixelRatio);
-      ctx.strokeRect(left, top, w, h);
-      ctx.setLineDash([]);
+      if (this._options.borderVisible) {
+        ctx.lineWidth = this._options.width;
+        ctx.strokeStyle = this._options.color;
+        applyLineDash(ctx, this._options.lineStyle, this._options.width, scope.horizontalPixelRatio);
+        ctx.strokeRect(left, top, w, h);
+        ctx.setLineDash([]);
+      }
 
       if (this._isSelected) {
         drawControlPoints(ctx, scope, [
@@ -104,6 +107,7 @@ class RectanglePaneView implements IPrimitivePaneView {
 const defaultOptions: BaseOptions = {
   color: '#2962FF',
   width: 2,
+  borderVisible: false,
   fillColor: '#2962FF',
   fillOpacity: 0.2,
 };
@@ -158,10 +162,16 @@ export class Rectangle extends BaseDrawing {
         currentValue: this._options.color
       },
       {
+        key: DrawingOptionKey.SHOW_BORDER,
+        label: 'Show Border',
+        type: 'boolean',
+        currentValue: this._options.borderVisible
+      },
+      {
         key: DrawingOptionKey.WIDTH,
         label: 'Border Width',
         type: 'number',
-        min: 1,
+        min: 0,
         max: 4,
         step: 1,
         group: 'Border',
@@ -184,7 +194,6 @@ export class Rectangle extends BaseDrawing {
         group: 'Fill',
         currentValue: this._options.fillOpacity
       },
-      lineStyleOption(this._options.lineStyle),
     ];
   }
 

@@ -6,7 +6,7 @@ import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
-import { applyLineDash, lineStyleOption } from './lineStyle';
+import { applyLineDash } from './lineStyle';
 
 // Extend the p1 -> p2 direction until it leaves the [0, width] x-range, so the
 // ray visually continues to the canvas edge. Returns the far endpoint in the
@@ -183,7 +183,13 @@ export class Ray extends BaseDrawing {
         step: 1,
         currentValue: this._options.width
       },
-      lineStyleOption(this._options.lineStyle),
+      {
+        key: DrawingOptionKey.LINE_STYLE,
+        label: "Line Style",
+        type: "lineStyle",
+        group: "Style",
+        currentValue: this._options.lineStyle ?? "solid",
+      }
     ];
   }
 

@@ -10,10 +10,6 @@ import { applyLineDash, lineStyleOption } from "./lineStyle";
 const defaultOptions: BaseOptions = {
   color: '#2962FF',
   width: 2,
-  labelText: '',
-  labelBackgroundColor: '#2962FF',
-  labelTextColor: 'white',
-  showLabel: false,
 };
 
 class HorizontalLinePaneRenderer implements IPrimitivePaneRenderer {
@@ -87,22 +83,22 @@ class HorizontalLinePriceAxisView implements ISeriesPrimitiveAxisView {
   }
 
   visible() {
-    return this._options.showLabel!;
+    return true;
   }
   tickVisible() {
-    return this._options.showLabel!;
+    return true;
   }
   coordinate() {
     return this._y ?? 0;
   }
   text() {
-    return this._options.labelText!;
+    return "";
   }
   textColor() {
-    return this._options.labelTextColor!;
+    return "";
   }
   backColor() {
-    return this._options.labelBackgroundColor!;
+    return "";
   }
 }
 
@@ -166,34 +162,6 @@ export class HorizontalLine extends BaseDrawing {
         step: 1,
         group: 'Line',
         currentValue: this._options.width
-      },
-      {
-        key: DrawingOptionKey.SHOW_LABEL,
-        label: 'Show Label',
-        type: 'boolean',
-        group: 'Label',
-        currentValue: this._options.showLabel
-      },
-      {
-        key: DrawingOptionKey.LABEL_TEXT,
-        label: 'Label Text',
-        type: 'text',
-        group: 'Label',
-        currentValue: this._options.labelText
-      },
-      {
-        key: DrawingOptionKey.LABEL_BACKGROUND_COLOR,
-        label: 'Label Background',
-        type: 'color',
-        group: 'Label',
-        currentValue: this._options.labelBackgroundColor
-      },
-      {
-        key: DrawingOptionKey.LABEL_TEXT_COLOR,
-        label: 'Label Text Color',
-        type: 'color',
-        group: 'Label',
-        currentValue: this._options.labelTextColor
       },
       lineStyleOption(this._options.lineStyle),
     ];

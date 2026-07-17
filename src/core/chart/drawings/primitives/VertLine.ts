@@ -11,9 +11,6 @@ const defaultOptions: BaseOptions = {
   color: '#00FF00',
   labelText: '',
   width: 2,
-  labelBackgroundColor: 'green',
-  labelTextColor: 'white',
-  showLabel: false,
 }
 
 class VertLinePaneRenderer implements IPrimitivePaneRenderer {
@@ -90,10 +87,10 @@ class VertLineTimeAxisView implements ISeriesPrimitiveAxisView {
   }
 
   visible() {
-    return this._options.showLabel!;
+    return false;
   }
   tickVisible() {
-    return this._options.showLabel!;
+    return false;
   }
   coordinate() {
     return this._x ?? 0;
@@ -102,10 +99,10 @@ class VertLineTimeAxisView implements ISeriesPrimitiveAxisView {
     return this._options.labelText!;
   }
   textColor() {
-    return this._options.labelTextColor!;
+    return "";
   }
   backColor() {
-    return this._options.labelBackgroundColor!;
+    return "";
   }
 }
 
@@ -167,34 +164,6 @@ export class VertLine extends BaseDrawing {
         step: 1,
         group: 'Line',
         currentValue: this._options.width
-      },
-      {
-        key: DrawingOptionKey.SHOW_LABEL,
-        label: 'Show Label',
-        type: 'boolean',
-        group: 'Label',
-        currentValue: this._options.showLabel
-      },
-      {
-        key: DrawingOptionKey.LABEL_TEXT,
-        label: 'Label Text',
-        type: 'text',
-        group: 'Label',
-        currentValue: this._options.labelText
-      },
-      {
-        key: DrawingOptionKey.LABEL_BACKGROUND_COLOR,
-        label: 'Label Background',
-        type: 'color',
-        group: 'Label',
-        currentValue: this._options.labelBackgroundColor
-      },
-      {
-        key: DrawingOptionKey.LABEL_TEXT_COLOR,
-        label: 'Label Text Color',
-        type: 'color',
-        group: 'Label',
-        currentValue: this._options.labelTextColor
       },
       lineStyleOption(this._options.lineStyle),
     ];

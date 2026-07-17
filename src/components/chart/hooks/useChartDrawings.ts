@@ -19,13 +19,8 @@ import { useCollabStore } from "@/stores/useCollabStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { DrawingType } from "@/core/chart/types";
 
-// Screen-space nudge (pixels) applied to a pasted clone so it lands visibly
-// offset from the original — a little to the right and up.
 const PASTE_OFFSET_PX = { dx: 16, dy: -16 };
 
-/**
- * This hook will be solely responsible for drawing and removing and storing drawings
- */
 export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
   try {
     let restoredDrawing: BaseDrawing | null = null;
@@ -69,7 +64,6 @@ export function useChartDrawings() {
   // local IndexedDB restore/persist is paused (it must never merge into a room).
   const roomId = useCollabStore((s) => s.roomId);
   const openDrawingSettings = useUIStore((s) => s.openDrawingSettings);
-
   const isInitializedRef = useRef<string | null>(null);
 
   // Drawings whose store listeners are already subscribed. Instances survive
@@ -90,19 +84,12 @@ export function useChartDrawings() {
       deleteDrawing(drawing.id);
     })
     drawing.subscribe(DrawingOperation.SELECT, () => {
-      // Enforce exclusive selection at the single point every selection change
-      // flows through. This covers selecting by click AND by grabbing another
-      // drawing's control point to drag it (onDragStart -> setSelected(true)),
-      // which the click handler never sees — so the previously selected drawing
-      // is turned off immediately instead of lingering until you click away.
       if (drawing.isSelected()) {
         for (const d of useChartStore.getState().drawings.collection.values()) {
           if (d.id !== drawing.id && d.isSelected()) d.setSelected(false);
         }
         selectDrawing(drawing.id);
       } else if (useChartStore.getState().drawings.selected === drawing.id) {
-        // This drawing was deselected; its instance flag is already off, so just
-        // clear the store id (no setSelected -> no re-entrant notify loop).
         selectDrawing(null);
       }
     })
@@ -121,10 +108,6 @@ export function useChartDrawings() {
       return;
     }
 
-    // Restore exactly once per ticker id. Do NOT key this on seriesApi: switching
-    // timeframe (or any chart recreation) produces a new series but must not
-    // re-run the restore, or every drawing gets a duplicate instance ("clone")
-    // that lingers attached to the series while orphaned from the collection.
     if (isInitializedRef.current === id) return;
 
     let active = true;
@@ -150,11 +133,6 @@ export function useChartDrawings() {
     };
   }, [id, seriesApi, roomId]);
 
-  // Reconcile the collection against the CURRENT series. `isAttached` alone is
-  // not enough: chart.remove() never calls detached() on series primitives, so
-  // after a chart recreation drawings still claim to be attached — to a dead
-  // series. Comparing series identity catches both never-attached (undefined)
-  // and stale-series drawings.
   useEffect(() => {
     if (!seriesApi) return;
     let dirty = false;
@@ -206,11 +184,6 @@ export function useChartDrawings() {
       const hoveredId = param.hoveredObjectId as string;
       const hit = drawings.collection.get(hoveredId);
 
-      // Deselect every OTHER drawing based on its own live `isSelected()` flag —
-      // the source of truth for control-point rendering. Relying on the store's
-      // `selected` id (from this memoized closure) could leave a previously
-      // selected drawing's control points stuck when clicking straight onto a
-      // different drawing.
       for (const d of drawings.collection.values()) {
         if (d.id !== hit?.id && d.isSelected()) d.setSelected(false);
       }
@@ -242,11 +215,6 @@ export function useChartDrawings() {
     } catch (e) { logger.error(e); }
   }, [drawings, selectDrawing, openDrawingSettings]);
 
-  // Point the hover highlight at `targetId` (or null). The actual flag flip +
-  // repaint is batched onto an animation frame so it runs OUTSIDE the
-  // crosshair-move dispatch — a repaint requested synchronously inside that
-  // dispatch gets coalesced away, which left control points stuck on screen.
-  // Every drawing is set each frame (self-healing), then one reliable repaint.
   const applyHover = useCallback((targetId: string | null) => {
     if (hoveredRef.current === targetId) return;
     hoveredRef.current = targetId;
