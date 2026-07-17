@@ -8,7 +8,7 @@ import { immer } from "zustand/middleware/immer";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { useCollabStore } from "./useCollabStore";
-import { restoreDrawing } from "@/components/chart/hooks/useChartDrawings";
+import { restoreDrawing } from "@/core/chart/drawings/registry";
 import { enableMapSet, setAutoFreeze, Draft } from "immer";
 import { DrawingType } from "@/core/chart/types";
 import { BaseDrawingHandler } from "@/core/chart/drawings/DrawingHandlerFactory";
@@ -98,6 +98,7 @@ interface ChartState {
   deleteDrawing: (drawingId: string) => void;
   deleteSelectedDrawing: () => void;
   selectDrawing: (drawingId: string | null) => void;
+  selectOnly: (drawingId: string) => void;
   deselectDrawing: () => void;
   modifyDrawing: (newDrawing: BaseDrawing) => void;
   startTool: (tool: DrawingType, handler: BaseDrawingHandler | null) => void;
@@ -412,6 +413,17 @@ export const useChartStore = create<ChartState>()(
         logger.debug("selecting drawing " + drawingId)
         state.drawings.selected = drawingId;
       }),
+      // Make `drawingId` the sole selection: clear every other instance's flag,
+      // flag the target, and record it in the store. Side effects run before the
+      // set (setSelected calls applyOptions), matching deselectDrawing.
+      selectOnly: (drawingId: string) => {
+        const { collection } = useChartStore.getState().drawings;
+        for (const d of collection.values()) {
+          if (d.id !== drawingId && d.isSelected()) d.setSelected(false);
+        }
+        collection.get(drawingId)?.setSelected(true);
+        set((state) => { state.drawings.selected = drawingId; });
+      },
       deselectDrawing: () => {
         const selected = useChartStore.getState().drawings.selected;
         if (!selected) return;

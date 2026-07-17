@@ -35,7 +35,7 @@ function focusDrawing(drawing: BaseDrawing) {
 }
 
 function DrawingRow({ drawing, selected }: { drawing: BaseDrawing; selected: boolean }) {
-  const selectDrawing = useChartStore((s) => s.selectDrawing);
+  const selectOnly = useChartStore((s) => s.selectOnly);
   const deleteDrawing = useChartStore((s) => s.deleteDrawing);
 
   const type = drawing.serialize().type as DrawingType;
@@ -45,11 +45,7 @@ function DrawingRow({ drawing, selected }: { drawing: BaseDrawing; selected: boo
   const label = (type === DrawingType.TEXT && drawing.options.labelText) || meta?.label || type;
 
   const handleSelect = () => {
-    for (const d of useChartStore.getState().drawings.collection.values()) {
-      if (d.id !== drawing.id && d.isSelected()) d.setSelected(false);
-    }
-    drawing.setSelected(true);
-    selectDrawing(drawing.id);
+    selectOnly(drawing.id);
     focusDrawing(drawing);
   };
 

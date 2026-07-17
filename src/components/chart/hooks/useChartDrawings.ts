@@ -1,13 +1,6 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { logger } from "@/lib/logger";
-import { TrendLine } from "@/core/chart/drawings/primitives/TrendLine";
-import { VertLine } from "@/core/chart/drawings/primitives/VertLine";
-import { HorizontalLine } from "@/core/chart/drawings/primitives/HorizontalLine";
-import { Ray } from "@/core/chart/drawings/primitives/Ray";
-import { Rectangle } from "@/core/chart/drawings/primitives/Rectangle";
-import { Triangle } from "@/core/chart/drawings/primitives/Triangle";
-import { FibonacciRetracement } from "@/core/chart/drawings/primitives/FibonacciRetracement";
-import { TextLabel } from "@/core/chart/drawings/primitives/TextLabel";
+import { restoreDrawing } from "@/core/chart/drawings/registry";
 import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types";
 import { useCallback, useEffect, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
@@ -18,51 +11,12 @@ import { randomUUID } from "@/lib/utils";
 import { useChartStore, suppressHistory } from "@/stores/useChartStore";
 import { useCollabStore } from "@/stores/useCollabStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { DrawingType } from "@/core/chart/types";
 
 const PASTE_OFFSET_PX = { dx: 16, dy: -16 };
 
-export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
-  try {
-    let restoredDrawing: BaseDrawing | null = null;
-    switch (drawing.type) {
-      case DrawingType.VERTICAL_LINE:
-        restoredDrawing = new VertLine(drawing.points, drawing.options, drawing.id)
-        break;
-      case DrawingType.TREND_LINE:
-        restoredDrawing = new TrendLine(drawing.points, drawing.options, drawing.id);
-        break;
-      case DrawingType.HORIZONTAL_LINE:
-        restoredDrawing = new HorizontalLine(drawing.points, drawing.options, drawing.id);
-        break;
-      case DrawingType.RAY:
-        restoredDrawing = new Ray(drawing.points, drawing.options, drawing.id);
-        break;
-      case DrawingType.RECTANGLE:
-        restoredDrawing = new Rectangle(drawing.points, drawing.options, drawing.id);
-        break;
-      case DrawingType.TRIANGLE:
-        restoredDrawing = new Triangle(drawing.points, drawing.options, drawing.id);
-        break;
-      case DrawingType.FIBONACCI:
-        restoredDrawing = new FibonacciRetracement(drawing.points, drawing.options, drawing.id);
-        break;
-      case DrawingType.TEXT:
-        restoredDrawing = new TextLabel(drawing.points, drawing.options, drawing.id);
-        break;
-    }
-    if (restoredDrawing) {
-      return restoredDrawing;
-    }
-  } catch (error) {
-    logger.error(`failed to restore drawing ${drawing.id}: `, error)
-  }
-  return null;
-}
-
 export function useChartDrawings() {
   const { id, drawings, tools, chartApi, seriesApi } = useChartStore();
-  const { addDrawing, modifyDrawing, deleteDrawing, selectDrawing, cancelTool, deselectDrawing } = useChartStore();
+  const { addDrawing, modifyDrawing, deleteDrawing, selectDrawing, selectOnly, cancelTool, deselectDrawing } = useChartStore();
 
   // While in a collab room the server snapshot is the sole source of truth, so
   // local IndexedDB restore/persist is paused (it must never merge into a room).
@@ -174,27 +128,15 @@ export function useChartDrawings() {
           wiredRef.current.add(inst);
           addDrawing(inst); // reducer should serialize internally
           cancelTool();
-          // Drop the freshly placed drawing straight into edit mode so its
-          // editor opens instead of it being silently placed. Clear any other
-          // selected drawing based on its own flag (not the store's id).
-          for (const d of drawings.collection.values()) {
-            if (d.id !== inst.id && d.isSelected()) d.setSelected(false);
-          }
-          inst.setSelected(true);
-          selectDrawing(inst.id);
+          selectOnly(inst.id);
         }
         return;
       }
       const hoveredId = param.hoveredObjectId as string;
       const hit = drawings.collection.get(hoveredId);
 
-      for (const d of drawings.collection.values()) {
-        if (d.id !== hit?.id && d.isSelected()) d.setSelected(false);
-      }
-
       if (hit) {
-        hit.setSelected(true);
-        selectDrawing(hit.id);
+        selectOnly(hit.id);
       } else {
         deselectDrawing();
       }
@@ -210,14 +152,10 @@ export function useChartDrawings() {
       if (!hoveredId) return;
       const hit = drawings.collection.get(hoveredId);
       if (!hit) return;
-      for (const d of drawings.collection.values()) {
-        if (d.id !== hit.id && d.isSelected()) d.setSelected(false);
-      }
-      hit.setSelected(true);
-      selectDrawing(hit.id);
+      selectOnly(hit.id);
       openDrawingSettings(hit.id);
     } catch (e) { logger.error(e); }
-  }, [drawings, selectDrawing, openDrawingSettings]);
+  }, [drawings, selectOnly, openDrawingSettings]);
 
   const applyHover = useCallback((targetId: string | null) => {
     if (hoveredRef.current === targetId) return;
@@ -238,22 +176,14 @@ export function useChartDrawings() {
       // Cursor left the chart pane — drop any hover highlight.
       if (!param.point || !param.logical) { applyHover(null); return; }
       const el = chartApi?.chartElement();
-
-      // While placing a drawing, drive the live preview and keep the crosshair
-      // cursor — the hoverable preview primitive would otherwise flip us to
-      // 'pointer' mid-draw.
       if (tools.activeHandler) {
         applyHover(null);
         tools.activeHandler.onMove(param.point.x, param.point.y);
         if (el) setCursor('', el);
         return;
       }
-
       const hoveredId = (param.hoveredObjectId as string) ?? null;
-      // Show control points under the cursor; they disappear when it moves away
-      // (a still-selected drawing keeps them).
       applyHover(hoveredId);
-
       // Scope the cursor to the chart element so it can't leak onto the rest of
       // the UI. '' clears the inline cursor, falling back to the container's
       // `cursor-crosshair`; 'pointer' overrides it on a draggable drawing.
@@ -275,10 +205,6 @@ export function useChartDrawings() {
     return true;
   }, []);
 
-  // Paste the clipboard as a brand-new drawing (fresh id) nudged off the
-  // original, then run the same lifecycle as placing a fresh drawing: attach,
-  // wire listeners, record/broadcast via addDrawing, and select it so its
-  // editor opens.
   const pasteDrawing = useCallback(() => {
     const clip = clipboardRef.current;
     if (!clip || clip.points.length === 0) return;
@@ -299,12 +225,8 @@ export function useChartDrawings() {
     wiredRef.current.add(inst);
     addDrawing(inst);
 
-    for (const d of useChartStore.getState().drawings.collection.values()) {
-      if (d.id !== inst.id && d.isSelected()) d.setSelected(false);
-    }
-    inst.setSelected(true);
-    selectDrawing(inst.id);
-  }, [attachListeners, addDrawing, selectDrawing]);
+    selectOnly(inst.id);
+  }, [attachListeners, addDrawing, selectOnly]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
