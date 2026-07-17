@@ -11,9 +11,6 @@ const defaultOptions: BaseOptions = {
   color: '#00FF00',
   labelText: '',
   width: 2,
-  labelBackgroundColor: 'green',
-  labelTextColor: 'white',
-  showLabel: false,
 }
 
 class VertLinePaneRenderer implements IPrimitivePaneRenderer {
@@ -90,10 +87,10 @@ class VertLineTimeAxisView implements ISeriesPrimitiveAxisView {
   }
 
   visible() {
-    return this._options.showLabel!;
+    return false;
   }
   tickVisible() {
-    return this._options.showLabel!;
+    return false;
   }
   coordinate() {
     return this._x ?? 0;
@@ -102,10 +99,10 @@ class VertLineTimeAxisView implements ISeriesPrimitiveAxisView {
     return this._options.labelText!;
   }
   textColor() {
-    return this._options.labelTextColor!;
+    return "";
   }
   backColor() {
-    return this._options.labelBackgroundColor!;
+    return "";
   }
 }
 

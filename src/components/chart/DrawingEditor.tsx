@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Settings, Trash } from 'lucide-react';
 import { useChartStore } from '@/stores/useChartStore';
-import { DrawingOptionKey } from '@/core/chart/drawings/types';
 import { rememberDrawingOptions } from '@/core/chart/drawings/drawingDefaults';
 import { DrawingType } from '@/core/chart/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -60,15 +59,10 @@ export const DrawingEditor = () => {
   const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.label === 'Line Width');
   const lineStyleOption = selectedDrawing?.getEditableOptions().find(o => o.type === 'lineStyle');
 
-  const primaryColorOptions = colorOptions?.filter(
-    o => o.key !== DrawingOptionKey.LABEL_TEXT_COLOR && o.key !== DrawingOptionKey.LABEL_BACKGROUND_COLOR
-  );
-
-
   return (
     <div ref={editorRef} className="bg-card border border-border rounded-lg shadow-lg">
       <div className="p-2 flex items-center space-x-2">
-        {primaryColorOptions?.map(option => (
+        {colorOptions?.map(option => (
           <Input
             key={option.key}
             type="color"

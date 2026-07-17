@@ -7,6 +7,7 @@ export enum DrawingOptionKey {
   FILL_COLOR = 'fillColor',
   FILL_OPACITY = 'fillOpacity',
   SHOW_BORDER = 'borderVisible',
+  LABEL_TEXT = 'labelText',
   LEVELS = 'levels',
   LINE_STYLE = 'lineStyle',
   FONT_SIZE = 'fontSize',
@@ -56,6 +57,7 @@ export interface BaseOptions {
   borderVisible?: boolean,
   extendLeft?: boolean,
   extendRight?: boolean,
+  labelText?: string,
   levels?: number[];
   levelColors?: string[];
 }

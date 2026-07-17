@@ -10,10 +10,6 @@ import { applyLineDash, lineStyleOption } from "./lineStyle";
 const defaultOptions: BaseOptions = {
   color: '#2962FF',
   width: 2,
-  labelText: '',
-  labelBackgroundColor: '#2962FF',
-  labelTextColor: 'white',
-  showLabel: false,
 };
 
 class HorizontalLinePaneRenderer implements IPrimitivePaneRenderer {
@@ -87,22 +83,22 @@ class HorizontalLinePriceAxisView implements ISeriesPrimitiveAxisView {
   }
 
   visible() {
-    return this._options.showLabel!;
+    return true;
   }
   tickVisible() {
-    return this._options.showLabel!;
+    return true;
   }
   coordinate() {
     return this._y ?? 0;
   }
   text() {
-    return this._options.labelText!;
+    return "";
   }
   textColor() {
-    return this._options.labelTextColor!;
+    return "";
   }
   backColor() {
-    return this._options.labelBackgroundColor!;
+    return "";
   }
 }
 
