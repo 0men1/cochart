@@ -57,7 +57,7 @@ export const DrawingEditor = () => {
   };
 
   const colorOptions = selectedDrawing?.getEditableOptions().filter(o => o.type === 'color');
-  const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.key === DrawingOptionKey.WIDTH);
+  const numberOptions = selectedDrawing?.getEditableOptions().filter(o => o.label === 'Line Width');
   const lineStyleOption = selectedDrawing?.getEditableOptions().find(o => o.type === 'lineStyle');
 
   const primaryColorOptions = colorOptions?.filter(

@@ -6,10 +6,7 @@ export enum DrawingOptionKey {
   WIDTH = 'width',
   FILL_COLOR = 'fillColor',
   FILL_OPACITY = 'fillOpacity',
-  SHOW_LABEL = 'showLabel',
-  LABEL_TEXT = 'labelText',
-  LABEL_BACKGROUND_COLOR = 'labelBackgroundColor',
-  LABEL_TEXT_COLOR = 'labelTextColor',
+  SHOW_BORDER = 'borderVisible',
   LEVELS = 'levels',
   LINE_STYLE = 'lineStyle',
   FONT_SIZE = 'fontSize',
@@ -38,7 +35,6 @@ export interface EditableOption {
   min?: number;
   max?: number;
   step?: number;
-  /** Optional section label used to group options on the settings page. */
   group?: string;
 }
 
@@ -55,12 +51,9 @@ export interface BaseOptions {
   width: number,
   lineStyle?: DrawingLineStyle;
   fontSize?: number;
-  labelText?: string
-  labelBackgroundColor?: string;
-  labelTextColor?: string;
-  showLabel?: boolean;
   fillColor?: string;
   fillOpacity?: number;
+  borderVisible?: boolean,
   extendLeft?: boolean,
   extendRight?: boolean,
   levels?: number[];

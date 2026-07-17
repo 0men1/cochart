@@ -25,8 +25,6 @@ export function useChartInteraction() {
   const keyDownHandler = useCallback((event: KeyboardEvent) => {
     syncSnap(event.metaKey || event.ctrlKey);
 
-    console.log(event)
-
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
     }

@@ -10,8 +10,6 @@ import { DrawingType } from '@/core/chart/types';
 import { EditableOption } from '@/core/chart/drawings/types';
 import { CONTROL_BY_KEY } from './drawing-settings/controls';
 
-// Friendly labels for the settings header. Falls back to the raw type string
-// for any drawing type not listed here.
 const TYPE_LABELS: Record<string, string> = {
   [DrawingType.TREND_LINE]: 'Trend Line',
   [DrawingType.RAY]: 'Ray',

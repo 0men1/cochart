@@ -10,11 +10,6 @@ import { DrawingOptionKey, DrawingLineStyle, EditableOption } from '@/core/chart
 import { BaseDrawing } from '@/core/chart/drawings/primitives/BaseDrawing';
 import { fibLevelColor } from '@/core/chart/drawings/primitives/FibonacciRetracement';
 
-// A control renders the input for a single editable option. The label + row
-// layout live in the settings page; a control only owns its widget. Controls are
-// reused across drawings — every color option renders the same ColorControl,
-// every number the same NumberControl, etc. Complex controls (e.g. the fib
-// levels editor) read/write full option structures via the `drawing` instance.
 export interface ControlProps {
   option: EditableOption;
   value: string | number | boolean | undefined;
@@ -69,17 +64,6 @@ function ToggleControl({ value, onChange }: ControlProps) {
       className="size-5"
       checked={value === true}
       onCheckedChange={(c) => onChange(c === true)}
-    />
-  );
-}
-
-function TextControl({ value, onChange }: ControlProps) {
-  return (
-    <Input
-      type="text"
-      value={typeof value === 'string' ? value : ''}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-48"
     />
   );
 }
@@ -179,13 +163,10 @@ function LevelsControl({ drawing }: ControlProps) {
 export const CONTROL_BY_KEY: Partial<Record<DrawingOptionKey, React.FC<ControlProps>>> = {
   [DrawingOptionKey.COLOR]: ColorControl,
   [DrawingOptionKey.FILL_COLOR]: ColorControl,
-  [DrawingOptionKey.LABEL_BACKGROUND_COLOR]: ColorControl,
-  [DrawingOptionKey.LABEL_TEXT_COLOR]: ColorControl,
   [DrawingOptionKey.WIDTH]: NumberControl,
   [DrawingOptionKey.FILL_OPACITY]: NumberControl,
   [DrawingOptionKey.FONT_SIZE]: NumberControl,
-  [DrawingOptionKey.SHOW_LABEL]: ToggleControl,
-  [DrawingOptionKey.LABEL_TEXT]: TextControl,
+  [DrawingOptionKey.SHOW_BORDER]: ToggleControl,
   [DrawingOptionKey.LEVELS]: LevelsControl,
   [DrawingOptionKey.LINE_STYLE]: LineStyleControl,
 };
