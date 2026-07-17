@@ -195,10 +195,10 @@ export class VertLine extends BaseDrawing {
   }
 
   paneViews() {
-    return this._paneViews;
+    return this._options.visible === false ? [] : this._paneViews;
   }
 
   timeAxisViews() {
-    return this._timeAxisViews;
+    return this._options.visible === false ? [] : this._timeAxisViews;
   }
 }
