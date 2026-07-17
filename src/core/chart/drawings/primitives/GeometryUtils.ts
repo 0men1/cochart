@@ -83,6 +83,32 @@ export class GeometryUtils {
 	}
 
 	/**
+	 * Check if a point is inside the triangle with the given vertices.
+	 * Uses the sign-of-cross-product test; points on an edge count as inside.
+	 */
+	static isPointInTriangle(
+		px: number,
+		py: number,
+		ax: number,
+		ay: number,
+		bx: number,
+		by: number,
+		cx: number,
+		cy: number
+	): boolean {
+		const cross = (x1: number, y1: number, x2: number, y2: number) => x1 * y2 - y1 * x2;
+		const d1 = cross(px - ax, py - ay, bx - ax, by - ay);
+		const d2 = cross(px - bx, py - by, cx - bx, cy - by);
+		const d3 = cross(px - cx, py - cy, ax - cx, ay - cy);
+
+		const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
+		const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
+
+		// Inside when all cross products share a sign (zeros allowed for edges).
+		return !(hasNeg && hasPos);
+	}
+
+	/**
 	 * Calculate distance from a point to a rectangle border
 	 */
 	static distanceToRectangle(

@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChartStore } from "@/stores/useChartStore";
-import { MoveDiagonal, MoveUp, Minus, MoveUpRight, RectangleHorizontal, AlignJustify, Type } from "lucide-react";
+import { MoveDiagonal, MoveUp, Minus, MoveUpRight, RectangleHorizontal, Triangle, AlignJustify, Type } from "lucide-react";
 import { DrawingType } from "@/core/chart/types";
 
 function Toolbox() {
@@ -45,6 +45,7 @@ function Toolbox() {
     { tool: DrawingType.TREND_LINE, icon: MoveDiagonal, label: "Trendline" },
     { tool: DrawingType.RAY, icon: MoveUpRight, label: "Ray" },
     { tool: DrawingType.RECTANGLE, icon: RectangleHorizontal, label: "Rectangle" },
+    { tool: DrawingType.TRIANGLE, icon: Triangle, label: "Triangle" },
     { tool: DrawingType.FIBONACCI, icon: AlignJustify, label: "Fib Retracement" },
     { tool: DrawingType.TEXT, icon: Type, label: "Text" },
   ];

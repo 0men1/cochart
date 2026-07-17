@@ -5,6 +5,7 @@ import { VertLine } from "@/core/chart/drawings/primitives/VertLine";
 import { HorizontalLine } from "@/core/chart/drawings/primitives/HorizontalLine";
 import { Ray } from "@/core/chart/drawings/primitives/Ray";
 import { Rectangle } from "@/core/chart/drawings/primitives/Rectangle";
+import { Triangle } from "@/core/chart/drawings/primitives/Triangle";
 import { FibonacciRetracement } from "@/core/chart/drawings/primitives/FibonacciRetracement";
 import { TextLabel } from "@/core/chart/drawings/primitives/TextLabel";
 import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types";
@@ -39,6 +40,9 @@ export function restoreDrawing(drawing: SerializedDrawing): BaseDrawing | null {
         break;
       case DrawingType.RECTANGLE:
         restoredDrawing = new Rectangle(drawing.points, drawing.options, drawing.id);
+        break;
+      case DrawingType.TRIANGLE:
+        restoredDrawing = new Triangle(drawing.points, drawing.options, drawing.id);
         break;
       case DrawingType.FIBONACCI:
         restoredDrawing = new FibonacciRetracement(drawing.points, drawing.options, drawing.id);

@@ -167,6 +167,8 @@ export const CONTROL_BY_KEY: Partial<Record<DrawingOptionKey, React.FC<ControlPr
   [DrawingOptionKey.FILL_OPACITY]: NumberControl,
   [DrawingOptionKey.FONT_SIZE]: NumberControl,
   [DrawingOptionKey.SHOW_BORDER]: ToggleControl,
+  [DrawingOptionKey.EXTEND_LEFT]: ToggleControl,
+  [DrawingOptionKey.EXTEND_RIGHT]: ToggleControl,
   [DrawingOptionKey.LEVELS]: LevelsControl,
   [DrawingOptionKey.LINE_STYLE]: LineStyleControl,
 };

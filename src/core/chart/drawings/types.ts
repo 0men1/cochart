@@ -7,6 +7,8 @@ export enum DrawingOptionKey {
   FILL_COLOR = 'fillColor',
   FILL_OPACITY = 'fillOpacity',
   SHOW_BORDER = 'borderVisible',
+  EXTEND_LEFT = 'extendLeft',
+  EXTEND_RIGHT = 'extendRight',
   LABEL_TEXT = 'labelText',
   LEVELS = 'levels',
   LINE_STYLE = 'lineStyle',
