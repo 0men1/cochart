@@ -9,6 +9,7 @@ import { VertLine } from './primitives/VertLine';
 import { HorizontalLine } from './primitives/HorizontalLine';
 import { Ray } from './primitives/Ray';
 import { Rectangle } from './primitives/Rectangle';
+import { Triangle } from './primitives/Triangle';
 import { FibonacciRetracement } from './primitives/FibonacciRetracement';
 import { TextLabel } from './primitives/TextLabel';
 import { BaseDrawing } from './primitives/BaseDrawing';
@@ -19,6 +20,7 @@ const DRAWING_CLASSES: Partial<Record<DrawingType, DrawingConstructor>> = {
   HORIZONTAL_LINE: HorizontalLine,
   RAY: Ray,
   RECTANGLE: Rectangle,
+  TRIANGLE: Triangle,
   FIBONACCI: FibonacciRetracement,
   TEXT: TextLabel,
 }

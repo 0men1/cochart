@@ -8,15 +8,17 @@ import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 import { applyLineDash } from './lineStyle';
 
-class RectanglePaneRenderer implements IPrimitivePaneRenderer {
+class TrianglePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
   _p2: ViewPoint;
+  _p3: ViewPoint;
   _options: BaseOptions;
   _isSelected: boolean;
 
-  constructor(p1: ViewPoint, p2: ViewPoint, options: BaseOptions, isSelected: boolean) {
+  constructor(p1: ViewPoint, p2: ViewPoint, p3: ViewPoint, options: BaseOptions, isSelected: boolean) {
     this._p1 = p1;
     this._p2 = p2;
+    this._p3 = p3;
     this._options = options;
     this._isSelected = isSelected;
   }
@@ -24,10 +26,9 @@ class RectanglePaneRenderer implements IPrimitivePaneRenderer {
   draw(target: CanvasRenderingTarget2D) {
     target.useBitmapCoordinateSpace(scope => {
       if (
-        this._p1.x === null ||
-        this._p1.y === null ||
-        this._p2.x === null ||
-        this._p2.y === null
+        this._p1.x === null || this._p1.y === null ||
+        this._p2.x === null || this._p2.y === null ||
+        this._p3.x === null || this._p3.y === null
       )
         return;
 
@@ -36,19 +37,19 @@ class RectanglePaneRenderer implements IPrimitivePaneRenderer {
       const y1 = Math.round(this._p1.y * scope.verticalPixelRatio);
       const x2 = Math.round(this._p2.x * scope.horizontalPixelRatio);
       const y2 = Math.round(this._p2.y * scope.verticalPixelRatio);
+      const x3 = Math.round(this._p3.x * scope.horizontalPixelRatio);
+      const y3 = Math.round(this._p3.y * scope.verticalPixelRatio);
 
-      // Stretch the box to the canvas edge on either side when extended.
-      const left = this._options.extendLeft ? 0 : Math.min(x1, x2);
-      const right = this._options.extendRight ? scope.bitmapSize.width : Math.max(x1, x2);
-      const top = Math.min(y1, y2);
-      const w = right - left;
-      const h = Math.abs(y2 - y1);
-
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(x3, y3);
+      ctx.closePath();
 
       // Semi-transparent fill.
       ctx.globalAlpha = this._options.fillOpacity ?? 0.2;
       ctx.fillStyle = this._options.fillColor ?? this._options.color;
-      ctx.fillRect(left, top, w, h);
+      ctx.fill();
       ctx.globalAlpha = 1;
 
       // Border.
@@ -56,29 +57,31 @@ class RectanglePaneRenderer implements IPrimitivePaneRenderer {
         ctx.lineWidth = this._options.width;
         ctx.strokeStyle = this._options.color;
         applyLineDash(ctx, this._options.lineStyle, this._options.width, scope.horizontalPixelRatio);
-        ctx.strokeRect(left, top, w, h);
+        ctx.stroke();
         ctx.setLineDash([]);
       }
 
       if (this._isSelected) {
         drawControlPoints(ctx, scope, [
           { x: x1, y: y1 },
-          { x: x2, y: y2 }
+          { x: x2, y: y2 },
+          { x: x3, y: y3 }
         ]);
       }
     });
   }
 }
 
-class RectanglePaneView implements IPrimitivePaneView {
-  _source: Rectangle;
+class TrianglePaneView implements IPrimitivePaneView {
+  _source: Triangle;
   _p1: ViewPoint = { x: null, y: null };
   _p2: ViewPoint = { x: null, y: null };
-  private _renderer: RectanglePaneRenderer;
+  _p3: ViewPoint = { x: null, y: null };
+  private _renderer: TrianglePaneRenderer;
 
-  constructor(source: Rectangle) {
+  constructor(source: Triangle) {
     this._source = source;
-    this._renderer = new RectanglePaneRenderer(this._p1, this._p2, this._source.options, this._source.isSelected());
+    this._renderer = new TrianglePaneRenderer(this._p1, this._p2, this._p3, this._source.options, this._source.isSelected());
   }
 
   update() {
@@ -88,6 +91,8 @@ class RectanglePaneView implements IPrimitivePaneView {
       this._p1.y = points[0].y;
       this._p2.x = points[1].x;
       this._p2.y = points[1].y;
+      this._p3.x = points[2].x;
+      this._p3.y = points[2].y;
     }
     else {
       const series = this._source.series;
@@ -95,6 +100,8 @@ class RectanglePaneView implements IPrimitivePaneView {
       this._p1.y = series.priceToCoordinate(this._source._p1.price);
       this._p2.x = this._source.timeToX(this._source._p2.time);
       this._p2.y = series.priceToCoordinate(this._source._p2.price);
+      this._p3.x = this._source.timeToX(this._source._p3.time);
+      this._p3.y = series.priceToCoordinate(this._source._p3.price);
     }
 
     this._renderer._isSelected = this._source.showControlPoints();
@@ -112,13 +119,11 @@ const defaultOptions: BaseOptions = {
   borderVisible: false,
   fillColor: '#2962FF',
   fillOpacity: 0.2,
-  extendLeft: false,
-  extendRight: false,
 };
 
-export class Rectangle extends BaseDrawing {
+export class Triangle extends BaseDrawing {
   declare _options: BaseOptions;
-  static requiredPoints: number = 2;
+  static requiredPoints: number = 3;
 
   constructor(
     points: Point[],
@@ -138,7 +143,7 @@ export class Rectangle extends BaseDrawing {
   serialize(): SerializedDrawing {
     return {
       id: this._id,
-      type: DrawingType.RECTANGLE,
+      type: DrawingType.TRIANGLE,
       points: this._points,
       options: { ...this._options },
       isDeleted: false,
@@ -147,12 +152,13 @@ export class Rectangle extends BaseDrawing {
 
   get _p1(): Point { return this._points[0]; }
   get _p2(): Point { return this._points[1]; }
+  get _p3(): Point { return this._points[2]; }
 
   protected initialize(): void {
     try {
-      this._paneViews = [new RectanglePaneView(this)];
+      this._paneViews = [new TrianglePaneView(this)];
     } catch (error) {
-      logger.error(`Failed to initialize rectangle ${this._id}: `, error);
+      logger.error(`Failed to initialize triangle ${this._id}: `, error);
     }
   }
 
@@ -198,44 +204,31 @@ export class Rectangle extends BaseDrawing {
         group: 'Fill',
         currentValue: this._options.fillOpacity
       },
-      {
-        key: DrawingOptionKey.EXTEND_LEFT,
-        label: 'Extend Left',
-        type: 'boolean',
-        group: 'Extend',
-        currentValue: this._options.extendLeft
-      },
-      {
-        key: DrawingOptionKey.EXTEND_RIGHT,
-        label: 'Extend Right',
-        type: 'boolean',
-        group: 'Extend',
-        currentValue: this._options.extendRight
-      },
     ];
   }
 
   isPointOnDrawing(x: Coordinate, y: Coordinate): boolean {
-    const coord1 = this.getScreenCoordinates(this._p1);
-    const coord2 = this.getScreenCoordinates(this._p2);
+    const c1 = this.getScreenCoordinates(this._p1);
+    const c2 = this.getScreenCoordinates(this._p2);
+    const c3 = this.getScreenCoordinates(this._p3);
 
-    if (coord1.x === null || coord1.y === null || coord2.x === null || coord2.y === null) {
+    if (
+      c1.x === null || c1.y === null ||
+      c2.x === null || c2.y === null ||
+      c3.x === null || c3.y === null
+    ) {
       return false;
     }
 
-    // Mirror the renderer: extended sides reach the chart edge.
-    const chartWidth = this._chart.chartElement().clientWidth;
-    const left = this._options.extendLeft ? 0 : Math.min(coord1.x, coord2.x);
-    const right = this._options.extendRight ? chartWidth : Math.max(coord1.x, coord2.x);
-    const top = Math.min(coord1.y, coord2.y);
-    const w = right - left;
-    const h = Math.abs(coord2.y - coord1.y);
+    // Anywhere inside the (filled) triangle, or near any of its edges, is a hit.
+    if (GeometryUtils.isPointInTriangle(x, y, c1.x, c1.y, c2.x, c2.y, c3.x, c3.y)) return true;
 
-    // Anywhere inside the (filled) box, or near the border, is a hit.
-    if (GeometryUtils.isPointInRectangle(x, y, left, top, w, h)) return true;
-
-    const distance = GeometryUtils.distanceToRectangle(x, y, left, top, w, h);
     const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
+    const distance = Math.min(
+      GeometryUtils.distanceToLineSegment(x, y, c1.x, c1.y, c2.x, c2.y),
+      GeometryUtils.distanceToLineSegment(x, y, c2.x, c2.y, c3.x, c3.y),
+      GeometryUtils.distanceToLineSegment(x, y, c3.x, c3.y, c1.x, c1.y),
+    );
 
     return distance <= hitThreshold;
   }

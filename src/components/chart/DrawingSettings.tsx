@@ -14,6 +14,7 @@ const TYPE_LABELS: Record<string, string> = {
   [DrawingType.TREND_LINE]: 'Trend Line',
   [DrawingType.RAY]: 'Ray',
   [DrawingType.RECTANGLE]: 'Rectangle',
+  [DrawingType.TRIANGLE]: 'Triangle',
   [DrawingType.FIBONACCI]: 'Fibonacci Retracement',
   [DrawingType.HORIZONTAL_LINE]: 'Horizontal Line',
   [DrawingType.VERTICAL_LINE]: 'Vertical Line',

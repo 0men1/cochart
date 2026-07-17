@@ -40,6 +40,31 @@ describe("GeometryUtils.isPointInRectangle", () => {
 	});
 });
 
+describe("GeometryUtils.isPointInTriangle", () => {
+	// Triangle with vertices (0,0), (10,0), (0,10).
+	const tri = [0, 0, 10, 0, 0, 10] as const;
+
+	it("is true for a point clearly inside", () => {
+		expect(GeometryUtils.isPointInTriangle(2, 2, ...tri)).toBe(true);
+	});
+
+	it("is true for a point on an edge", () => {
+		// Midpoint of the hypotenuse (5,5).
+		expect(GeometryUtils.isPointInTriangle(5, 5, ...tri)).toBe(true);
+	});
+
+	it("is false for a point outside", () => {
+		// Just past the hypotenuse.
+		expect(GeometryUtils.isPointInTriangle(6, 6, ...tri)).toBe(false);
+		expect(GeometryUtils.isPointInTriangle(-1, 5, ...tri)).toBe(false);
+	});
+
+	it("detects inside regardless of vertex winding order", () => {
+		// Same triangle, vertices listed clockwise.
+		expect(GeometryUtils.isPointInTriangle(2, 2, 0, 0, 0, 10, 10, 0)).toBe(true);
+	});
+});
+
 describe("GeometryUtils.distanceToRectangle", () => {
 	// Rectangle at (0,0) with width 10, height 4.
 	it("is 0 for a point inside", () => {
