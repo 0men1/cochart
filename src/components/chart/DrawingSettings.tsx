@@ -9,16 +9,7 @@ import { useChartStore } from '@/stores/useChartStore';
 import { DrawingType } from '@/core/chart/types';
 import { EditableOption } from '@/core/chart/drawings/types';
 import { CONTROL_BY_KEY } from './drawing-settings/controls';
-
-const TYPE_LABELS: Record<string, string> = {
-  [DrawingType.TREND_LINE]: 'Trend Line',
-  [DrawingType.RAY]: 'Ray',
-  [DrawingType.RECTANGLE]: 'Rectangle',
-  [DrawingType.TRIANGLE]: 'Triangle',
-  [DrawingType.FIBONACCI]: 'Fibonacci Retracement',
-  [DrawingType.HORIZONTAL_LINE]: 'Horizontal Line',
-  [DrawingType.VERTICAL_LINE]: 'Vertical Line',
-};
+import { DRAWING_TYPE_META } from './drawingMeta';
 
 type OptionValue = string | number | boolean | undefined;
 
@@ -67,7 +58,7 @@ export default function DrawingSettings() {
   if (!isOpen || !drawing) return null;
 
   const type = drawing.serialize().type;
-  const typeLabel = TYPE_LABELS[type] ?? type;
+  const typeLabel = DRAWING_TYPE_META[type as DrawingType]?.label ?? type;
   const groups = groupOptions(drawing.getEditableOptions());
 
   const updateOption = (key: string, value: string | number | boolean) => {

@@ -4,36 +4,14 @@ import { coordinateToTimeExtrapolated } from '../interval';
 import { isSnapEnabled, snapPriceToCandle, snapYToCandle } from '../snap';
 import { DrawingConstructor, DrawingType, Point } from '../types';
 import { getLastDrawingOptions } from './drawingDefaults';
-import { TrendLine } from './primitives/TrendLine';
-import { VertLine } from './primitives/VertLine';
-import { HorizontalLine } from './primitives/HorizontalLine';
-import { Ray } from './primitives/Ray';
-import { Rectangle } from './primitives/Rectangle';
-import { Triangle } from './primitives/Triangle';
-import { FibonacciRetracement } from './primitives/FibonacciRetracement';
-import { TextLabel } from './primitives/TextLabel';
+import { DRAWING_REGISTRY } from './registry';
 import { BaseDrawing } from './primitives/BaseDrawing';
-
-const DRAWING_CLASSES: Partial<Record<DrawingType, DrawingConstructor>> = {
-  TREND_LINE: TrendLine,
-  VERTICAL_LINE: VertLine,
-  HORIZONTAL_LINE: HorizontalLine,
-  RAY: Ray,
-  RECTANGLE: Rectangle,
-  TRIANGLE: Triangle,
-  FIBONACCI: FibonacciRetracement,
-  TEXT: TextLabel,
-}
 
 export class BaseDrawingHandler {
   private _chart: IChartApi;
   private _series: ISeriesApi<SeriesType>;
   private _collectedPoints: Point[] = [];
   private _DrawingClass: DrawingConstructor;
-
-  // Transient in-progress preview. Attached directly to the series while the
-  // user is placing points; never added to the store, wired, broadcast, or
-  // persisted. Cleared on finalize/cancel.
   private _preview: BaseDrawing | null = null;
   private _type: DrawingType;
 
@@ -153,7 +131,7 @@ export class DrawingHandlerFactory {
   createHandler(tool: DrawingType): BaseDrawingHandler | null {
     if (!tool) return null;
 
-    const drawingClass = DRAWING_CLASSES[tool];
+    const drawingClass = DRAWING_REGISTRY[tool];
 
     if (!drawingClass) {
       logger.error("Invalid drawing tool: ", tool);

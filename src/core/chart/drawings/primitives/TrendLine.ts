@@ -187,6 +187,6 @@ export class TrendLine extends BaseDrawing {
   }
 
   paneViews() {
-    return this._paneViews;
+    return this._options.visible === false ? [] : this._paneViews;
   }
 }

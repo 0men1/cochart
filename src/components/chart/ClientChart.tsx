@@ -6,6 +6,7 @@ import ChartHeader from './ChartHeader';
 import Toolbox from './ToolBox';
 import Settings from './Settings';
 import DrawingSettings from './DrawingSettings';
+import DrawingManager from './DrawingManager';
 import { useChartDrawings } from './hooks/useChartDrawings';
 import { useChartInteraction } from './hooks/useChartInteractions';
 import TickerSearchBox from './TickerSearchBox';
@@ -76,7 +77,7 @@ export default function ClientChart() {
         </div>
         <div className="flex flex-1 w-full overflow-hidden relative">
           <Toolbox />
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-w-0">
             <div ref={chartContainerRef} className="w-full h-full cursor-crosshair" />
 
             <ChartInfoBanner />
@@ -103,6 +104,8 @@ export default function ClientChart() {
               </div>
             )}
           </div>
+
+          <DrawingManager />
 
         </div>
 

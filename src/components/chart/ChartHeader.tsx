@@ -1,12 +1,10 @@
-import { Settings, Share2, Users } from "lucide-react";
+import { Layers, Settings, Share2, Users } from "lucide-react";
 import { Button } from "../ui/button";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { useUIStore } from "@/stores/useUIStore";
 import { useChartStore } from "@/stores/useChartStore";
 import { Product } from "@/stores/types";
 import { useCollabStore } from "@/stores/useCollabStore";
-
-
 
 export default function ChartHeader() {
   const { toggleChartSettings } = useChartStore();
@@ -15,6 +13,8 @@ export default function ChartHeader() {
   const { selectChart } = useChartStore();
 
   const { toggleTickerSearch } = useUIStore();
+  const drawingManagerOpen = useUIStore((s) => s.drawingManager.isOpen);
+  const toggleDrawingManager = useUIStore((s) => s.toggleDrawingManager);
   const { status, roomId, toggleCollabWindow } = useCollabStore();
 
   const isInRoom = status === ConnectionStatus.CONNECTED && !!roomId;
@@ -75,6 +75,17 @@ export default function ChartHeader() {
           )}
         </Button>
 
+
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Drawings"
+          title="Drawings"
+          className={`rounded-md w-9 h-9 md:w-10 md:h-8 ${drawingManagerOpen ? 'bg-accent text-foreground' : ''}`}
+          onClick={() => toggleDrawingManager(!drawingManagerOpen)}
+        >
+          <Layers size={18} />
+        </Button>
 
         <Button
           variant="outline"

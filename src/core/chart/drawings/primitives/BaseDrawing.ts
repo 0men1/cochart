@@ -72,6 +72,8 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
   }
 
   onDragStart(x: number, y: number): boolean {
+    // Locked drawings stay put; hidden ones aren't interactive at all.
+    if (this.isLocked || !this.isVisible) return false;
     const hitPointIndex = this.getControlPointsAt(x as Coordinate, y as Coordinate);
     if (hitPointIndex !== null) { this._activeControlPoint = hitPointIndex; }
     else if (this.isPointOnDrawing(x, y)) { this._activeControlPoint = null; }
@@ -177,10 +179,30 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
   }
 
   hitTest(x: number, y: number): PrimitiveHoveredItem | null {
+    // A hidden drawing renders nothing, so it must not hover/select either.
+    if (!this.isVisible) return null;
     if (this.isPointOnDrawing(x, y)) {
       return this;
     };
     return null;
+  }
+
+  // Per-drawing visibility/lock. Both live in options so they serialize, persist
+  // to IndexedDB, and sync to peers (undefined = visible + unlocked).
+  get isVisible(): boolean {
+    return this._options.visible !== false;
+  }
+
+  get isLocked(): boolean {
+    return this._options.locked === true;
+  }
+
+  setVisible(visible: boolean): void {
+    this.updateOptions({ visible });
+  }
+
+  setLocked(locked: boolean): void {
+    this.updateOptions({ locked });
   }
 
   getControlPointsAt(x: Coordinate, y: Coordinate): number | null {

@@ -59,6 +59,8 @@ export interface BaseOptions {
   borderVisible?: boolean,
   extendLeft?: boolean,
   extendRight?: boolean,
+  visible?: boolean,
+  locked?: boolean,
   labelText?: string,
   levels?: number[];
   levelColors?: string[];

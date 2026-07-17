@@ -27,13 +27,19 @@ export function getLastDrawingOptions(
   return read()[type];
 }
 
+// Per-drawing state that must never carry over to the next new drawing of the
+// same type — otherwise hiding/locking one shape would make future ones spawn
+// invisible or unmovable.
+const PER_DRAWING_KEYS: (keyof BaseOptions)[] = ["visible", "locked"];
+
 // Record the options a user just applied to a drawing as the new default for
-// that type. Drawing-specific keys (label text) are stripped first.
+// that type. Per-drawing state (visibility/lock) is stripped first.
 export function rememberDrawingOptions(
   type: DrawingType,
   options: Partial<BaseOptions>,
 ): void {
   const cleaned: Partial<BaseOptions> = { ...options };
+  for (const key of PER_DRAWING_KEYS) delete cleaned[key];
 
   const next: DrawingDefaults = { ...read(), [type]: cleaned };
   cache = next;

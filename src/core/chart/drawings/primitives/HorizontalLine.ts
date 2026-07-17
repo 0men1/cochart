@@ -193,10 +193,10 @@ export class HorizontalLine extends BaseDrawing {
   }
 
   paneViews() {
-    return this._paneViews;
+    return this._options.visible === false ? [] : this._paneViews;
   }
 
   priceAxisViews() {
-    return this._priceAxisViews;
+    return this._options.visible === false ? [] : this._priceAxisViews;
   }
 }

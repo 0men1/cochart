@@ -3,8 +3,8 @@ import { logger } from "@/lib/logger";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useChartStore } from "@/stores/useChartStore";
-import { MoveDiagonal, MoveUp, Minus, MoveUpRight, RectangleHorizontal, Triangle, AlignJustify, Type } from "lucide-react";
 import { DrawingType } from "@/core/chart/types";
+import { DRAWING_TYPE_META } from "./drawingMeta";
 
 function Toolbox() {
   const activeTool = useChartStore((s) => s.tools.activeTool);
@@ -39,16 +39,21 @@ function Toolbox() {
     }
   }
 
-  const buttons = [
-    { tool: DrawingType.VERTICAL_LINE, icon: MoveUp, label: "Vertical Line" },
-    { tool: DrawingType.HORIZONTAL_LINE, icon: Minus, label: "Horizontal Line" },
-    { tool: DrawingType.TREND_LINE, icon: MoveDiagonal, label: "Trendline" },
-    { tool: DrawingType.RAY, icon: MoveUpRight, label: "Ray" },
-    { tool: DrawingType.RECTANGLE, icon: RectangleHorizontal, label: "Rectangle" },
-    { tool: DrawingType.TRIANGLE, icon: Triangle, label: "Triangle" },
-    { tool: DrawingType.FIBONACCI, icon: AlignJustify, label: "Fib Retracement" },
-    { tool: DrawingType.TEXT, icon: Type, label: "Text" },
+  const toolOrder: DrawingType[] = [
+    DrawingType.VERTICAL_LINE,
+    DrawingType.HORIZONTAL_LINE,
+    DrawingType.TREND_LINE,
+    DrawingType.RAY,
+    DrawingType.RECTANGLE,
+    DrawingType.TRIANGLE,
+    DrawingType.FIBONACCI,
+    DrawingType.TEXT,
   ];
+  const buttons = toolOrder.map((tool) => ({
+    tool,
+    icon: DRAWING_TYPE_META[tool].icon,
+    label: DRAWING_TYPE_META[tool].label,
+  }));
 
   return (
     <div className="flex flex-col px-1 py-1 bg-card border-r border-border">
