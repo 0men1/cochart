@@ -13,7 +13,12 @@ export interface TickData {
 	symbol: string;
 	price: number;
 	timestamp: number;
+	// Exchange-reported 24h rolling volume (not per-interval). Do not use it as a
+	// candle's volume — accumulate `size` instead.
 	volume?: number;
+	// Size of the most recent trade, accumulated into the in-progress candle's
+	// per-interval volume.
+	size?: number;
 	bid?: number;
 	ask?: number;
 }

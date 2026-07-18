@@ -13,6 +13,9 @@ import { enableMapSet, setAutoFreeze, Draft } from "immer";
 import { DrawingType } from "@/core/chart/types";
 import { BaseDrawingHandler } from "@/core/chart/drawings/DrawingHandlerFactory";
 import { deepMerge } from "./mergeSettings";
+import { IndicatorConfig, IndicatorParams, IndicatorStyle, IndicatorType } from "@/core/chart/indicators/types";
+import { INDICATOR_META, nextIndicatorColor } from "@/core/chart/indicators/registry";
+import { randomUUID } from "@/lib/utils";
 
 interface DataState {
   product: Product
@@ -83,6 +86,10 @@ interface ChartState {
     updatedAt: number;
   };
   data: DataState;
+  indicators: {
+    collection: Map<string, IndicatorConfig>;
+    updatedAt: number;
+  };
   chartApi: IChartApi | null;
   seriesApi: ISeriesApi<SeriesType> | null;
   tools: ToolState;
@@ -111,6 +118,11 @@ interface ChartState {
   syncAddDrawing: (drawings: SerializedDrawing) => void;
   syncDeleteDrawing: (drawingId: string) => void;
   syncModifyDrawing: (drawing: SerializedDrawing) => void;
+  addIndicator: (type: IndicatorType) => void;
+  removeIndicator: (id: string) => void;
+  toggleIndicator: (id: string, enabled: boolean) => void;
+  updateIndicatorParams: (id: string, params: IndicatorParams) => void;
+  updateIndicatorStyle: (id: string, style: Partial<IndicatorStyle>) => void;
 }
 
 const defaultData: DataState = {
@@ -207,6 +219,10 @@ export const useChartStore = create<ChartState>()(
       drawings: {
         collection: new Map(),
         selected: null,
+        updatedAt: Date.now()
+      },
+      indicators: {
+        collection: new Map(),
         updatedAt: Date.now()
       },
       chartApi: null,
@@ -373,6 +389,44 @@ export const useChartStore = create<ChartState>()(
           snapshots.set(drawing.id, drawing);
         })
       },
+      // Indicators are config-driven and session-scoped: these actions mutate
+      // the config collection; useChartIndicators reconciles the live chart
+      // series from it. Multiple instances of the same type are allowed — each
+      // add creates a fresh instance with its own id, params, and color.
+      addIndicator: (type: IndicatorType) => set((state) => {
+        const config: IndicatorConfig = {
+          id: randomUUID(),
+          type,
+          params: { ...INDICATOR_META[type].defaultParams },
+          // Cycle the palette by instance count so new lines are distinct.
+          style: { color: nextIndicatorColor(state.indicators.collection.size) },
+          enabled: true,
+        };
+        state.indicators.collection.set(config.id, config);
+        state.indicators.updatedAt = Date.now();
+      }),
+      removeIndicator: (id: string) => set((state) => {
+        state.indicators.collection.delete(id);
+        state.indicators.updatedAt = Date.now();
+      }),
+      toggleIndicator: (id: string, enabled: boolean) => set((state) => {
+        const config = state.indicators.collection.get(id);
+        if (!config) return;
+        config.enabled = enabled;
+        state.indicators.updatedAt = Date.now();
+      }),
+      updateIndicatorParams: (id: string, params: IndicatorParams) => set((state) => {
+        const config = state.indicators.collection.get(id);
+        if (!config) return;
+        config.params = { ...config.params, ...params };
+        state.indicators.updatedAt = Date.now();
+      }),
+      updateIndicatorStyle: (id: string, style: Partial<IndicatorStyle>) => set((state) => {
+        const config = state.indicators.collection.get(id);
+        if (!config) return;
+        config.style = { ...config.style, ...style };
+        state.indicators.updatedAt = Date.now();
+      }),
       setInstances: (chartApi, seriesApi) => set((state) => {
         state.chartApi = chartApi;
         state.seriesApi = seriesApi;
