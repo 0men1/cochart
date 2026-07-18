@@ -16,6 +16,16 @@ interface UIState {
   drawingManager: {
     isOpen: boolean;
   };
+  indicatorDialog: {
+    isOpen: boolean;
+  };
+  indicatorManager: {
+    isOpen: boolean;
+  };
+  indicatorSettings: {
+    isOpen: boolean;
+    indicatorId: string | null;
+  };
   suggestionBox: {
     isOpen: boolean;
   };
@@ -25,6 +35,10 @@ interface UIState {
   openDrawingSettings: (drawingId: string) => void;
   closeDrawingSettings: () => void;
   toggleDrawingManager: (isOpen: boolean) => void;
+  toggleIndicatorDialog: (isOpen: boolean) => void;
+  toggleIndicatorManager: (isOpen: boolean) => void;
+  openIndicatorSettings: (indicatorId: string) => void;
+  closeIndicatorSettings: () => void;
   toggleSuggestion: (isOpen: boolean) => void;
   welcomeTour: {
     isOpen: boolean;
@@ -44,6 +58,13 @@ export const useUIStore = create<UIState>((set) => ({
   closeDrawingSettings: () => set({ drawingSettings: { isOpen: false, drawingId: null } }),
   drawingManager: { isOpen: false },
   toggleDrawingManager: (isOpen: boolean) => set({ drawingManager: { isOpen } }),
+  indicatorDialog: { isOpen: false },
+  toggleIndicatorDialog: (isOpen: boolean) => set({ indicatorDialog: { isOpen } }),
+  indicatorManager: { isOpen: false },
+  toggleIndicatorManager: (isOpen: boolean) => set({ indicatorManager: { isOpen } }),
+  indicatorSettings: { isOpen: false, indicatorId: null },
+  openIndicatorSettings: (indicatorId: string) => set({ indicatorSettings: { isOpen: true, indicatorId } }),
+  closeIndicatorSettings: () => set({ indicatorSettings: { isOpen: false, indicatorId: null } }),
   suggestionBox: { isOpen: false },
   toggleSuggestion: (isOpen: boolean) => set({ suggestionBox: { isOpen } }),
   welcomeTour: { isOpen: false },

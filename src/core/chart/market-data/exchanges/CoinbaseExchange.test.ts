@@ -11,6 +11,7 @@ describe("CoinbaseExchange.parseTickerMessage", () => {
       price: "100.5",
       time: "2025-01-01T00:00:00Z",
       volume_24h: "5",
+      last_size: "0.25",
       best_bid: "100",
       best_ask: "101",
     });
@@ -19,6 +20,7 @@ describe("CoinbaseExchange.parseTickerMessage", () => {
       price: 100.5,
       timestamp: Math.floor(Date.parse("2025-01-01T00:00:00Z") / 1000),
       volume: 5,
+      size: 0.25,
       bid: 100,
       ask: 101,
     });
@@ -33,6 +35,7 @@ describe("CoinbaseExchange.parseTickerMessage", () => {
     expect(tick?.symbol).toBe("ETH-USD");
     expect(tick?.price).toBe(42);
     expect(tick?.volume).toBeUndefined();
+    expect(tick?.size).toBeUndefined();
     expect(tick?.bid).toBeUndefined();
     expect(tick?.ask).toBeUndefined();
     expect(typeof tick?.timestamp).toBe("number");

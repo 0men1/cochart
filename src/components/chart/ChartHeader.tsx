@@ -1,4 +1,4 @@
-import { Layers, Settings, Share2, Users } from "lucide-react";
+import { LineChart, Layers, Settings, Share2, Users } from "lucide-react";
 import { Button } from "../ui/button";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { useUIStore } from "@/stores/useUIStore";
@@ -15,6 +15,8 @@ export default function ChartHeader() {
   const { toggleTickerSearch } = useUIStore();
   const drawingManagerOpen = useUIStore((s) => s.drawingManager.isOpen);
   const toggleDrawingManager = useUIStore((s) => s.toggleDrawingManager);
+  const indicatorManagerOpen = useUIStore((s) => s.indicatorManager.isOpen);
+  const toggleIndicatorManager = useUIStore((s) => s.toggleIndicatorManager);
   const { status, roomId, toggleCollabWindow } = useCollabStore();
 
   const isInRoom = status === ConnectionStatus.CONNECTED && !!roomId;
@@ -75,6 +77,17 @@ export default function ChartHeader() {
           )}
         </Button>
 
+
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Indicators"
+          title="Indicators"
+          className={`rounded-md w-9 h-9 md:w-10 md:h-8 ${indicatorManagerOpen ? 'bg-accent text-foreground' : ''}`}
+          onClick={() => toggleIndicatorManager(!indicatorManagerOpen)}
+        >
+          <LineChart size={18} />
+        </Button>
 
         <Button
           variant="outline"

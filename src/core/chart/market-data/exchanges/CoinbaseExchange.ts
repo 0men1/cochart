@@ -35,6 +35,7 @@ export class CoinbaseExchange extends ExchangeAdapter {
 			price: parseFloat(data.price),
 			timestamp: Math.floor(new Date(data.time || Date.now()).getTime() / 1000),
 			volume: data.volume_24h ? parseFloat(data.volume_24h) : undefined,
+			size: data.last_size ? parseFloat(data.last_size) : undefined,
 			bid: data.best_bid ? parseFloat(data.best_bid) : undefined,
 			ask: data.best_ask ? parseFloat(data.best_ask) : undefined
 		}

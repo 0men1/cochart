@@ -7,7 +7,11 @@ import Toolbox from './ToolBox';
 import Settings from './Settings';
 import DrawingSettings from './DrawingSettings';
 import DrawingManager from './DrawingManager';
+import IndicatorDialog from './IndicatorDialog';
+import IndicatorManager from './IndicatorManager';
+import IndicatorSettings from './IndicatorSettings';
 import { useChartDrawings } from './hooks/useChartDrawings';
+import { useChartIndicators } from './hooks/useChartIndicators';
 import { useChartInteraction } from './hooks/useChartInteractions';
 import TickerSearchBox from './TickerSearchBox';
 import ChartFooter from './ChartFooter';
@@ -66,6 +70,7 @@ export default function ClientChart() {
 
   useCandleChart(chartContainerRef);
   useChartDrawings();
+  useChartIndicators();
   useChartInteraction()
   useCursorBroadcast();
 
@@ -106,6 +111,7 @@ export default function ClientChart() {
           </div>
 
           <DrawingManager />
+          <IndicatorManager />
 
         </div>
 
@@ -116,6 +122,8 @@ export default function ClientChart() {
         <CollabStatus />
         <Settings />
         <DrawingSettings />
+        <IndicatorDialog />
+        <IndicatorSettings />
         <ChartFooter />
       </main>
     </div>
