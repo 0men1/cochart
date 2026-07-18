@@ -16,12 +16,16 @@ interface UIState {
   drawingManager: {
     isOpen: boolean;
   };
+  suggestionBox: {
+    isOpen: boolean;
+  };
   toggleTickerSearch: (isOpen: boolean, term?: string) => void;
   toggleFeatureSpotlight: (isOpen: boolean) => void;
   toggleWelcomeTour: (isOpen: boolean) => void;
   openDrawingSettings: (drawingId: string) => void;
   closeDrawingSettings: () => void;
   toggleDrawingManager: (isOpen: boolean) => void;
+  toggleSuggestion: (isOpen: boolean) => void;
   welcomeTour: {
     isOpen: boolean;
   };
@@ -40,6 +44,8 @@ export const useUIStore = create<UIState>((set) => ({
   closeDrawingSettings: () => set({ drawingSettings: { isOpen: false, drawingId: null } }),
   drawingManager: { isOpen: false },
   toggleDrawingManager: (isOpen: boolean) => set({ drawingManager: { isOpen } }),
+  suggestionBox: { isOpen: false },
+  toggleSuggestion: (isOpen: boolean) => set({ suggestionBox: { isOpen } }),
   welcomeTour: { isOpen: false },
   toggleWelcomeTour: (isOpen: boolean) => set(({ welcomeTour: { isOpen } })),
   toggleTickerSearch: (isOpen: boolean, term?: string) => set((state) => ({
