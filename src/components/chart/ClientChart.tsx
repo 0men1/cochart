@@ -21,7 +21,6 @@ import { hasSeenIntro, markIntroSeen } from '@/lib/onboarding';
 import { DrawingEditor } from './DrawingEditor';
 import ChartInfoBanner from './ChartInfoBanner';
 import CollabStatus from './CollabStatus';
-import SnapshotPrompt from './SnapshotPrompt';
 import PresenceStack from './PresenceStack';
 import PeerCursors from './PeerCursors';
 import ConnectionBanner from './ConnectionBanner';
@@ -97,7 +96,6 @@ export default function ClientChart() {
 
             <PresenceStack />
 
-            <SnapshotPrompt />
             {isLoading && roomId && (
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center z-20">
                 <div className="bg-card border border-border p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">

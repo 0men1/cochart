@@ -186,6 +186,90 @@ describe("Room drawing state", () => {
   });
 });
 
+describe("Room indicator state", () => {
+  function seededRoom() {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.INIT_ROOM,
+        payload: { product: "BTC-USD", timeframe: "1H", drawings: [], indicators: [] },
+      }),
+      asClient(a),
+    );
+    return { room, a };
+  }
+
+  // Read current indicators by joining a fresh client and reading its snapshot.
+  function indicatorsSnapshot(room: Room): any[] {
+    const probe = fakeClient(`probe-${Math.random()}`);
+    room.register(probe as unknown as Client);
+    return lastMessageOfType(probe, CollabAction.SNAPSHOT).payload.indicators;
+  }
+
+  it("adds and modifies an indicator by id (upsert)", () => {
+    const { room, a } = seededRoom();
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.ADD_INDICATOR,
+        payload: { indicator: { id: "i1", type: "SMA", params: { period: 20 } } },
+      }),
+      asClient(a),
+    );
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.MODIFY_INDICATOR,
+        payload: { indicator: { id: "i1", type: "SMA", params: { period: 50 } } },
+      }),
+      asClient(a),
+    );
+    expect(indicatorsSnapshot(room)).toEqual([{ id: "i1", type: "SMA", params: { period: 50 } }]);
+  });
+
+  it("removes an indicator by id", () => {
+    const { room, a } = seededRoom();
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.ADD_INDICATOR,
+        payload: { indicator: { id: "i1", type: "VOLUME" } },
+      }),
+      asClient(a),
+    );
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.REMOVE_INDICATOR,
+        payload: { indicatorId: "i1" },
+      }),
+      asClient(a),
+    );
+    expect(indicatorsSnapshot(room)).toEqual([]);
+  });
+
+  it("seeds indicators from INIT_ROOM and includes them in a joiner's snapshot", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.INIT_ROOM,
+        payload: {
+          product: "BTC-USD",
+          timeframe: "1H",
+          drawings: [],
+          indicators: [{ id: "i1", type: "RSI", params: { period: 14 } }],
+        },
+      }),
+      asClient(a),
+    );
+
+    const b = fakeClient("b");
+    room.register(asClient(b));
+    const snap = lastMessageOfType(b, CollabAction.SNAPSHOT);
+    expect(snap.payload.indicators).toEqual([{ id: "i1", type: "RSI", params: { period: 14 } }]);
+  });
+});
+
 describe("Room broadcasting", () => {
   it("relays a delta to other clients but not the sender", () => {
     const room = newRoom();

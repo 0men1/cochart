@@ -113,7 +113,7 @@ interface ChartState {
   undo: () => void;
   redo: () => void;
   syncChart: (product: Product, timeframe: IntervalKey) => void;
-  syncSnapshot: (product: Product, timeframe: IntervalKey, drawings: SerializedDrawing[], mode?: 'replace' | 'keep') => void;
+  syncSnapshot: (product: Product, timeframe: IntervalKey, drawings: SerializedDrawing[], indicators?: IndicatorConfig[]) => void;
   clearDrawings: () => void;
   syncAddDrawing: (drawings: SerializedDrawing) => void;
   syncDeleteDrawing: (drawingId: string) => void;
@@ -123,6 +123,8 @@ interface ChartState {
   toggleIndicator: (id: string, enabled: boolean) => void;
   updateIndicatorParams: (id: string, params: IndicatorParams) => void;
   updateIndicatorStyle: (id: string, style: Partial<IndicatorStyle>) => void;
+  syncUpsertIndicator: (config: IndicatorConfig) => void;
+  syncRemoveIndicator: (id: string) => void;
 }
 
 const defaultData: DataState = {
@@ -209,6 +211,16 @@ function recordDelete(before: SerializedDrawing | undefined) {
   if (applyingHistory) return;
   historyUndo.push({ op: 'delete', before });
   historyRedo.length = 0;
+}
+
+// Relay an indicator change to the collab room when connected; a no-op solo.
+// Indicators are plain config objects, so they go on the wire as-is (no
+// serialize step, unlike drawings).
+function broadcastIndicator(type: CollabAction, payload: Record<string, unknown>) {
+  const { socket, status } = useCollabStore.getState();
+  if (status === ConnectionStatus.CONNECTED && socket) {
+    socket.send({ type, payload });
+  }
 }
 
 export const useChartStore = create<ChartState>()(
@@ -305,7 +317,11 @@ export const useChartStore = create<ChartState>()(
           if (tickerChanged) detachAndClearDrawings(state);
         });
       },
-      syncSnapshot: (product: Product, timeframe: IntervalKey, drawings: SerializedDrawing[], mode: 'replace' | 'keep' = 'replace') => {
+      // Adopt the room's authoritative state, always replacing what's on screen.
+      // Local drawings/indicators are only in memory here (persistence is paused
+      // while in a room), so the user's saved drawings are untouched and restore
+      // on leave.
+      syncSnapshot: (product: Product, timeframe: IntervalKey, drawings: SerializedDrawing[], indicators: IndicatorConfig[] = []) => {
         set((state) => {
           // Adopt the room's authoritative chart selection. Skip when already
           // on the room's chart — assigning a fresh product object would tear
@@ -320,35 +336,34 @@ export const useChartStore = create<ChartState>()(
             state.data.timeframe = timeframe;
           }
 
-          // 'replace' discards local drawings; 'keep' leaves them in the
-          // collection (in-memory only — never broadcast or persisted).
-          // delete() detaches from the drawing's series, which is only safe
-          // against the live one; for drawings stuck on a disposed chart,
-          // dropping the reference is enough.
-          if (mode === 'replace') {
-            for (const drawing of state.drawings.collection.values()) {
-              if (drawing.isAttached && drawing.series === state.seriesApi) {
-                try { drawing.delete(); } catch (e) { logger.error(e); }
-              }
+          // Discard local drawings. delete() detaches from the drawing's series,
+          // which is only safe against the live one; for drawings stuck on a
+          // disposed chart, dropping the reference is enough.
+          for (const drawing of state.drawings.collection.values()) {
+            if (drawing.isAttached && drawing.series === state.seriesApi) {
+              try { drawing.delete(); } catch (e) { logger.error(e); }
             }
-            state.drawings.collection.clear();
-            state.drawings.selected = null;
-            // Undo shouldn't cross the boundary into the replaced room state.
-            resetHistory();
           }
+          state.drawings.collection.clear();
+          state.drawings.selected = null;
+          // Undo shouldn't cross the boundary into the replaced room state.
+          resetHistory();
 
-          // Room drawings win on id collision; detach the displaced local
-          // instance so it doesn't linger on the canvas.
+          // Load the room's drawings.
           for (const sd of drawings ?? []) {
             const inst = restoreDrawing(sd);
             if (!inst) continue;
-            const existing = state.drawings.collection.get(inst.id);
-            if (existing && existing.isAttached && existing.series === state.seriesApi) {
-              try { existing.delete(); } catch (e) { logger.error(e); }
-            }
             state.drawings.collection.set(inst.id, inst);
           }
           state.drawings.updatedAt = Date.now();
+
+          // Indicators are plain configs, so no restore/detach is needed — the
+          // reconcile hook rebuilds series from the collection.
+          state.indicators.collection.clear();
+          for (const config of indicators ?? []) {
+            state.indicators.collection.set(config.id, config);
+          }
+          state.indicators.updatedAt = Date.now();
         });
       },
       clearDrawings: () => {
@@ -393,38 +408,69 @@ export const useChartStore = create<ChartState>()(
       // the config collection; useChartIndicators reconciles the live chart
       // series from it. Multiple instances of the same type are allowed — each
       // add creates a fresh instance with its own id, params, and color.
-      addIndicator: (type: IndicatorType) => set((state) => {
+      addIndicator: (type: IndicatorType) => {
         const config: IndicatorConfig = {
           id: randomUUID(),
           type,
           params: { ...INDICATOR_META[type].defaultParams },
           // Cycle the palette by instance count so new lines are distinct.
-          style: { color: nextIndicatorColor(state.indicators.collection.size) },
+          style: { color: nextIndicatorColor(useChartStore.getState().indicators.collection.size) },
           enabled: true,
         };
+        set((state) => {
+          state.indicators.collection.set(config.id, config);
+          state.indicators.updatedAt = Date.now();
+        });
+        broadcastIndicator(CollabAction.ADD_INDICATOR, { indicator: config });
+      },
+      removeIndicator: (id: string) => {
+        set((state) => {
+          state.indicators.collection.delete(id);
+          state.indicators.updatedAt = Date.now();
+        });
+        broadcastIndicator(CollabAction.REMOVE_INDICATOR, { indicatorId: id });
+      },
+      // toggle/param/style edits all broadcast the full config as MODIFY (the
+      // server upserts by id), matching how a drawing modify sends its whole
+      // serialized form.
+      toggleIndicator: (id: string, enabled: boolean) => {
+        set((state) => {
+          const config = state.indicators.collection.get(id);
+          if (!config) return;
+          config.enabled = enabled;
+          state.indicators.updatedAt = Date.now();
+        });
+        const config = useChartStore.getState().indicators.collection.get(id);
+        if (config) broadcastIndicator(CollabAction.MODIFY_INDICATOR, { indicator: config });
+      },
+      updateIndicatorParams: (id: string, params: IndicatorParams) => {
+        set((state) => {
+          const config = state.indicators.collection.get(id);
+          if (!config) return;
+          config.params = { ...config.params, ...params };
+          state.indicators.updatedAt = Date.now();
+        });
+        const config = useChartStore.getState().indicators.collection.get(id);
+        if (config) broadcastIndicator(CollabAction.MODIFY_INDICATOR, { indicator: config });
+      },
+      updateIndicatorStyle: (id: string, style: Partial<IndicatorStyle>) => {
+        set((state) => {
+          const config = state.indicators.collection.get(id);
+          if (!config) return;
+          config.style = { ...config.style, ...style };
+          state.indicators.updatedAt = Date.now();
+        });
+        const config = useChartStore.getState().indicators.collection.get(id);
+        if (config) broadcastIndicator(CollabAction.MODIFY_INDICATOR, { indicator: config });
+      },
+      // Non-broadcasting appliers for inbound remote changes (add/modify upsert,
+      // remove deletes). The reconcile hook picks up collection/updatedAt changes.
+      syncUpsertIndicator: (config: IndicatorConfig) => set((state) => {
         state.indicators.collection.set(config.id, config);
         state.indicators.updatedAt = Date.now();
       }),
-      removeIndicator: (id: string) => set((state) => {
+      syncRemoveIndicator: (id: string) => set((state) => {
         state.indicators.collection.delete(id);
-        state.indicators.updatedAt = Date.now();
-      }),
-      toggleIndicator: (id: string, enabled: boolean) => set((state) => {
-        const config = state.indicators.collection.get(id);
-        if (!config) return;
-        config.enabled = enabled;
-        state.indicators.updatedAt = Date.now();
-      }),
-      updateIndicatorParams: (id: string, params: IndicatorParams) => set((state) => {
-        const config = state.indicators.collection.get(id);
-        if (!config) return;
-        config.params = { ...config.params, ...params };
-        state.indicators.updatedAt = Date.now();
-      }),
-      updateIndicatorStyle: (id: string, style: Partial<IndicatorStyle>) => set((state) => {
-        const config = state.indicators.collection.get(id);
-        if (!config) return;
-        config.style = { ...config.style, ...style };
         state.indicators.updatedAt = Date.now();
       }),
       setInstances: (chartApi, seriesApi) => set((state) => {

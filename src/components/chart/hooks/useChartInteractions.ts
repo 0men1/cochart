@@ -2,7 +2,6 @@
 import { useCallback, useEffect } from "react";
 import { CrosshairMode } from "cochart-charts";
 import { useUIStore } from "@/stores/useUIStore";
-import { useCollabStore } from "@/stores/useCollabStore";
 import { useChartStore } from "@/stores/useChartStore";
 import { isSnapEnabled, setSnapEnabled } from "@/core/chart/snap";
 
@@ -60,11 +59,6 @@ export function useChartInteraction() {
     }
 
     if (event.metaKey || event.ctrlKey || event.altKey) {
-      return;
-    }
-
-    // Don't steal typing while a blocking prompt owns the screen.
-    if (useCollabStore.getState().pendingSnapshot) {
       return;
     }
 

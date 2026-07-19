@@ -5,6 +5,9 @@ export const CollabAction = {
   ADD_DRAWING: "ADD_DRAWING",
   MODIFY_DRAWING: "MODIFY_DRAWING",
   DELETE_DRAWING: "DELETE_DRAWING",
+  ADD_INDICATOR: "ADD_INDICATOR",
+  MODIFY_INDICATOR: "MODIFY_INDICATOR",
+  REMOVE_INDICATOR: "REMOVE_INDICATOR",
   PRESENCE: "PRESENCE", // server -> clients: the room's active-user roster
   UPDATE_PRESENCE: "UPDATE_PRESENCE", // client -> server: change my displayName/color
   CURSOR: "CURSOR", // client -> peers: ephemeral live cursor position (never stored)
@@ -22,6 +25,13 @@ export interface Drawing {
   [key: string]: unknown;
 }
 
+// Indicators are plain config objects; like drawings the room treats them as
+// opaque and only keys off `id`.
+export interface Indicator {
+  id: string;
+  [key: string]: unknown;
+}
+
 export interface ChartSelection {
   product: unknown;
   timeframe: unknown;
@@ -35,6 +45,9 @@ export interface IncomingAction {
     drawing?: Drawing;
     drawingId?: string;
     drawings?: Drawing[];
+    indicator?: Indicator;
+    indicatorId?: string;
+    indicators?: Indicator[];
     displayName?: string;
     color?: string;
     // CURSOR payload: chart-coordinate position (time + price) so peers can

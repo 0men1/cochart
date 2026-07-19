@@ -4,6 +4,7 @@ import {
   type ChartSelection,
   CollabAction,
   type Drawing,
+  type Indicator,
   type IncomingAction,
 } from "./protocol";
 import type { RoomManager } from "./roomManager";
@@ -12,6 +13,7 @@ interface RoomState {
   seeded: boolean;
   chart: ChartSelection | null;
   drawings: Map<string, Drawing>;
+  indicators: Map<string, Indicator>;
 }
 
 // Caps on user-supplied identity fields relayed to the whole room.
@@ -26,6 +28,7 @@ export class Room {
     seeded: false,
     chart: null,
     drawings: new Map(),
+    indicators: new Map(),
   };
 
   constructor(
@@ -107,6 +110,9 @@ export class Room {
         this.state.drawings = new Map(
           (action.payload?.drawings ?? []).map((d) => [d.id, d]),
         );
+        this.state.indicators = new Map(
+          (action.payload?.indicators ?? []).map((i) => [i.id, i]),
+        );
         // Covers the rare case where someone joined before the seed arrived.
         this.broadcastToOthers(this.snapshotMessage(), sender);
         return;
@@ -131,6 +137,20 @@ export class Room {
       case CollabAction.DELETE_DRAWING: {
         const drawingId = action.payload?.drawingId;
         if (drawingId) this.state.drawings.delete(drawingId);
+        break;
+      }
+      case CollabAction.ADD_INDICATOR:
+      case CollabAction.MODIFY_INDICATOR: {
+        const indicator = action.payload?.indicator;
+        if (indicator?.id) {
+          this.state.seeded = true;
+          this.state.indicators.set(indicator.id, indicator);
+        }
+        break;
+      }
+      case CollabAction.REMOVE_INDICATOR: {
+        const indicatorId = action.payload?.indicatorId;
+        if (indicatorId) this.state.indicators.delete(indicatorId);
         break;
       }
       case CollabAction.UPDATE_PRESENCE: {
@@ -168,6 +188,7 @@ export class Room {
         product: this.state.chart?.product ?? null,
         timeframe: this.state.chart?.timeframe ?? null,
         drawings: Array.from(this.state.drawings.values()),
+        indicators: Array.from(this.state.indicators.values()),
       },
     });
   }
