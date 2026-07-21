@@ -6,6 +6,7 @@ import { useChartStore } from "./useChartStore";
 import { useIdentityStore } from "./useIdentityStore";
 import { useChatStore } from "./useChatStore";
 import { CollabAction, PresenceUser } from "./types";
+import { Point } from "@/core/chart/types";
 
 export interface PeerCursor {
   time: number;
@@ -19,6 +20,9 @@ interface CollabState {
   isLoading: boolean,
   activeUsers: PresenceUser[]
   peerCursors: Record<string, PeerCursor>;
+  // drawingId -> userId of the peer currently dragging it (for the "who is
+  // dragging what" badge). Ephemeral, like peerCursors.
+  draggingPeers: Record<string, string>;
   socket: CollabSocket | null;
   status: ConnectionStatus;
   setRoom: (roomId: string, isHost: boolean) => void;
@@ -28,6 +32,7 @@ interface CollabState {
   toggleCollabWindow: (isOpen: boolean) => void;
   broadcastPresence: () => void;
   broadcastCursor: (time: number, price: number, hidden?: boolean) => void;
+  broadcastDrawingDrag: (drawingId: string, points: Point[]) => void;
 }
 
 export const useCollabStore = create<CollabState>((set, get) => ({
@@ -37,6 +42,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
   isHost: false,
   activeUsers: [],
   peerCursors: {},
+  draggingPeers: {},
   socket: null,
   status: ConnectionStatus.DISCONNECTED,
   setRoom: (roomId: string, isHost: boolean) => {
@@ -88,6 +94,14 @@ export const useCollabStore = create<CollabState>((set, get) => ({
           syncAddDrawing, syncDeleteDrawing,
           syncUpsertIndicator, syncRemoveIndicator } = useChartStore.getState();
 
+        // Drop a drawing's drag badge (no-op if it wasn't being dragged).
+        const clearDraggingPeer = (drawingId?: string) => {
+          if (!drawingId || !(drawingId in get().draggingPeers)) return;
+          const next = { ...get().draggingPeers };
+          delete next[drawingId];
+          set({ draggingPeers: next });
+        };
+
         // Presence is independent of chart state — always apply the latest
         // roster, even while a snapshot decision is pending. Prune cursors for
         // anyone who has left so departed peers don't leave a stale marker.
@@ -98,7 +112,12 @@ export const useCollabStore = create<CollabState>((set, get) => ({
           const pruned = Object.fromEntries(
             Object.entries(peerCursors).filter(([id]) => present.has(id)),
           );
-          set({ activeUsers: users, peerCursors: pruned });
+          // Drop drag badges for anyone who has left (e.g. disconnected mid-drag).
+          const draggingPeers = get().draggingPeers;
+          const prunedDrags = Object.fromEntries(
+            Object.entries(draggingPeers).filter(([, uid]) => present.has(uid)),
+          );
+          set({ activeUsers: users, peerCursors: pruned, draggingPeers: prunedDrags });
           return;
         }
 
@@ -115,6 +134,18 @@ export const useCollabStore = create<CollabState>((set, get) => ({
             peerCursors[userId] = { time, price };
           }
           set({ peerCursors });
+          return;
+        }
+
+        // Live drawing drag: ephemeral, independent of the authoritative chart
+        // state. Apply the in-progress points so the drawing visibly moves, and
+        // record who's dragging it for the attribution badge.
+        if (incomingAction.type === CollabAction.DRAWING_DRAG) {
+          const { userId, drawingId, points } = incomingAction.payload ?? {};
+          const myId = useIdentityStore.getState().identity?.userId;
+          if (!userId || userId === myId || !drawingId || !Array.isArray(points)) return;
+          useChartStore.getState().applyPeerDrag(drawingId, points);
+          set({ draggingPeers: { ...get().draggingPeers, [drawingId]: userId } });
           return;
         }
 
@@ -146,9 +177,12 @@ export const useCollabStore = create<CollabState>((set, get) => ({
             break;
           case CollabAction.DELETE_DRAWING:
             syncDeleteDrawing(incomingAction.payload.drawingId);
+            clearDraggingPeer(incomingAction.payload.drawingId);
             break;
           case CollabAction.MODIFY_DRAWING:
             syncModifyDrawing(incomingAction.payload.drawing);
+            // The authoritative commit means the drag is over — drop its badge.
+            clearDraggingPeer(incomingAction.payload.drawing?.id);
             break;
           case CollabAction.ADD_INDICATOR:
           case CollabAction.MODIFY_INDICATOR:
@@ -196,6 +230,16 @@ export const useCollabStore = create<CollabState>((set, get) => ({
       payload: { userId: identity.userId, time, price, hidden },
     });
   },
+  broadcastDrawingDrag: (drawingId: string, points: Point[]) => {
+    const socket = get().socket;
+    if (!socket) return;
+    const identity = useIdentityStore.getState().identity;
+    if (!identity) return;
+    socket.send({
+      type: CollabAction.DRAWING_DRAG,
+      payload: { userId: identity.userId, drawingId, points },
+    });
+  },
   disconnectSocket: () => {
     const socket = get().socket;
 
@@ -208,6 +252,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
         status: ConnectionStatus.DISCONNECTED,
         activeUsers: [],
         peerCursors: {},
+        draggingPeers: {},
       });
       // Drop the room's drawings; the IndexedDB restore effect re-runs on
       // roomId -> null and brings back the user's own saved drawings.

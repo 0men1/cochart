@@ -64,6 +64,7 @@ export enum CollabAction {
   UPDATE_PRESENCE = 'UPDATE_PRESENCE',
   CURSOR = 'CURSOR',
   CHAT = 'CHAT',
+  DRAWING_DRAG = 'DRAWING_DRAG',
 }
 
 export interface PresenceUser {

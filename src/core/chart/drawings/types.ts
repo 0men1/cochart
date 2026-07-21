@@ -24,7 +24,9 @@ export enum DrawingOperation {
   CREATE = 'CREATE',
   DELETE = 'DELETE',
   MODIFY = 'MODIFY',
-  SELECT = 'SELECT'
+  SELECT = 'SELECT',
+  // Fired per-frame while dragging (preview stage), before the committing MODIFY.
+  DRAG = 'DRAG'
 }
 
 export type DrawingListener = (drawing: BaseDrawing) => void;

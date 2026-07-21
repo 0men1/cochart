@@ -12,6 +12,7 @@ export const CollabAction = {
   UPDATE_PRESENCE: "UPDATE_PRESENCE", // client -> server: change my displayName/color
   CURSOR: "CURSOR", // client -> peers: ephemeral live cursor position (never stored)
   CHAT: "CHAT", // client -> server (text); server -> clients (full message)
+  DRAWING_DRAG: "DRAWING_DRAG", // client -> peers: ephemeral in-progress drag points (never stored)
 } as const;
 
 // Anonymous per-connection identity, echoed to peers for presence display.
@@ -64,6 +65,8 @@ export interface IncomingAction {
     color?: string;
     // CHAT payload: the raw message text a client wants to send.
     text?: string;
+    // DRAWING_DRAG payload: in-progress drawing points, relayed opaquely.
+    points?: unknown[];
     // CURSOR payload: chart-coordinate position (time + price) so peers can
     // re-project it to their own pixels; `hidden` clears a departed cursor.
     userId?: string;

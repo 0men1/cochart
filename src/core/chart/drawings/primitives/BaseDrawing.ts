@@ -116,6 +116,9 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
         };
       })
       this.setPreviewPoints(newScreenPoints);
+      // Per-frame: let listeners (e.g. collab drag broadcast) react to the
+      // in-progress position before the committing MODIFY at drag end.
+      this.notify(DrawingOperation.DRAG);
       return;
     }
 
@@ -125,18 +128,13 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
     }));
 
     this.setPreviewPoints(newScreenPoints);
+    this.notify(DrawingOperation.DRAG);
   }
 
   onDragEnd(): void {
-    if (this._previewPoints && this._chart && this._series) {
-      const newPoints = this._previewPoints.map(p => ({
-        time: coordinateToTimeExtrapolated(this._chart, this._series, p.x) as Time,
-        price: this._series.coordinateToPrice(p.y) as number
-      }));
-
-      if (newPoints.every(p => p.time !== null && p.price !== null)) {
-        this.updatePoints(newPoints);
-      }
+    const newPoints = this.getPreviewPoints();
+    if (newPoints) {
+      this.updatePoints(newPoints);
     }
 
     this._dragStartPoint = null;
@@ -145,6 +143,18 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
     this.notify(DrawingOperation.MODIFY);
   }
 
+  // Convert the in-progress (screen-space) preview to time/price points, or null
+  // if there's no live drag or any point fails to resolve to a real coordinate.
+  // Shared by onDragEnd (commit) and the collab drag broadcast.
+  getPreviewPoints(): Point[] | null {
+    if (!this._previewPoints || !this._chart || !this._series) return null;
+    const points = this._previewPoints.map(p => ({
+      time: coordinateToTimeExtrapolated(this._chart, this._series, p.x) as Time,
+      price: this._series.coordinateToPrice(p.y) as number
+    }));
+    if (!points.every(p => p.time !== null && p.price !== null)) return null;
+    return points;
+  }
 
   setPreviewPoints(points: { x: Coordinate, y: Coordinate }[] | null) {
     this._previewPoints = points;
