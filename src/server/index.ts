@@ -1,6 +1,8 @@
 import { RoomManager } from "./collab/roomManager";
 import { logger } from "../lib/logger";
 import { CoinbaseProvider } from "./market/coinbase";
+import { KrakenProvider } from "./market/kraken";
+import { BinanceProvider } from "./market/binance";
 import { SearchEngine } from "./market/search";
 import { MarketService } from "./market/service";
 import type { ExchangeProvider } from "./market/types";
@@ -11,6 +13,8 @@ import type { ExchangeProvider } from "./market/types";
 
 const providers = new Map<string, ExchangeProvider>([
 	["coinbase", new CoinbaseProvider()],
+	["kraken", new KrakenProvider()],
+	["binance", new BinanceProvider()],
 ]);
 
 export const marketService = new MarketService(providers);
