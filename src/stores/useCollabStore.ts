@@ -4,6 +4,7 @@ import { ConnectionStatus } from "@/core/chart/market-data/types";
 import { create } from "zustand";
 import { useChartStore } from "./useChartStore";
 import { useIdentityStore } from "./useIdentityStore";
+import { useChatStore } from "./useChatStore";
 import { CollabAction, PresenceUser } from "./types";
 
 export interface PeerCursor {
@@ -117,14 +118,24 @@ export const useCollabStore = create<CollabState>((set, get) => ({
           return;
         }
 
+        // Chat is independent of chart state — append the server-stamped message
+        // straight to the chat store.
+        if (incomingAction.type === CollabAction.CHAT) {
+          const message = incomingAction.payload?.message;
+          if (message) useChatStore.getState().receive(message);
+          return;
+        }
+
         switch (incomingAction.type) {
           case CollabAction.SNAPSHOT: {
             // Always adopt the room's authoritative state, replacing whatever is
             // on screen. Room state is never written to IndexedDB (the in-room
             // guard in useChartDrawings pauses persistence), so the user's own
             // saved drawings are untouched and restored when they leave.
-            const { product, timeframe, drawings, indicators } = incomingAction.payload;
+            const { product, timeframe, drawings, indicators, messages } = incomingAction.payload;
             useChartStore.getState().syncSnapshot(product, timeframe, drawings ?? [], indicators ?? []);
+            // Replay the room's chat history to a late joiner.
+            useChatStore.getState().setMessages(messages ?? []);
             break;
           }
           case CollabAction.SELECT_CHART:
@@ -203,6 +214,8 @@ export const useCollabStore = create<CollabState>((set, get) => ({
       // Indicators are intentionally left in place: they have no persistence to
       // restore from, so clearing them here would just lose the user's work.
       useChartStore.getState().clearDrawings();
+      // The chat belongs to the room; drop it so history doesn't leak across rooms.
+      useChatStore.getState().reset();
     }
   },
 }))

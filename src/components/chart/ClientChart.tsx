@@ -22,6 +22,7 @@ import { DrawingEditor } from './DrawingEditor';
 import ChartInfoBanner from './ChartInfoBanner';
 import CollabStatus from './CollabStatus';
 import PresenceStack from './PresenceStack';
+import ChatPanel from './ChatPanel';
 import PeerCursors from './PeerCursors';
 import ConnectionBanner from './ConnectionBanner';
 import { useCursorBroadcast } from './hooks/useCursorBroadcast';
@@ -94,7 +95,10 @@ export default function ClientChart() {
 
             <ConnectionBanner />
 
-            <PresenceStack />
+            <div className="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
+              <PresenceStack />
+              <ChatPanel />
+            </div>
 
             {isLoading && roomId && (
               <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center z-20">

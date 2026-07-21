@@ -410,6 +410,121 @@ describe("Room presence updates", () => {
   });
 });
 
+describe("Room chat", () => {
+  // Read current chat history by joining a fresh client and reading its snapshot.
+  function messagesSnapshot(room: Room): any[] {
+    const probe = fakeClient(`probe-${Math.random()}`);
+    room.register(probe as unknown as Client);
+    return lastMessageOfType(probe, CollabAction.SNAPSHOT).payload.messages;
+  }
+
+  it("broadcasts a chat message to everyone including the sender", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    const b = fakeClient("b");
+    room.register(asClient(a));
+    room.register(asClient(b));
+    a.sent.length = 0;
+    b.sent.length = 0;
+
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.CHAT, payload: { text: "hello" } }),
+      asClient(a),
+    );
+
+    for (const c of [a, b]) {
+      const chat = lastMessageOfType(c, CollabAction.CHAT);
+      expect(chat.payload.message.text).toBe("hello");
+    }
+  });
+
+  it("stamps identity from the sender and ignores spoofed identity in the payload", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.CHAT,
+        payload: {
+          text: "hi",
+          userId: "victim",
+          displayName: "Impostor",
+          color: "#ffffff",
+        },
+      }),
+      asClient(a),
+    );
+
+    const chat = lastMessageOfType(a, CollabAction.CHAT);
+    expect(chat.payload.message.userId).toBe("a");
+    expect(chat.payload.message.displayName).toBe("user-a");
+    expect(chat.payload.message.color).toBe("#000000");
+    expect(typeof chat.payload.message.id).toBe("string");
+  });
+
+  it("drops empty/whitespace-only messages and truncates long ones", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.CHAT, payload: { text: "   " } }),
+      asClient(a),
+    );
+    expect(lastMessageOfType(a, CollabAction.CHAT)).toBeUndefined();
+
+    const long = "x".repeat(600);
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.CHAT, payload: { text: long } }),
+      asClient(a),
+    );
+    expect(lastMessageOfType(a, CollabAction.CHAT).payload.message.text).toHaveLength(500);
+  });
+
+  it("caps stored history and replays it to a late joiner via snapshot", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    // Seed so a snapshot is sent to joiners.
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.INIT_ROOM,
+        payload: { product: "BTC-USD", timeframe: "1H", drawings: [] },
+      }),
+      asClient(a),
+    );
+
+    for (let i = 0; i < 250; i++) {
+      room.handleMessage(
+        JSON.stringify({ type: CollabAction.CHAT, payload: { text: `m${i}` } }),
+        asClient(a),
+      );
+    }
+
+    const history = messagesSnapshot(room);
+    expect(history).toHaveLength(200);
+    // Oldest were dropped; the newest is retained.
+    expect(history[history.length - 1].text).toBe("m249");
+    expect(history[0].text).toBe("m50");
+  });
+
+  it("does not seed the room's chart truth on chat alone", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.CHAT, payload: { text: "hi" } }),
+      asClient(a),
+    );
+
+    // A later joiner gets no snapshot because the room was never seeded.
+    const b = fakeClient("b");
+    room.register(asClient(b));
+    expect(lastMessageOfType(b, CollabAction.SNAPSHOT)).toBeUndefined();
+  });
+});
+
 describe("Room lifecycle", () => {
   it("removes itself from the manager when the last client leaves", () => {
     const manager = fakeManager();

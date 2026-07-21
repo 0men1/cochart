@@ -63,10 +63,22 @@ export enum CollabAction {
   PRESENCE = 'PRESENCE',
   UPDATE_PRESENCE = 'UPDATE_PRESENCE',
   CURSOR = 'CURSOR',
+  CHAT = 'CHAT',
 }
 
 export interface PresenceUser {
   userId: string;
   displayName: string;
   color: string;
+}
+
+// Mirror of the server's ChatMessage: identity is stamped server-side, the
+// client only sends the text.
+export interface ChatMessage {
+  id: string;
+  userId: string;
+  displayName: string;
+  color: string;
+  text: string;
+  timestamp: number;
 }
