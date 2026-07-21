@@ -24,6 +24,7 @@ import CollabStatus from './CollabStatus';
 import PresenceStack from './PresenceStack';
 import ChatPanel from './ChatPanel';
 import PeerCursors from './PeerCursors';
+import PeerDragLabels from './PeerDragLabels';
 import ConnectionBanner from './ConnectionBanner';
 import { useCursorBroadcast } from './hooks/useCursorBroadcast';
 import { useCollabStore } from '@/stores/useCollabStore';
@@ -92,6 +93,8 @@ export default function ClientChart() {
             </div>
 
             <PeerCursors />
+
+            <PeerDragLabels />
 
             <ConnectionBanner />
 

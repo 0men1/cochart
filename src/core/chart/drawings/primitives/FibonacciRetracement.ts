@@ -70,8 +70,15 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
       const hp = scope.horizontalPixelRatio;
       const vp = scope.verticalPixelRatio;
 
-      const xLeft = Math.round(Math.min(this._p1.x, this._p2.x) * hp);
-      const xRight = Math.round(Math.max(this._p1.x, this._p2.x) * hp);
+      // Honor the extend flags: stretch the level lines/bands to the canvas edge
+      // on either side. Keep the price labels anchored to the actual right-hand
+      // point (`xLabel`) so they stay next to the data instead of sliding off the
+      // edge when extended right.
+      const xData1 = this._p1.x * hp;
+      const xData2 = this._p2.x * hp;
+      const xLeft = this._options.extendLeft ? 0 : Math.round(Math.min(xData1, xData2));
+      const xRight = this._options.extendRight ? scope.bitmapSize.width : Math.round(Math.max(xData1, xData2));
+      const xLabel = Math.round(Math.max(xData1, xData2));
 
       const drawable = this._levels.filter(l => l.y !== null);
 
@@ -104,7 +111,7 @@ class FibonacciPaneRenderer implements IPrimitivePaneRenderer {
 
         ctx.fillStyle = levelColor;
         const label = `${lv.level.toFixed(3)} (${lv.price.toFixed(2)})`;
-        ctx.fillText(label, xRight + 4 * hp, y);
+        ctx.fillText(label, xLabel + 4 * hp, y);
       }
 
       if (this._isSelected && this._p1.y !== null && this._p2.y !== null) {
@@ -248,6 +255,20 @@ export class FibonacciRetracement extends BaseDrawing {
         currentValue: this._options.fillOpacity
       },
       {
+        key: DrawingOptionKey.EXTEND_LEFT,
+        label: 'Extend Left',
+        type: 'boolean',
+        group: 'Extend',
+        currentValue: this._options.extendLeft
+      },
+      {
+        key: DrawingOptionKey.EXTEND_RIGHT,
+        label: 'Extend Right',
+        type: 'boolean',
+        group: 'Extend',
+        currentValue: this._options.extendRight
+      },
+      {
         key: DrawingOptionKey.LEVELS,
         label: 'Levels',
         type: 'levels',
@@ -264,8 +285,10 @@ export class FibonacciRetracement extends BaseDrawing {
       return false;
     }
 
-    const xLeft = Math.min(coord1.x, coord2.x);
-    const xRight = Math.max(coord1.x, coord2.x);
+    // Mirror the renderer: extended sides reach the chart edge.
+    const chartWidth = this._chart.chartElement().clientWidth;
+    const xLeft = this._options.extendLeft ? 0 : Math.min(coord1.x, coord2.x);
+    const xRight = this._options.extendRight ? chartWidth : Math.max(coord1.x, coord2.x);
     const levels = this._options.levels ?? DEFAULT_LEVELS;
     const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
 

@@ -324,6 +324,45 @@ describe("Room broadcasting", () => {
     expect(snap.payload.drawings).toEqual([]);
   });
 
+  it("relays a DRAWING_DRAG to peers but keeps it out of the snapshot", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    const b = fakeClient("b");
+    room.register(asClient(a));
+    room.register(asClient(b));
+    // Seed so a late joiner's snapshot has content to compare against.
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.INIT_ROOM,
+        payload: { product: "BTC-USD", timeframe: "1H", drawings: [{ id: "d1" }] },
+      }),
+      asClient(a),
+    );
+    a.sent.length = 0;
+    b.sent.length = 0;
+
+    const raw = JSON.stringify({
+      type: CollabAction.DRAWING_DRAG,
+      payload: {
+        userId: "a",
+        drawingId: "d1",
+        points: [{ time: 1, price: 2 }, { time: 3, price: 4 }],
+      },
+    });
+    room.handleMessage(raw, asClient(a));
+
+    // Peer receives it; sender does not.
+    expect(b.sent).toContain(raw);
+    expect(a.sent).not.toContain(raw);
+
+    // Ephemeral: a fresh joiner's snapshot still shows the pre-drag drawing,
+    // never the in-progress drag points.
+    const probe = fakeClient("probe");
+    room.register(asClient(probe));
+    const snap = lastMessageOfType(probe, CollabAction.SNAPSHOT);
+    expect(snap.payload.drawings).toEqual([{ id: "d1" }]);
+  });
+
   it("relays malformed JSON to others without throwing", () => {
     const room = newRoom();
     const a = fakeClient("a");

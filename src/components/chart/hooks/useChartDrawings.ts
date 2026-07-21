@@ -2,7 +2,8 @@ import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { logger } from "@/lib/logger";
 import { restoreDrawing } from "@/core/chart/drawings/registry";
 import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types";
-import { useCallback, useEffect, useRef } from "react";
+import { Point } from "@/core/chart/types";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
 import { MouseEventParams } from "cochart-charts";
 import { setCursor } from "@/core/chart/cursor";
@@ -11,8 +12,13 @@ import { randomUUID } from "@/lib/utils";
 import { useChartStore, suppressHistory } from "@/stores/useChartStore";
 import { useCollabStore } from "@/stores/useCollabStore";
 import { useUIStore } from "@/stores/useUIStore";
+import { throttle } from "@/lib/throttle";
 
 const PASTE_OFFSET_PX = { dx: 16, dy: -16 };
+
+// Cap drag broadcasts to ~25/s: frequent enough to feel live, light enough not to
+// flood the room socket (mirrors the cursor broadcast cadence).
+const DRAG_THROTTLE_MS = 40;
 
 export function useChartDrawings() {
   const { id, drawings, tools, chartApi, seriesApi } = useChartStore();
@@ -37,6 +43,19 @@ export function useChartDrawings() {
   // control points stuck on screen.
   const hoverFrameRef = useRef<number | null>(null);
 
+  // A single stable throttled sender for live drag broadcasts; reads the latest
+  // broadcast fn from the store on each call so it never goes stale.
+  const sendDrag = useMemo(
+    () =>
+      throttle((drawingId: string, points: Point[]) => {
+        useCollabStore.getState().broadcastDrawingDrag(drawingId, points);
+      }, DRAG_THROTTLE_MS),
+    [],
+  );
+
+  // Drop any pending drag broadcast when the hook tears down.
+  useEffect(() => () => sendDrag.cancel(), [sendDrag]);
+
   const attachListeners = useCallback((drawing: BaseDrawing) => {
     drawing.subscribe(DrawingOperation.DELETE, () => {
       deleteDrawing(drawing.id);
@@ -51,10 +70,19 @@ export function useChartDrawings() {
         selectDrawing(null);
       }
     })
+    // Stream the in-progress position to peers while dragging (only in a room).
+    drawing.subscribe(DrawingOperation.DRAG, () => {
+      if (!useCollabStore.getState().roomId) return;
+      const pts = drawing.getPreviewPoints();
+      if (pts) sendDrag(drawing.id, pts);
+    })
     drawing.subscribe(DrawingOperation.MODIFY, () => {
+      // Drop any pending trailing drag so it can't land after this authoritative
+      // commit (which peers treat as "drag over").
+      sendDrag.cancel();
       modifyDrawing(drawing);
     })
-  }, [addDrawing, modifyDrawing, selectDrawing, drawings.selected])
+  }, [addDrawing, modifyDrawing, selectDrawing, drawings.selected, sendDrag])
 
   useEffect(() => {
     if (!seriesApi) return;

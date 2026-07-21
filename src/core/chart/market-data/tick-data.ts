@@ -12,6 +12,14 @@ const exchangeRegistry: Partial<Record<string, () => Promise<ExchangeAdapter>>> 
 		const mod = await import("@/core/chart/market-data/exchanges/CoinbaseExchange")
 		return new mod.CoinbaseExchange();
 	},
+	"kraken": async () => {
+		const mod = await import("@/core/chart/market-data/exchanges/KrakenExchange")
+		return new mod.KrakenExchange();
+	},
+	"binance": async () => {
+		const mod = await import("@/core/chart/market-data/exchanges/BinanceExchange")
+		return new mod.BinanceExchange();
+	},
 };
 
 async function loadAndCacheAdapter(exchange: string): Promise<ExchangeAdapter | null> {

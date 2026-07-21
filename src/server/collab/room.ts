@@ -177,9 +177,11 @@ export class Room {
         this.broadcastToAll(this.presenceMessage());
         return;
       }
-      case CollabAction.CURSOR: {
-        // Ephemeral live-cursor position: relay to peers verbatim but never
-        // fold into the room's truth, so it stays out of the snapshot.
+      case CollabAction.CURSOR:
+      case CollabAction.DRAWING_DRAG: {
+        // Ephemeral live position (cursor / in-progress drag): relay to peers
+        // verbatim but never fold into the room's truth, so it stays out of the
+        // snapshot. The committing MODIFY_DRAWING is the authoritative update.
         this.broadcastToOthers(raw, sender);
         return;
       }

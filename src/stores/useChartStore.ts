@@ -10,7 +10,7 @@ import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { useCollabStore } from "./useCollabStore";
 import { restoreDrawing } from "@/core/chart/drawings/registry";
 import { enableMapSet, setAutoFreeze, Draft } from "immer";
-import { DrawingType } from "@/core/chart/types";
+import { DrawingType, Point } from "@/core/chart/types";
 import { BaseDrawingHandler } from "@/core/chart/drawings/DrawingHandlerFactory";
 import { deepMerge } from "./mergeSettings";
 import { IndicatorConfig, IndicatorParams, IndicatorStyle, IndicatorType } from "@/core/chart/indicators/types";
@@ -118,6 +118,7 @@ interface ChartState {
   syncAddDrawing: (drawings: SerializedDrawing) => void;
   syncDeleteDrawing: (drawingId: string) => void;
   syncModifyDrawing: (drawing: SerializedDrawing) => void;
+  applyPeerDrag: (drawingId: string, points: Point[]) => void;
   addIndicator: (type: IndicatorType) => void;
   removeIndicator: (id: string) => void;
   toggleIndicator: (id: string, enabled: boolean) => void;
@@ -403,6 +404,16 @@ export const useChartStore = create<ChartState>()(
           state.drawings.updatedAt = Date.now();
           snapshots.set(drawing.id, drawing);
         })
+      },
+      // Apply a peer's in-progress drag to the live drawing so it visibly moves.
+      // Deliberately `set`-free and snapshot-free: syncFrom already repaints via
+      // applyOptions and doesn't re-notify (no rebroadcast loop), and skipping the
+      // store update avoids per-frame React churn / IndexedDB writes for this
+      // ephemeral, high-frequency signal. The committing MODIFY_DRAWING is what
+      // updates the authoritative store state.
+      applyPeerDrag: (drawingId: string, points: Point[]) => {
+        const drawing = useChartStore.getState().drawings.collection.get(drawingId);
+        if (drawing) drawing.syncFrom(points, drawing.options);
       },
       // Indicators are config-driven and session-scoped: these actions mutate
       // the config collection; useChartIndicators reconciles the live chart
