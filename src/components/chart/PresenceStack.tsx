@@ -16,7 +16,7 @@ export default function PresenceStack() {
 	if (!roomId || activeUsers.length === 0) return null;
 
 	return (
-		<div className="absolute bottom-4 right-4 z-10 w-52 rounded-lg border border-border bg-card/95 backdrop-blur-sm shadow-lg overflow-hidden">
+		<div className="w-52 rounded-lg border border-border bg-card/95 backdrop-blur-sm shadow-lg overflow-hidden">
 			<div className="flex items-center gap-2 px-3 py-2 border-b border-border text-xs font-medium text-muted-foreground">
 				<Users size={14} className="text-live" />
 				<span>{activeUsers.length} in room</span>

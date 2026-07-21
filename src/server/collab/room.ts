@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import type { Client } from "./client";
 import { logger } from "../../lib/logger";
 import {
   type ChartSelection,
+  type ChatMessage,
   CollabAction,
   type Drawing,
   type Indicator,
@@ -14,11 +16,17 @@ interface RoomState {
   chart: ChartSelection | null;
   drawings: Map<string, Drawing>;
   indicators: Map<string, Indicator>;
+  messages: ChatMessage[];
 }
 
 // Caps on user-supplied identity fields relayed to the whole room.
 const MAX_DISPLAY_NAME_LENGTH = 32;
 const MAX_COLOR_LENGTH = 32;
+
+// Caps on chat: max characters per message, and how many recent messages the
+// room keeps (and replays to late joiners via the snapshot).
+const MAX_CHAT_LENGTH = 500;
+const MAX_CHAT_HISTORY = 200;
 
 export class Room {
   clients = new Set<Client>();
@@ -29,6 +37,7 @@ export class Room {
     chart: null,
     drawings: new Map(),
     indicators: new Map(),
+    messages: [],
   };
 
   constructor(
@@ -174,6 +183,33 @@ export class Room {
         this.broadcastToOthers(raw, sender);
         return;
       }
+      case CollabAction.CHAT: {
+        // Build the message from the sender's connection identity so a client
+        // can't spoof another user; it only ever supplies the text. Chat does
+        // not seed the room's chart truth.
+        const text = action.payload?.text;
+        if (typeof text !== "string") return;
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        const message: ChatMessage = {
+          id: randomUUID(),
+          userId: sender.userId,
+          displayName: sender.displayName,
+          color: sender.color,
+          text: trimmed.slice(0, MAX_CHAT_LENGTH),
+          timestamp: Date.now(),
+        };
+        this.state.messages.push(message);
+        if (this.state.messages.length > MAX_CHAT_HISTORY) {
+          this.state.messages = this.state.messages.slice(-MAX_CHAT_HISTORY);
+        }
+        // Broadcast to everyone (including the sender) so all peers share one
+        // authoritative, ordered history.
+        this.broadcastToAll(
+          JSON.stringify({ type: CollabAction.CHAT, payload: { message } }),
+        );
+        return;
+      }
       default:
         break;
     }
@@ -189,6 +225,7 @@ export class Room {
         timeframe: this.state.chart?.timeframe ?? null,
         drawings: Array.from(this.state.drawings.values()),
         indicators: Array.from(this.state.indicators.values()),
+        messages: this.state.messages,
       },
     });
   }
