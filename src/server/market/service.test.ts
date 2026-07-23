@@ -94,6 +94,40 @@ describe("MarketService caching", () => {
   });
 });
 
+describe("MarketService coalescing", () => {
+  it("collapses concurrent identical block fetches into one upstream call", async () => {
+    // Provider whose fetch is held open until we release it, so both callers
+    // are in flight for the same block at the same time.
+    let release!: (c: Candlestick[]) => void;
+    const gate = new Promise<Candlestick[]>((r) => {
+      release = r;
+    });
+    const calls: Array<[number, number]> = [];
+    const provider: ExchangeProvider = {
+      id: () => "coinbase",
+      getProducts: async (): Promise<Product[]> => [],
+      fetchCandles: async (_s, start, end) => {
+        calls.push([start, end]);
+        return gate;
+      },
+    };
+    const svc = service(provider);
+
+    const p1 = svc.fetchCandles("coinbase", "BTC-USD", 0, BLOCK, G);
+    const p2 = svc.fetchCandles("coinbase", "BTC-USD", 0, BLOCK, G);
+
+    // Both requests have reached the in-flight check; only one hit the provider.
+    expect(calls.length).toBe(1);
+
+    release([candle(0)]);
+    const [r1, r2] = await Promise.all([p1, p2]);
+
+    expect(calls.length).toBe(1);
+    expect(r1).toEqual([candle(0)]);
+    expect(r2).toEqual(r1);
+  });
+});
+
 describe("MarketService errors", () => {
   it("throws for an unknown exchange", async () => {
     const { provider } = mockProvider(() => []);

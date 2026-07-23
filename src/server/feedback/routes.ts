@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { logger } from "../../lib/logger";
+import { clientIp, sendJson } from "../http";
 import { createGithubIssue, buildIssue } from "./github";
 import { createRateLimiter } from "./rateLimit";
 import { validateSuggestion } from "./validate";
@@ -9,19 +10,6 @@ import { validateSuggestion } from "./validate";
 const limiter = createRateLimiter({ limit: 5, windowMs: 10 * 60_000 });
 
 const MAX_BODY_BYTES = 16 * 1024;
-
-function sendJson(res: ServerResponse, status: number, payload: unknown): void {
-  res.writeHead(status, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(payload));
-}
-
-function clientIp(req: IncomingMessage): string {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-  return req.socket.remoteAddress ?? "unknown";
-}
 
 function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
