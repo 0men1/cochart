@@ -80,7 +80,6 @@ async function main(): Promise<void> {
     }
   });
 
-  // Terminate sockets that miss a pong (replaces Go's 60s read deadline).
   const heartbeat = setInterval(() => {
     for (const ws of wss.clients) {
       const w = ws as AliveSocket;

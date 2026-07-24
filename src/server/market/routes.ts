@@ -63,8 +63,6 @@ export function handleSearch(
 
   const { q, limit } = result.data;
 
-  // The client expects PascalCase keys (this preserves the Go server's
-  // tagless JSON shape — see SearchResult in TickerSearchBox.tsx).
   const products = engine.search(q, limit).map((p) => ({
     ID: p.id,
     Name: p.name,

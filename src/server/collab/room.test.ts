@@ -27,9 +27,13 @@ function fakeClient(id: string): FakeClient {
   return c;
 }
 
-// Room only touches removeRoom on the manager.
+// Room touches removeRoom + the per-user client index on the manager.
 function fakeManager() {
-  return { removeRoom: vi.fn() } as unknown as RoomManager;
+  return {
+    removeRoom: vi.fn(),
+    trackClient: vi.fn(),
+    untrackClient: vi.fn(),
+  } as unknown as RoomManager;
 }
 
 function newRoom(manager = fakeManager()): Room {

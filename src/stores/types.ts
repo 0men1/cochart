@@ -65,6 +65,7 @@ export enum CollabAction {
   CURSOR = 'CURSOR',
   CHAT = 'CHAT',
   DRAWING_DRAG = 'DRAWING_DRAG',
+  ROOM_LIMIT = 'ROOM_LIMIT',
 }
 
 export interface PresenceUser {

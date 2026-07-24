@@ -47,6 +47,7 @@ export class Room {
 
   register(client: Client): void {
     this.clients.add(client);
+    this.manager.trackClient(client);
     client.start();
 
     logger.debug(
@@ -65,6 +66,7 @@ export class Room {
   unregister(client: Client): void {
     if (!this.clients.has(client)) return;
     this.clients.delete(client);
+    this.manager.untrackClient(client);
 
     try {
       client.conn.close();
