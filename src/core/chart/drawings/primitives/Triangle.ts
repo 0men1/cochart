@@ -7,6 +7,7 @@ import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 import { applyLineDash } from './lineStyle';
+import { HIT_TOLERANCE_PX } from '../hit';
 
 class TrianglePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
@@ -223,7 +224,7 @@ export class Triangle extends BaseDrawing {
     // Anywhere inside the (filled) triangle, or near any of its edges, is a hit.
     if (GeometryUtils.isPointInTriangle(x, y, c1.x, c1.y, c2.x, c2.y, c3.x, c3.y)) return true;
 
-    const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
+    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
     const distance = Math.min(
       GeometryUtils.distanceToLineSegment(x, y, c1.x, c1.y, c2.x, c2.y),
       GeometryUtils.distanceToLineSegment(x, y, c2.x, c2.y, c3.x, c3.y),

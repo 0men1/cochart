@@ -7,6 +7,7 @@ import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 import { applyLineDash } from './lineStyle';
+import { HIT_TOLERANCE_PX } from '../hit';
 
 class RectanglePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
@@ -235,7 +236,7 @@ export class Rectangle extends BaseDrawing {
     if (GeometryUtils.isPointInRectangle(x, y, left, top, w, h)) return true;
 
     const distance = GeometryUtils.distanceToRectangle(x, y, left, top, w, h);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
+    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
     return distance <= hitThreshold;
   }

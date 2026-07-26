@@ -7,6 +7,7 @@ import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 import { applyLineDash } from './lineStyle';
+import { HIT_TOLERANCE_PX } from '../hit';
 
 // Extend the p1 -> p2 direction until it leaves the [0, width] x-range, so the
 // ray visually continues to the canvas edge. Returns the far endpoint in the
@@ -205,7 +206,7 @@ export class Ray extends BaseDrawing {
     const far = extendToEdge(coord1.x, coord1.y, coord2.x, coord2.y, chartWidth);
 
     const distance = GeometryUtils.distanceToLineSegment(x, y, coord1.x, coord1.y, far.x, far.y);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
+    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
     return distance <= hitThreshold;
   }

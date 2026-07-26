@@ -6,6 +6,7 @@ import { GeometryUtils } from "./GeometryUtils";
 import { DrawingType, Point, ViewPoint } from "@/core/chart/types";
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from "@/core/chart/drawings/types";
 import { applyLineDash, lineStyleOption } from "./lineStyle";
+import { HIT_TOLERANCE_PX } from '../hit';
 
 const defaultOptions: BaseOptions = {
   color: '#00FF00',
@@ -176,7 +177,7 @@ export class VertLine extends BaseDrawing {
     if (coord1.x === null || coord1.y === null) { return false; }
 
     const distance = GeometryUtils.distanceToVerticalLine(x, y, coord1.x, 0, chartHeight);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
+    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
     return distance <= hitThreshold;
   }

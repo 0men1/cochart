@@ -6,8 +6,9 @@ import { Point } from "@/core/chart/types";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
 import { MouseEventParams, Coordinate } from "cochart-charts";
-import { setCursor } from "@/core/chart/cursor";
+import { setCursor, type CursorType } from "@/core/chart/cursor";
 import { pixelNudgeDeltas, shiftPoints } from "@/core/chart/drawings/clipboard";
+import { setSelectedDrawingAccessor } from "@/core/chart/drawings/selectionPriority";
 import { randomUUID } from "@/lib/utils";
 import { useChartStore, suppressHistory } from "@/stores/useChartStore";
 import { useShallow } from "zustand/react/shallow";
@@ -61,6 +62,14 @@ export function useChartDrawings() {
 
   // Drop any pending drag broadcast when the hook tears down.
   useEffect(() => () => sendDrag.cancel(), [sendDrag]);
+
+  useEffect(() => {
+    setSelectedDrawingAccessor(() => {
+      const { selected, collection } = useChartStore.getState().drawings;
+      return selected ? collection.get(selected) ?? null : null;
+    });
+    return () => setSelectedDrawingAccessor(() => null);
+  }, []);
 
   const attachListeners = useCallback((drawing: BaseDrawing) => {
     drawing.subscribe(DrawingOperation.DELETE, () => {
@@ -206,9 +215,15 @@ export function useChartDrawings() {
       }
       const hoveredId = (param.hoveredObjectId as string) ?? null;
       applyHover(hoveredId);
-      if (el) setCursor(hoveredId ? 'pointer' : '', el);
+      let cursor: CursorType | '' = '';
+      if (hoveredId) {
+        const hit = drawings.collection.get(hoveredId);
+        const overControlPoint = !!hit && hit.getControlPointsAt(param.point.x, param.point.y) !== null;
+        cursor = overControlPoint ? 'grab' : 'move';
+      }
+      if (el) setCursor(cursor, el);
     } catch (e) { logger.error(e); }
-  }, [tools.activeHandler, chartApi, applyHover]);
+  }, [tools.activeHandler, chartApi, applyHover, drawings]);
 
 
   const copySelectedDrawing = useCallback((): boolean => {

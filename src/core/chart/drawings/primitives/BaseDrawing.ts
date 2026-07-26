@@ -4,6 +4,8 @@ import { coordinateToTimeExtrapolated, timeToCoordinateExtrapolated } from '@/co
 import { isSnapEnabled, snapYToCandle } from '@/core/chart/snap';
 import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, SerializedDrawing } from '../types';
 import { randomUUID } from '@/lib/utils';
+import { CONTROL_POINT_GRAB_PX } from '../hit';
+import { getSelectedDrawing } from '../selectionPriority';
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
   protected readonly _id: string;
@@ -191,6 +193,18 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
   hitTest(x: number, y: number): PrimitiveHoveredItem | null {
     // A hidden drawing renders nothing, so it must not hover/select either.
     if (!this.isVisible) return null;
+
+    if (this._isSelected && this.getControlPointsAt(x as Coordinate, y as Coordinate) !== null) {
+      return this;
+    }
+    if (!this._isSelected) {
+      const selected = getSelectedDrawing();
+      if (selected && selected !== this && selected.getControlPointsAt(x as Coordinate, y as Coordinate) !== null) {
+        // Yield: the selected drawing's handle owns this spot.
+        return null;
+      }
+    }
+
     if (this.isPointOnDrawing(x, y)) {
       return this;
     };
@@ -218,7 +232,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
   getControlPointsAt(x: Coordinate, y: Coordinate): number | null {
     // Control points are grabbable whenever they're visible (selected OR hovered).
     if (!this.showControlPoints()) return null;
-    const threshold = 8;
+    const threshold = CONTROL_POINT_GRAB_PX;
     for (let i = 0; i < this._points.length; ++i) {
       const screenCoords = this.getScreenCoordinates(this._points[i])
       if (screenCoords.x === undefined || screenCoords.y === undefined || screenCoords.x === null || screenCoords.y === null) {

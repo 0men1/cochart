@@ -7,6 +7,7 @@ import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 import { applyLineDash, lineStyleOption } from './lineStyle';
+import { HIT_TOLERANCE_PX } from '../hit';
 
 class TrendLinePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
@@ -173,7 +174,7 @@ export class TrendLine extends BaseDrawing {
     }
 
     const distance = GeometryUtils.distanceToLineSegment(x, y, coord1.x, coord1.y, coord2.x, coord2.y);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
+    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
     return distance <= hitThreshold;
   }
