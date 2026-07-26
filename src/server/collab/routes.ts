@@ -5,10 +5,11 @@ import type { WebSocket } from "ws";
 import { Client } from "./client";
 import { Room } from "./room";
 import type { RoomManager } from "./roomManager";
+import { createRoomLimiter } from "../index";
+import { clientIp, sendJson } from "../http";
 
 let i = 1;
 
-// Fallback colors for connections that don't supply one (older clients).
 const FALLBACK_COLORS = [
   "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6",
   "#3b82f6", "#8b5cf6", "#ec4899", "#06b6d4", "#f43f5e",
@@ -16,17 +17,22 @@ const FALLBACK_COLORS = [
 
 // POST /api/rooms/create
 export function handleCreateRoom(
+  req: IncomingMessage,
   res: ServerResponse,
   manager: RoomManager,
 ): void {
+  if (!createRoomLimiter.check(clientIp(req))) {
+    sendJson(res, 429, { error: "Too many rooms created. Please slow down." });
+    return;
+  }
+
   const roomId = randomUUID();
   const room = new Room(roomId, manager);
   manager.addRoom(room);
 
   logger.debug(`Created room: ${roomId}`);
 
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(JSON.stringify({ roomId, url: `/chart/room/${roomId}` }));
+  sendJson(res, 200, { roomId, url: `/chart/room/${roomId}` });
 }
 
 // WS /api/rooms/join — called after the socket upgrade has completed.

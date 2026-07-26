@@ -27,9 +27,12 @@ function fakeClient(id: string): FakeClient {
   return c;
 }
 
-// Room only touches removeRoom on the manager.
+// Room only touches removeRoom on the manager (identity is cosmetic; there is
+// no per-user index or eviction any more).
 function fakeManager() {
-  return { removeRoom: vi.fn() } as unknown as RoomManager;
+  return {
+    removeRoom: vi.fn(),
+  } as unknown as RoomManager;
 }
 
 function newRoom(manager = fakeManager()): Room {
@@ -587,5 +590,87 @@ describe("Room lifecycle", () => {
     room.unregister(asClient(a));
     expect(manager.removeRoom).not.toHaveBeenCalled();
     expect(lastMessageOfType(b, CollabAction.PRESENCE).payload.count).toBe(1);
+  });
+});
+
+describe("Room state caps", () => {
+  const snapshotOf = (room: Room, key: "drawings" | "indicators") => {
+    const probe = fakeClient(`probe-${Math.random()}`);
+    room.register(asClient(probe));
+    return lastMessageOfType(probe, CollabAction.SNAPSHOT).payload[key];
+  };
+
+  it("caps the number of distinct drawings but still allows updates at the cap", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+
+    // Push well past the cap (MAX_DRAWINGS = 500).
+    for (let n = 0; n < 600; n++) {
+      room.handleMessage(
+        JSON.stringify({ type: CollabAction.ADD_DRAWING, payload: { drawing: { id: `d${n}`, v: 1 } } }),
+        asClient(a),
+      );
+    }
+
+    const drawings = snapshotOf(room, "drawings");
+    expect(drawings.length).toBe(500);
+    // A brand-new id past the cap was dropped...
+    expect(drawings.some((d: { id: string }) => d.id === "d599")).toBe(false);
+    // ...but modifying an already-stored drawing still applies.
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.MODIFY_DRAWING, payload: { drawing: { id: "d0", v: 2 } } }),
+      asClient(a),
+    );
+    const updated = snapshotOf(room, "drawings").find((d: { id: string }) => d.id === "d0");
+    expect(updated.v).toBe(2);
+  });
+
+  it("caps the number of distinct indicators (MAX_INDICATORS = 50)", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+
+    for (let n = 0; n < 80; n++) {
+      room.handleMessage(
+        JSON.stringify({ type: CollabAction.ADD_INDICATOR, payload: { indicator: { id: `i${n}` } } }),
+        asClient(a),
+      );
+    }
+    expect(snapshotOf(room, "indicators").length).toBe(50);
+  });
+});
+
+describe("Room malformed payloads", () => {
+  // These wrong-shape frames reach handleMessage as valid JSON; Room must not
+  // silently corrupt state. (The process-level crash guard lives in Client.)
+  it("does not throw on a valid-JSON frame with a wrong-typed drawings array", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    expect(() =>
+      room.handleMessage(
+        JSON.stringify({ type: CollabAction.INIT_ROOM, payload: { drawings: [] } }),
+        asClient(a),
+      ),
+    ).not.toThrow();
+  });
+
+  it("ignores an ADD_DRAWING with no drawing id", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    // Seed first so the room emits a snapshot to the probe below.
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.INIT_ROOM, payload: { drawings: [] } }),
+      asClient(a),
+    );
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.ADD_DRAWING, payload: { drawing: { color: "red" } } }),
+      asClient(a),
+    );
+    const probe = fakeClient("probe");
+    room.register(asClient(probe));
+    expect(lastMessageOfType(probe, CollabAction.SNAPSHOT).payload.drawings).toEqual([]);
   });
 });

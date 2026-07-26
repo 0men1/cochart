@@ -6,6 +6,7 @@ import TickerSearchItem from "./TickerSearchItem";
 import { Modal } from "@/components/ui/modal";
 import { useUIStore } from "@/stores/useUIStore";
 import { useChartStore } from "@/stores/useChartStore";
+import { useShallow } from "zustand/react/shallow";
 
 const SearchIcon = ({ className }: { className?: string }) => (
 	<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -34,7 +35,9 @@ interface TickerSearchBoxProps {
 export default function TickerSearchBox({ onClose }: TickerSearchBoxProps) {
 
 	const { tickerSearchBox } = useUIStore();
-	const { selectChart, data } = useChartStore();
+	const { selectChart, data } = useChartStore(
+		useShallow((s) => ({ selectChart: s.selectChart, data: s.data })),
+	);
 
 	const [query, setQuery] = useState(tickerSearchBox.searchTerm);
 	const [results, setResults] = useState<SearchResult[]>([]);

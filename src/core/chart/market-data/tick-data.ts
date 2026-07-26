@@ -3,7 +3,10 @@ import { logger } from "@/lib/logger";
 import { ConnectionState, TickData } from "@/core/chart/market-data/types";
 
 // CACHE
-const adaptersCache: Map<string, ExchangeAdapter> = new Map();
+// Keyed by exchange. We cache the in-flight *promise* (not just the resolved
+// adapter) so concurrent callers before the first connect resolves all share
+// one adapter/socket instead of each creating and connecting their own.
+const adaptersCache: Map<string, Promise<ExchangeAdapter>> = new Map();
 const statusListeners: Map<string, Set<(state: ConnectionState) => void>> = new Map();
 
 // REGISTRY
@@ -23,7 +26,8 @@ const exchangeRegistry: Partial<Record<string, () => Promise<ExchangeAdapter>>> 
 };
 
 async function loadAndCacheAdapter(exchange: string): Promise<ExchangeAdapter | null> {
-	if (!exchangeRegistry[exchange]) {
+	const factory = exchangeRegistry[exchange];
+	if (!factory) {
 		logger.error("(DNE) failed to load exchange")
 		return null;
 	}
@@ -33,23 +37,28 @@ async function loadAndCacheAdapter(exchange: string): Promise<ExchangeAdapter | 
 		return cached;
 	}
 
-	const exchangeAdapter = exchangeRegistry[exchange]()
-		.then(obj => {
-			obj.connect();
-			adaptersCache.set(exchange, obj);
-			const listeners = new Set<(state: ConnectionState) => void>();
-			statusListeners.set(exchange, listeners);
-			obj.onStatusChange((state: ConnectionState) => {
-				listeners.forEach(l => l(state));
-			})
-			return obj;
+	const pending = factory().then(obj => {
+		obj.connect();
+		const listeners = new Set<(state: ConnectionState) => void>();
+		statusListeners.set(exchange, listeners);
+		obj.onStatusChange((state: ConnectionState) => {
+			listeners.forEach(l => l(state));
 		})
-		.catch(error => {
-			logger.error("failed to load exchange: ", error)
-			return null;
-		})
+		return obj;
+	})
 
-	return exchangeAdapter!;
+	// Store the promise synchronously (before the first await returns) so a
+	// second concurrent call reuses it instead of connecting a new adapter.
+	adaptersCache.set(exchange, pending);
+
+	try {
+		return await pending;
+	} catch (error) {
+		// Drop the failed promise so a later call can retry from scratch.
+		logger.error("failed to load exchange: ", error)
+		adaptersCache.delete(exchange);
+		return null;
+	}
 }
 
 export async function subscribeToTicks(

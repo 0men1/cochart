@@ -1,8 +1,7 @@
 import type { WebSocket } from "ws";
+import { logger } from "../../lib/logger";
 import type { Room } from "./room";
 
-// Wraps a raw ws connection. The ping/pong heartbeat that replaces Go's read
-// deadline lives at the socket level in server.ts.
 export class Client {
   constructor(
     public conn: WebSocket,
@@ -14,9 +13,11 @@ export class Client {
 
   start(): void {
     this.conn.on("message", (data: Buffer) => {
-      // Let the room apply the delta to its authoritative state and relay
-      // it. Text frame + trim matches the original Go server behavior.
-      this.room.handleMessage(data.toString().trim(), this);
+      try {
+        this.room.handleMessage(data.toString().trim(), this);
+      } catch (err) {
+        logger.error("Dropped malformed WS message:", err);
+      }
     });
 
     const onGone = () => this.room.unregister(this);

@@ -1,6 +1,7 @@
 "use client"
 
 import { useChartStore } from "@/stores/useChartStore";
+import { useShallow } from "zustand/react/shallow";
 import { useUIStore } from "@/stores/useUIStore";
 import {
   Select,
@@ -45,7 +46,9 @@ function getStatusDiv(status: ConnectionStatus) {
 }
 export default function ChartFooter() {
   const { toggleWelcomeTour, toggleSuggestion } = useUIStore();
-  const { data, chartSettings, setTimezone } = useChartStore();
+  const { data, chartSettings, setTimezone } = useChartStore(
+    useShallow((s) => ({ data: s.data, chartSettings: s.chartSettings, setTimezone: s.setTimezone })),
+  );
   const { status } = useCollabStore();
   const currentTimezone = chartSettings.timezone || "UTC";
 

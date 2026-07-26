@@ -19,17 +19,16 @@ interface RoomState {
   messages: ChatMessage[];
 }
 
-// Caps on user-supplied identity fields relayed to the whole room.
 const MAX_DISPLAY_NAME_LENGTH = 32;
 const MAX_COLOR_LENGTH = 32;
-
-// Caps on chat: max characters per message, and how many recent messages the
-// room keeps (and replays to late joiners via the snapshot).
 const MAX_CHAT_LENGTH = 500;
 const MAX_CHAT_HISTORY = 200;
+const MAX_DRAWINGS = 500;
+const MAX_INDICATORS = 50;
 
 export class Room {
   clients = new Set<Client>();
+  readonly createdAt = Date.now();
 
   // The single source of truth for this room.
   private state: RoomState = {
@@ -48,17 +47,12 @@ export class Room {
   register(client: Client): void {
     this.clients.add(client);
     client.start();
-
     logger.debug(
       `User joined: ${client.displayName} (Room: ${this.id}, Total: ${this.clients.size})`,
     );
-
-    // Bring the newcomer up to the room's authoritative state first...
     if (this.state.seeded) {
       client.send(this.snapshotMessage());
     }
-
-    // ...then hand everyone (including the newcomer) the updated roster.
     this.broadcastToAll(this.presenceMessage());
   }
 
@@ -138,6 +132,8 @@ export class Room {
       case CollabAction.MODIFY_DRAWING: {
         const drawing = action.payload?.drawing;
         if (drawing?.id) {
+          const isNew = !this.state.drawings.has(drawing.id);
+          if (isNew && this.state.drawings.size >= MAX_DRAWINGS) return;
           this.state.seeded = true;
           this.state.drawings.set(drawing.id, drawing);
         }
@@ -152,6 +148,8 @@ export class Room {
       case CollabAction.MODIFY_INDICATOR: {
         const indicator = action.payload?.indicator;
         if (indicator?.id) {
+          const isNew = !this.state.indicators.has(indicator.id);
+          if (isNew && this.state.indicators.size >= MAX_INDICATORS) return;
           this.state.seeded = true;
           this.state.indicators.set(indicator.id, indicator);
         }
@@ -163,9 +161,6 @@ export class Room {
         break;
       }
       case CollabAction.UPDATE_PRESENCE: {
-        // The sender is renaming/recoloring itself mid-session. Update its
-        // roster entry and hand everyone the refreshed presence; don't relay
-        // the raw delta (peers only ever consume the full roster).
         const displayName = action.payload?.displayName;
         const color = action.payload?.color;
         if (typeof displayName === "string" && displayName.trim()) {
@@ -179,16 +174,10 @@ export class Room {
       }
       case CollabAction.CURSOR:
       case CollabAction.DRAWING_DRAG: {
-        // Ephemeral live position (cursor / in-progress drag): relay to peers
-        // verbatim but never fold into the room's truth, so it stays out of the
-        // snapshot. The committing MODIFY_DRAWING is the authoritative update.
         this.broadcastToOthers(raw, sender);
         return;
       }
       case CollabAction.CHAT: {
-        // Build the message from the sender's connection identity so a client
-        // can't spoof another user; it only ever supplies the text. Chat does
-        // not seed the room's chart truth.
         const text = action.payload?.text;
         if (typeof text !== "string") return;
         const trimmed = text.trim();
@@ -205,8 +194,6 @@ export class Room {
         if (this.state.messages.length > MAX_CHAT_HISTORY) {
           this.state.messages = this.state.messages.slice(-MAX_CHAT_HISTORY);
         }
-        // Broadcast to everyone (including the sender) so all peers share one
-        // authoritative, ordered history.
         this.broadcastToAll(
           JSON.stringify({ type: CollabAction.CHAT, payload: { message } }),
         );

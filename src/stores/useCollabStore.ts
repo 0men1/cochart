@@ -54,7 +54,13 @@ export const useCollabStore = create<CollabState>((set, get) => ({
   })),
   connectSocket: (roomId: string) => {
 
-    if (get().socket) return;
+    // Already connected: no-op if it's the same room, otherwise leave the
+    // current room first and switch to the new one (no cap on rooms).
+    const existing = get().socket;
+    if (existing) {
+      if (get().roomId === roomId) return;
+      get().disconnectSocket();
+    }
 
     const socket = new CollabSocket();
     // Set roomId up front so drawing persistence knows we're in a room from
@@ -203,7 +209,7 @@ export const useCollabStore = create<CollabState>((set, get) => ({
       },
       onReconnecting: () => {
         set({ status: ConnectionStatus.RECONNECTING });
-      }
+      },
     });
   },
   broadcastPresence: () => {

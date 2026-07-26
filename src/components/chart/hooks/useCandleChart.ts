@@ -18,6 +18,7 @@ import { Candlestick, ConnectionState, ConnectionStatus, INTERVAL_SECONDS, TickD
 import { subscribeToTicks, subscribeToStatus } from "@/core/chart/market-data/tick-data";
 import { fetchHistoricalCandles } from "@/core/chart/market-data/historical-data";
 import { useChartStore } from "@/stores/useChartStore";
+import { useShallow } from "zustand/react/shallow";
 import { IntervalKey } from "@/core/chart/market-data/types";
 import { setActiveIntervalSeconds } from "@/core/chart/interval";
 import { setCandleData } from "@/core/chart/indicators/candleData";
@@ -73,9 +74,13 @@ function buildTimeFormatters(timeframe: IntervalKey, tz: string) {
 }
 
 export function useCandleChart(containerRef: React.RefObject<HTMLDivElement | null>) {
-  const { chartSettings } = useChartStore();
-  const { product, timeframe } = useChartStore((state) => state.data);
-  const { setDataConnectionState, setInstances } = useChartStore((state) => state);
+  const chartSettings = useChartStore((s) => s.chartSettings);
+  const { product, timeframe } = useChartStore(
+    useShallow((s) => ({ product: s.data.product, timeframe: s.data.timeframe })),
+  );
+  const { setDataConnectionState, setInstances } = useChartStore(
+    useShallow((s) => ({ setDataConnectionState: s.setDataConnectionState, setInstances: s.setInstances })),
+  );
 
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<SeriesType> | null>(null);

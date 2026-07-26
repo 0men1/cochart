@@ -3,14 +3,17 @@ import { Button } from "../ui/button";
 import { ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { useUIStore } from "@/stores/useUIStore";
 import { useChartStore } from "@/stores/useChartStore";
+import { useShallow } from "zustand/react/shallow";
 import { Product } from "@/stores/types";
 import { useCollabStore } from "@/stores/useCollabStore";
 
 export default function ChartHeader() {
-  const { toggleChartSettings } = useChartStore();
-
-  const { product, timeframe } = useChartStore().data;
-  const { selectChart } = useChartStore();
+  const { toggleChartSettings, selectChart } = useChartStore(
+    useShallow((s) => ({ toggleChartSettings: s.toggleChartSettings, selectChart: s.selectChart })),
+  );
+  const { product, timeframe } = useChartStore(
+    useShallow((s) => ({ product: s.data.product, timeframe: s.data.timeframe })),
+  );
 
   const { toggleTickerSearch } = useUIStore();
   const drawingManagerOpen = useUIStore((s) => s.drawingManager.isOpen);
