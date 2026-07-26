@@ -13,7 +13,6 @@ export const CollabAction = {
   CURSOR: "CURSOR", // client -> peers: ephemeral live cursor position (never stored)
   CHAT: "CHAT", // client -> server (text); server -> clients (full message)
   DRAWING_DRAG: "DRAWING_DRAG", // client -> peers: ephemeral in-progress drag points (never stored)
-  ROOM_LIMIT: "ROOM_LIMIT", // server -> client: join refused, user already at their room cap
 } as const;
 
 // Anonymous per-connection identity, echoed to peers for presence display.

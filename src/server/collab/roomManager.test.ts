@@ -1,17 +1,15 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { RoomManager } from "./roomManager";
-import type { Client } from "./client";
 import type { Room } from "./room";
 
-const room = (id: string) => ({ id }) as unknown as Room;
-
-// A client with just the fields RoomManager reads: its userId and a room whose
-// id it belongs to (with an unregister spy so eviction can be asserted).
-function client(userId: string, roomId: string) {
-  const unregister = vi.fn();
-  const c = { userId, room: { id: roomId, unregister } };
-  return c as unknown as Client & { room: { unregister: ReturnType<typeof vi.fn> } };
-}
+// A room-like with just the fields RoomManager reads: id, its client set (for
+// emptiness), and createdAt (for reaping).
+const room = (id: string, opts: { clients?: number; createdAt?: number } = {}) =>
+  ({
+    id,
+    clients: new Set(Array.from({ length: opts.clients ?? 0 })),
+    createdAt: opts.createdAt ?? Date.now(),
+  }) as unknown as Room;
 
 describe("RoomManager", () => {
   it("returns undefined for an unknown room", () => {
@@ -24,6 +22,7 @@ describe("RoomManager", () => {
     const r = room("r1");
     mgr.addRoom(r);
     expect(mgr.getRoom("r1")).toBe(r);
+    expect(mgr.size).toBe(1);
   });
 
   it("removes a room", () => {
@@ -34,50 +33,28 @@ describe("RoomManager", () => {
   });
 });
 
-describe("RoomManager per-user index", () => {
-  it("tracks the distinct rooms a user occupies", () => {
-    const mgr = new RoomManager();
-    mgr.trackClient(client("u1", "rA"));
-    mgr.trackClient(client("u1", "rB"));
-    mgr.trackClient(client("u2", "rA"));
+describe("RoomManager.reapIdle", () => {
+  const now = 1_000_000;
+  const ttl = 5 * 60_000;
 
-    expect(mgr.roomsForUser("u1")).toEqual(new Set(["rA", "rB"]));
-    expect(mgr.roomsForUser("u2")).toEqual(new Set(["rA"]));
-    expect(mgr.roomsForUser("nobody")).toEqual(new Set());
+  it("reaps empty rooms created before the TTL", () => {
+    const mgr = new RoomManager();
+    mgr.addRoom(room("old", { clients: 0, createdAt: now - ttl - 1 }));
+    mgr.reapIdle(ttl, now);
+    expect(mgr.getRoom("old")).toBeUndefined();
   });
 
-  it("untracks a client and forgets the user once empty", () => {
+  it("keeps empty rooms still within the grace period", () => {
     const mgr = new RoomManager();
-    const a = client("u1", "rA");
-    const b = client("u1", "rB");
-    mgr.trackClient(a);
-    mgr.trackClient(b);
-
-    mgr.untrackClient(a);
-    expect(mgr.roomsForUser("u1")).toEqual(new Set(["rB"]));
-
-    mgr.untrackClient(b);
-    expect(mgr.roomsForUser("u1")).toEqual(new Set());
+    mgr.addRoom(room("fresh", { clients: 0, createdAt: now - 1000 }));
+    mgr.reapIdle(ttl, now);
+    expect(mgr.getRoom("fresh")).toBeDefined();
   });
 
-  it("evicts the user from every room except the one to keep", () => {
+  it("never reaps a room that still has clients, however old", () => {
     const mgr = new RoomManager();
-    const a = client("u1", "rA");
-    const b = client("u1", "rB");
-    const keep = client("u1", "rC");
-    mgr.trackClient(a);
-    mgr.trackClient(b);
-    mgr.trackClient(keep);
-
-    mgr.evictUserFromOtherRooms("u1", "rC");
-
-    expect(a.room.unregister).toHaveBeenCalledWith(a);
-    expect(b.room.unregister).toHaveBeenCalledWith(b);
-    expect(keep.room.unregister).not.toHaveBeenCalled();
-  });
-
-  it("evicting an unknown user is a no-op", () => {
-    const mgr = new RoomManager();
-    expect(() => mgr.evictUserFromOtherRooms("ghost", "rA")).not.toThrow();
+    mgr.addRoom(room("busy", { clients: 3, createdAt: now - ttl * 10 }));
+    mgr.reapIdle(ttl, now);
+    expect(mgr.getRoom("busy")).toBeDefined();
   });
 });

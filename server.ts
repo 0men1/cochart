@@ -10,12 +10,16 @@ import {
   roomManager,
   searchEngine,
 } from "./src/server";
+import { logger } from "./src/lib/logger";
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME || "0.0.0.0";
 const port = Number.parseInt(process.env.PORT || "3000", 10);
 
 const ROOM_JOIN_PATH = "/api/rooms/join";
+const MAX_WS_PAYLOAD = 256 * 1024;
+const ROOM_SWEEP_INTERVAL_MS = 60_000;
+const ROOM_IDLE_TTL_MS = 5 * 60_000;
 
 type AliveSocket = WebSocket & { isAlive?: boolean };
 
@@ -42,7 +46,7 @@ async function main(): Promise<void> {
         return;
       }
       if (pathname === "/api/rooms/create" && req.method === "POST") {
-        handleCreateRoom(res, roomManager);
+        handleCreateRoom(req, res, roomManager);
         return;
       }
       if (pathname === "/api/suggestions" && req.method === "POST") {
@@ -52,13 +56,13 @@ async function main(): Promise<void> {
 
       await handle(req, res);
     } catch (err) {
-      console.error("Request error:", err);
+      logger.error("Request error:", err);
       if (!res.headersSent) res.writeHead(500);
       res.end("Internal Server Error");
     }
   });
 
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_WS_PAYLOAD });
 
   wss.on("connection", (ws: AliveSocket, req: IncomingMessage) => {
     ws.isAlive = true;
@@ -75,7 +79,6 @@ async function main(): Promise<void> {
         wss.emit("connection", ws, req);
       });
     } else {
-      // Next.js dev HMR (and any other upgrades) must reach Next's handler.
       upgradeHandler(req, socket, head);
     }
   });
@@ -93,12 +96,24 @@ async function main(): Promise<void> {
   }, 30_000);
   heartbeat.unref?.();
 
+  const roomSweep = setInterval(() => {
+    roomManager.reapIdle(ROOM_IDLE_TTL_MS);
+  }, ROOM_SWEEP_INTERVAL_MS);
+  roomSweep.unref?.();
+
   server.listen(port, hostname, () => {
-    console.log(`> Ready on http://${hostname}:${port} (dev=${dev})`);
+    logger.info(`> Ready on http://${hostname}:${port} (dev=${dev})`);
   });
 }
 
+process.on("uncaughtException", (err) => {
+  logger.error("Uncaught exception:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled rejection:", reason);
+});
+
 main().catch((err) => {
-  console.error("Fatal server error:", err);
+  logger.error("Fatal server error:", err);
   process.exit(1);
 });

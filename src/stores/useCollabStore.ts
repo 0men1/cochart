@@ -25,15 +25,10 @@ interface CollabState {
   draggingPeers: Record<string, string>;
   socket: CollabSocket | null;
   status: ConnectionStatus;
-  // Set when a join was refused because the user is already at their room cap.
-  // Drives the "leave your other room?" prompt. null when there's nothing to ask.
-  roomLimitPrompt: { roomId: string } | null;
   setRoom: (roomId: string, isHost: boolean) => void;
   setCollabConnectionStatus: (status: ConnectionStatus) => void;
-  connectSocket: (roomId: string, force?: boolean) => void;
+  connectSocket: (roomId: string) => void;
   disconnectSocket: () => void;
-  confirmRoomSwitch: () => void;
-  dismissRoomLimit: () => void;
   toggleCollabWindow: (isOpen: boolean) => void;
   broadcastPresence: () => void;
   broadcastCursor: (time: number, price: number, hidden?: boolean) => void;
@@ -50,7 +45,6 @@ export const useCollabStore = create<CollabState>((set, get) => ({
   draggingPeers: {},
   socket: null,
   status: ConnectionStatus.DISCONNECTED,
-  roomLimitPrompt: null,
   setRoom: (roomId: string, isHost: boolean) => {
     set({ roomId, isHost });
   },
@@ -58,18 +52,20 @@ export const useCollabStore = create<CollabState>((set, get) => ({
   toggleCollabWindow: (isOpen: boolean) => set(({
     isOpen: isOpen
   })),
-  connectSocket: (roomId: string, force = false) => {
+  connectSocket: (roomId: string) => {
 
-    // A normal connect is a no-op if we already have a socket. A force-join
-    // (after the user confirmed leaving their other room) reuses that same
-    // socket instance to reconnect with the force flag.
+    // Already connected: no-op if it's the same room, otherwise leave the
+    // current room first and switch to the new one (no cap on rooms).
     const existing = get().socket;
-    if (existing && !force) return;
+    if (existing) {
+      if (get().roomId === roomId) return;
+      get().disconnectSocket();
+    }
 
-    const socket = existing ?? new CollabSocket();
+    const socket = new CollabSocket();
     // Set roomId up front so drawing persistence knows we're in a room from
     // the first render (before the socket finishes opening).
-    set({ socket, roomId, status: ConnectionStatus.CONNECTING, roomLimitPrompt: null });
+    set({ socket, roomId, status: ConnectionStatus.CONNECTING });
 
     // Identify ourselves to the room with this browser's anonymous identity.
     const identity = useIdentityStore.getState().identity;
@@ -214,28 +210,6 @@ export const useCollabStore = create<CollabState>((set, get) => ({
       onReconnecting: () => {
         set({ status: ConnectionStatus.RECONNECTING });
       },
-      onRoomLimit: () => {
-        // Server refused: the user is already in another room. Surface the
-        // prompt; the socket stays around so a confirm can force-reconnect it.
-        set({ status: ConnectionStatus.DISCONNECTED, roomLimitPrompt: { roomId } });
-      },
-    }, force);
-  },
-  confirmRoomSwitch: () => {
-    const prompt = get().roomLimitPrompt;
-    if (!prompt) return;
-    // Reconnect with force=1 so the server drops the user's other room(s).
-    get().connectSocket(prompt.roomId, true);
-  },
-  dismissRoomLimit: () => {
-    // The user declined to leave their other room. Tear down this attempt so
-    // they simply aren't in a room (the caller navigates them away).
-    get().socket?.disconnect();
-    set({
-      roomLimitPrompt: null,
-      socket: null,
-      roomId: null,
-      status: ConnectionStatus.DISCONNECTED,
     });
   },
   broadcastPresence: () => {
