@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Settings, Trash } from 'lucide-react';
 import { useChartStore } from '@/stores/useChartStore';
+import { useShallow } from 'zustand/react/shallow';
 import { rememberDrawingOptions } from '@/core/chart/drawings/drawingDefaults';
 import { DrawingType } from '@/core/chart/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,7 +16,9 @@ export const DrawingEditor = () => {
   const editorRef = useRef<HTMLDivElement>(null);
   const { openDrawingSettings } = useUIStore();
 
-  const { deleteDrawing, drawings } = useChartStore();
+  const { deleteDrawing, drawings } = useChartStore(
+    useShallow((s) => ({ deleteDrawing: s.deleteDrawing, drawings: s.drawings })),
+  );
   const { selected } = drawings
 
   const selectedDrawing = useMemo(() => {

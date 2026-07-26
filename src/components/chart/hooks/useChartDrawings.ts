@@ -10,6 +10,7 @@ import { setCursor } from "@/core/chart/cursor";
 import { pixelNudgeDeltas, shiftPoints } from "@/core/chart/drawings/clipboard";
 import { randomUUID } from "@/lib/utils";
 import { useChartStore, suppressHistory } from "@/stores/useChartStore";
+import { useShallow } from "zustand/react/shallow";
 import { useCollabStore } from "@/stores/useCollabStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { throttle } from "@/lib/throttle";
@@ -21,8 +22,27 @@ const PASTE_OFFSET_PX = { dx: 16, dy: -16 };
 const DRAG_THROTTLE_MS = 40;
 
 export function useChartDrawings() {
-  const { id, drawings, tools, chartApi, seriesApi } = useChartStore();
-  const { addDrawing, modifyDrawing, deleteDrawing, selectDrawing, selectOnly, cancelTool, deselectDrawing } = useChartStore();
+  const { id, drawings, tools, chartApi, seriesApi } = useChartStore(
+    useShallow((s) => ({
+      id: s.id,
+      drawings: s.drawings,
+      tools: s.tools,
+      chartApi: s.chartApi,
+      seriesApi: s.seriesApi,
+    })),
+  );
+  const { addDrawing, modifyDrawing, deleteDrawing, selectDrawing, selectOnly, cancelTool, deselectDrawing } =
+    useChartStore(
+      useShallow((s) => ({
+        addDrawing: s.addDrawing,
+        modifyDrawing: s.modifyDrawing,
+        deleteDrawing: s.deleteDrawing,
+        selectDrawing: s.selectDrawing,
+        selectOnly: s.selectOnly,
+        cancelTool: s.cancelTool,
+        deselectDrawing: s.deselectDrawing,
+      })),
+    );
 
   // While in a collab room the server snapshot is the sole source of truth, so
   // local IndexedDB restore/persist is paused (it must never merge into a room).

@@ -1,4 +1,5 @@
 import { useChartStore } from "@/stores/useChartStore";
+import { useShallow } from "zustand/react/shallow";
 import { useUIStore } from "@/stores/useUIStore";
 
 interface TickerSearchItemProps {
@@ -8,7 +9,9 @@ interface TickerSearchItemProps {
 }
 
 export default function TickerSearchItem({ symbol, name, provider }: TickerSearchItemProps) {
-	const { selectChart, data } = useChartStore();
+	const { selectChart, data } = useChartStore(
+		useShallow((s) => ({ selectChart: s.selectChart, data: s.data })),
+	);
 	const { toggleTickerSearch } = useUIStore();
 
 	const onItemClick = () => {
