@@ -5,9 +5,10 @@ import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types
 import { Point } from "@/core/chart/types";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { getDrawings, setDrawings } from "@/lib/indexdb";
-import { MouseEventParams } from "cochart-charts";
-import { setCursor } from "@/core/chart/cursor";
+import { MouseEventParams, Coordinate } from "cochart-charts";
+import { setCursor, type CursorType } from "@/core/chart/cursor";
 import { pixelNudgeDeltas, shiftPoints } from "@/core/chart/drawings/clipboard";
+import { setSelectedDrawingAccessor } from "@/core/chart/drawings/selectionPriority";
 import { randomUUID } from "@/lib/utils";
 import { useChartStore, suppressHistory } from "@/stores/useChartStore";
 import { useShallow } from "zustand/react/shallow";
@@ -16,10 +17,8 @@ import { useUIStore } from "@/stores/useUIStore";
 import { throttle } from "@/lib/throttle";
 
 const PASTE_OFFSET_PX = { dx: 16, dy: -16 };
-
-// Cap drag broadcasts to ~25/s: frequent enough to feel live, light enough not to
-// flood the room socket (mirrors the cursor broadcast cadence).
 const DRAG_THROTTLE_MS = 40;
+const DRAG_CREATE_THRESHOLD_PX = 5;
 
 export function useChartDrawings() {
   const { id, drawings, tools, chartApi, seriesApi } = useChartStore(
@@ -44,27 +43,17 @@ export function useChartDrawings() {
       })),
     );
 
-  // While in a collab room the server snapshot is the sole source of truth, so
-  // local IndexedDB restore/persist is paused (it must never merge into a room).
   const roomId = useCollabStore((s) => s.roomId);
   const openDrawingSettings = useUIStore((s) => s.openDrawingSettings);
+  const openDrawingContextMenu = useUIStore((s) => s.openDrawingContextMenu);
+  const closeDrawingContextMenu = useUIStore((s) => s.closeDrawingContextMenu);
   const isInitializedRef = useRef<string | null>(null);
-
-  // Drawings whose store listeners are already subscribed. Instances survive
-  // chart recreation, so re-attaching must not re-subscribe them.
   const wiredRef = useRef(new WeakSet<BaseDrawing>());
-
-  // Id of the drawing currently under the cursor, so we can clear its hover
-  // highlight when the cursor moves off it.
   const hoveredRef = useRef<string | null>(null);
-  // Pending hover-repaint frame. Hover is applied on an animation frame (outside
-  // the crosshair-move dispatch) so the repaint isn't coalesced away — a lone
-  // update fired synchronously inside the dispatch was being dropped, leaving
-  // control points stuck on screen.
   const hoverFrameRef = useRef<number | null>(null);
 
-  // A single stable throttled sender for live drag broadcasts; reads the latest
-  // broadcast fn from the store on each call so it never goes stale.
+  const clipboardRef = useRef<SerializedDrawing | null>(null);
+
   const sendDrag = useMemo(
     () =>
       throttle((drawingId: string, points: Point[]) => {
@@ -75,6 +64,14 @@ export function useChartDrawings() {
 
   // Drop any pending drag broadcast when the hook tears down.
   useEffect(() => () => sendDrag.cancel(), [sendDrag]);
+
+  useEffect(() => {
+    setSelectedDrawingAccessor(() => {
+      const { selected, collection } = useChartStore.getState().drawings;
+      return selected ? collection.get(selected) ?? null : null;
+    });
+    return () => setSelectedDrawingAccessor(() => null);
+  }, []);
 
   const attachListeners = useCallback((drawing: BaseDrawing) => {
     drawing.subscribe(DrawingOperation.DELETE, () => {
@@ -104,11 +101,21 @@ export function useChartDrawings() {
     })
   }, [addDrawing, modifyDrawing, selectDrawing, drawings.selected, sendDrag])
 
+  const commitDrawing = useCallback((inst: BaseDrawing) => {
+    const series = useChartStore.getState().seriesApi;
+    if (!series) return;
+    series.attachPrimitive(inst);
+    attachListeners(inst);
+    wiredRef.current.add(inst);
+    addDrawing(inst);
+    cancelTool();
+    selectOnly(inst.id);
+  }, [attachListeners, addDrawing, cancelTool, selectOnly]);
+
   useEffect(() => {
     if (!seriesApi) return;
 
     // In a collab room the server snapshot owns the drawings, so skip the local
-    // restore — but mark it not-done so LEAVING the room re-restores from IndexedDB.
     if (roomId) {
       isInitializedRef.current = null;
       return;
@@ -119,10 +126,8 @@ export function useChartDrawings() {
     let active = true;
     (async () => {
       const recovered = await getDrawings(id);
-      // Bail if superseded (dep change) or another run already restored this id.
       if (!active || isInitializedRef.current === id) return;
 
-      // Suppressed so a page load doesn't fill the undo stack with the restores.
       suppressHistory(() => {
         for (const sd of recovered) {
           const inst = restoreDrawing(sd);
@@ -155,8 +160,6 @@ export function useChartDrawings() {
     if (dirty) seriesApi.applyOptions(seriesApi.options());
   }, [drawings.collection, drawings.updatedAt, seriesApi])
 
-  // persist when collection changes, only after initialization for this id
-  // (skipped while in a room — the room snapshot owns the truth there)
   useEffect(() => {
     if (!id || roomId || isInitializedRef.current !== id) return;
     const drawingsArray = Array.from(drawings.collection.values());
@@ -166,34 +169,17 @@ export function useChartDrawings() {
   const mouseClickHandler = useCallback((param: MouseEventParams) => {
     try {
       if (!param.point || !param.logical) return;
-      // The pencil owns its own pointer capture; a stray click must not select
-      // or place anything while it's active.
-      if (tools.activeHandler) {
-        const inst = tools.activeHandler.onClick(param.point.x, param.point.y);
-        if (inst && seriesApi) {
-          seriesApi.attachPrimitive(inst);
-          attachListeners(inst);
-          wiredRef.current.add(inst);
-          addDrawing(inst); // reducer should serialize internally
-          cancelTool();
-          selectOnly(inst.id);
-        }
-        return;
-      }
       const hoveredId = param.hoveredObjectId as string;
       const hit = drawings.collection.get(hoveredId);
-
       if (hit) {
         selectOnly(hit.id);
       } else {
         deselectDrawing();
       }
     } catch (e) { logger.error(e); }
-  }, [tools.activeHandler, drawings, seriesApi]);
+  }, [drawings, selectOnly, deselectDrawing]);
 
-  // Double-clicking a drawing opens its dedicated settings page. Resolve the
-  // target the same way a single click does (via the library's hoveredObjectId)
-  // and keep selection in sync so the drawing stays highlighted behind the modal.
+  // Double-clicking a drawing opens its dedicated settings page
   const mouseDblClickHandler = useCallback((param: MouseEventParams) => {
     try {
       const hoveredId = param.hoveredObjectId as string | undefined;
@@ -226,24 +212,22 @@ export function useChartDrawings() {
       const el = chartApi?.chartElement();
       if (tools.activeHandler) {
         applyHover(null);
-        tools.activeHandler.onMove(param.point.x, param.point.y);
         if (el) setCursor('', el);
         return;
       }
       const hoveredId = (param.hoveredObjectId as string) ?? null;
       applyHover(hoveredId);
-      // Scope the cursor to the chart element so it can't leak onto the rest of
-      // the UI. '' clears the inline cursor, falling back to the container's
-      // `cursor-crosshair`; 'pointer' overrides it on a draggable drawing.
-      if (el) setCursor(hoveredId ? 'pointer' : '', el);
+      let cursor: CursorType | '' = '';
+      if (hoveredId) {
+        const hit = drawings.collection.get(hoveredId);
+        const overControlPoint = !!hit && hit.getControlPointsAt(param.point.x, param.point.y) !== null;
+        cursor = overControlPoint ? 'grab' : 'move';
+      }
+      if (el) setCursor(cursor, el);
     } catch (e) { logger.error(e); }
-  }, [tools.activeHandler, chartApi, applyHover]);
+  }, [tools.activeHandler, chartApi, applyHover, drawings]);
 
-  // Serialized copy of the drawing captured by Cmd/Ctrl-C, reused by Cmd/Ctrl-V.
-  const clipboardRef = useRef<SerializedDrawing | null>(null);
 
-  // Copy the selected drawing into the in-hook clipboard. Returns whether there
-  // was a selection to copy, so the key handler knows if it owned the event.
   const copySelectedDrawing = useCallback((): boolean => {
     const { selected, collection } = useChartStore.getState().drawings;
     if (!selected) return false;
@@ -279,7 +263,6 @@ export function useChartDrawings() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
-      // Never hijack copy/paste while the user is typing in a field.
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       const key = event.key.toLowerCase();
       if (key === 'c') {
@@ -294,6 +277,112 @@ export function useChartDrawings() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [copySelectedDrawing, pasteDrawing]);
+
+  useEffect(() => {
+    if (!chartApi || !seriesApi) return;
+    let el: HTMLElement | null = null;
+    try { el = chartApi.chartElement(); } catch { return; }
+    if (!el) return;
+    const element = el;
+
+    // Client pixels -> chart pane coords. Valid for the default right-price-scale
+    // layout (no left scale), where the pane's top-left is the element's top-left.
+    const paneCoords = (e: PointerEvent) => {
+      const rect = element.getBoundingClientRect();
+      return { x: (e.clientX - rect.left) as Coordinate, y: (e.clientY - rect.top) as Coordinate };
+    };
+
+    // Anchor (client px) of the current gesture, or null when not drawing.
+    let downPt: { cx: number; cy: number } | null = null;
+    let dragging = false;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const handler = useChartStore.getState().tools.activeHandler;
+      if (!handler) return;                  // no tool → let the library pan/select
+      if (e.button !== 0 || !e.isPrimary) return;
+      // Block the library's pan and its synthetic click for this gesture.
+      e.preventDefault();
+      e.stopPropagation();
+      try { element.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+      downPt = { cx: e.clientX, cy: e.clientY };
+      dragging = false;
+      const { x, y } = paneCoords(e);
+      try {
+        const inst = handler.onClick(x, y);
+        if (inst) { commitDrawing(inst); downPt = null; }
+      } catch (err) { logger.error(err); }
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      const handler = useChartStore.getState().tools.activeHandler;
+      if (!handler) { downPt = null; return; }  // no tool → library owns hover/pan
+      const { x, y } = paneCoords(e);
+      if (downPt) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!dragging && Math.hypot(e.clientX - downPt.cx, e.clientY - downPt.cy) > DRAG_CREATE_THRESHOLD_PX) {
+          dragging = true;
+        }
+      }
+      try { handler.onMove(x, y); } catch (err) { logger.error(err); }
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (!downPt) return;
+      const handler = useChartStore.getState().tools.activeHandler;
+      e.preventDefault();
+      e.stopPropagation();
+      try { element.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+      const wasDragging = dragging;
+      const { x, y } = paneCoords(e);
+      downPt = null;
+      dragging = false;
+      if (!handler) return;
+      if (wasDragging && handler.requiredPoints === 2) {
+        try {
+          const inst = handler.onClick(x, y);
+          if (inst) commitDrawing(inst);
+        } catch (err) { logger.error(err); }
+      }
+    };
+
+    element.addEventListener('pointerdown', onPointerDown, true);
+    element.addEventListener('pointermove', onPointerMove, true);
+    element.addEventListener('pointerup', onPointerUp, true);
+    element.addEventListener('pointercancel', onPointerUp, true);
+    return () => {
+      element.removeEventListener('pointerdown', onPointerDown, true);
+      element.removeEventListener('pointermove', onPointerMove, true);
+      element.removeEventListener('pointerup', onPointerUp, true);
+      element.removeEventListener('pointercancel', onPointerUp, true);
+    };
+  }, [chartApi, seriesApi, commitDrawing]);
+
+  // Right-click a drawing to open its context menu. The drawing under the cursor
+  // is whatever is currently hovered (hoveredRef, kept fresh by crosshair-move).
+  useEffect(() => {
+    if (!chartApi) return;
+    let element: HTMLElement | null = null;
+    try { element = chartApi.chartElement(); } catch { return; }
+    if (!element) return;
+    const el = element;
+
+    const onContextMenu = (e: MouseEvent) => {
+      // A drawing tool is mid-placement — don't hijack the right-click.
+      if (useChartStore.getState().tools.activeHandler) return;
+      const id = hoveredRef.current;
+      if (!id || !useChartStore.getState().drawings.collection.has(id)) {
+        closeDrawingContextMenu();
+        return; // empty chart → leave the native menu alone
+      }
+      e.preventDefault();
+      selectOnly(id);
+      openDrawingContextMenu({ x: e.clientX, y: e.clientY, drawingId: id });
+    };
+
+    el.addEventListener('contextmenu', onContextMenu);
+    return () => el.removeEventListener('contextmenu', onContextMenu);
+  }, [chartApi, selectOnly, openDrawingContextMenu, closeDrawingContextMenu]);
 
   useEffect(() => {
     chartApi?.subscribeCrosshairMove(mouseMoveHandler);

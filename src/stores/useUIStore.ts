@@ -16,6 +16,12 @@ interface UIState {
   drawingManager: {
     isOpen: boolean;
   };
+  drawingContextMenu: {
+    isOpen: boolean;
+    x: number;
+    y: number;
+    drawingId: string | null;
+  };
   indicatorDialog: {
     isOpen: boolean;
   };
@@ -35,6 +41,8 @@ interface UIState {
   openDrawingSettings: (drawingId: string) => void;
   closeDrawingSettings: () => void;
   toggleDrawingManager: (isOpen: boolean) => void;
+  openDrawingContextMenu: (p: { x: number; y: number; drawingId: string }) => void;
+  closeDrawingContextMenu: () => void;
   toggleIndicatorDialog: (isOpen: boolean) => void;
   toggleIndicatorManager: (isOpen: boolean) => void;
   openIndicatorSettings: (indicatorId: string) => void;
@@ -58,6 +66,9 @@ export const useUIStore = create<UIState>((set) => ({
   closeDrawingSettings: () => set({ drawingSettings: { isOpen: false, drawingId: null } }),
   drawingManager: { isOpen: false },
   toggleDrawingManager: (isOpen: boolean) => set({ drawingManager: { isOpen } }),
+  drawingContextMenu: { isOpen: false, x: 0, y: 0, drawingId: null },
+  openDrawingContextMenu: ({ x, y, drawingId }) => set({ drawingContextMenu: { isOpen: true, x, y, drawingId } }),
+  closeDrawingContextMenu: () => set({ drawingContextMenu: { isOpen: false, x: 0, y: 0, drawingId: null } }),
   indicatorDialog: { isOpen: false },
   toggleIndicatorDialog: (isOpen: boolean) => set({ indicatorDialog: { isOpen } }),
   indicatorManager: { isOpen: false },

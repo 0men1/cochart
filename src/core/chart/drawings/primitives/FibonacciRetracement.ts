@@ -7,6 +7,7 @@ import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
 import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
 import { applyLineDash } from './lineStyle';
+import { HIT_TOLERANCE_PX } from '../hit';
 
 const DEFAULT_LEVELS = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
 
@@ -290,7 +291,7 @@ export class FibonacciRetracement extends BaseDrawing {
     const xLeft = this._options.extendLeft ? 0 : Math.min(coord1.x, coord2.x);
     const xRight = this._options.extendRight ? chartWidth : Math.max(coord1.x, coord2.x);
     const levels = this._options.levels ?? DEFAULT_LEVELS;
-    const hitThreshold = Math.max(this._options.width / 2 + 5, 8);
+    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
     for (const level of levels) {
       const price = this._p1.price + (this._p2.price - this._p1.price) * level;

@@ -1,4 +1,5 @@
 import { CrosshairMode, LineStyle } from "cochart-charts";
+import { DrawingType } from "@/core/chart/types";
 
 export interface GridLineSettings {
   visible: boolean;
@@ -41,7 +42,8 @@ export interface ChartSettings {
     borderUpColor: string;
     borderDownColor: string;
   };
-
+  // Number-key (1-9) hotkey per drawing tool; '' means unbound.
+  hotkeys: Record<DrawingType, string>;
 }
 
 export interface Product {
