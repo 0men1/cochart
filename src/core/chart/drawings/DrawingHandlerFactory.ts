@@ -22,24 +22,18 @@ export class BaseDrawingHandler {
     this._type = type;
   }
 
-  // The user's last-used style options for this drawing type (color, width,
-  // fill, …), or undefined the first time, in which case the class defaults win.
   private lastOptions() {
     return getLastDrawingOptions(this._type);
+  }
+
+  get requiredPoints(): number {
+    return this._DrawingClass.requiredPoints;
   }
 
   onStart(): void {
     this._collectedPoints = [];
   }
 
-  // Follows the cursor with a live preview once at least one anchor is placed
-  // and the drawing still needs more points. Single-point drawings complete on
-  // the first click, so they never preview.
-  //
-  // Drives the preview exactly like BaseDrawing.onDrag: screen-space preview
-  // points + requestUpdate(), never updatePoints()/applyOptions() — the latter
-  // would re-emit crosshair-move from inside this crosshair-move handler and
-  // recurse until the call stack overflows.
   onMove(x: Coordinate, y: Coordinate): void {
     try {
       const required = this._DrawingClass.requiredPoints;
@@ -130,14 +124,11 @@ export class DrawingHandlerFactory {
 
   createHandler(tool: DrawingType): BaseDrawingHandler | null {
     if (!tool) return null;
-
     const drawingClass = DRAWING_REGISTRY[tool];
-
     if (!drawingClass) {
       logger.error("Invalid drawing tool: ", tool);
       return null;
     }
-
     return new BaseDrawingHandler(this.chart, this.series, drawingClass, tool);
   }
 }
