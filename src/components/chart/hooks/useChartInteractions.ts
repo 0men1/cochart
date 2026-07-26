@@ -3,6 +3,7 @@ import { useCallback, useEffect } from "react";
 import { CrosshairMode } from "cochart-charts";
 import { useUIStore } from "@/stores/useUIStore";
 import { useChartStore } from "@/stores/useChartStore";
+import { DrawingType } from "@/core/chart/types";
 import { isSnapEnabled, setSnapEnabled } from "@/core/chart/snap";
 
 export function useChartInteraction() {
@@ -60,6 +61,17 @@ export function useChartInteraction() {
 
     if (event.metaKey || event.ctrlKey || event.altKey) {
       return;
+    }
+
+    // Number-key drawing-tool hotkeys (1-9). Configurable in Settings → Hotkeys.
+    if (/^[1-9]$/.test(event.key)) {
+      const { hotkeys } = useChartStore.getState().chartSettings;
+      const tool = (Object.keys(hotkeys) as DrawingType[]).find((t) => hotkeys[t] === event.key);
+      if (tool) {
+        event.preventDefault();
+        useChartStore.getState().activateTool(tool);
+        return;
+      }
     }
 
     if (/^[a-zA-Z]$/.test(event.key)) {

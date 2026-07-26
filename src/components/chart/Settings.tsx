@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SlidersHorizontal, Grid3x3, ChartCandlestick, Crosshair, Moon, Sun } from 'lucide-react';
+import { SlidersHorizontal, Grid3x3, ChartCandlestick, Crosshair, Moon, Sun, Keyboard } from 'lucide-react';
 import { CrosshairMode, LineStyle } from 'cochart-charts';
+import { DrawingType } from '@/core/chart/types';
+import { DRAWING_TYPE_META } from './drawingMeta';
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
@@ -175,7 +177,12 @@ const TabButton = ({ active, onClick, icon: Icon, label }: any) => (
   </button>
 );
 
-type Tab = 'general' | 'grid' | 'crosshair' | 'candles';
+type Tab = 'general' | 'grid' | 'crosshair' | 'candles' | 'hotkeys';
+
+const HOTKEY_OPTIONS = [
+  { value: '', label: 'None' },
+  ...['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => ({ value: n, label: n })),
+];
 
 // --- Main Component ---
 
@@ -220,6 +227,22 @@ export default function SettingsPanel() {
     });
   };
 
+  // Assign a number key to a tool, clearing whatever tool currently holds it so
+  // bindings stay unique.
+  const setHotkey = (tool: DrawingType, key: string) => {
+    setLocalChartSettings(prev => {
+      if (!prev) return null;
+      return produce(prev, (draft) => {
+        if (key) {
+          for (const t of Object.keys(draft.hotkeys) as DrawingType[]) {
+            if (draft.hotkeys[t] === key) draft.hotkeys[t] = '';
+          }
+        }
+        draft.hotkeys[tool] = key;
+      });
+    });
+  };
+
   const systemTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const timezoneOptions = [...new Set([systemTz, localChartSettings.timezone, ...TIMEZONE_OPTIONS])]
     .map((tz) => ({ value: tz, label: tz === systemTz ? `${tz} (System)` : tz }));
@@ -246,6 +269,7 @@ export default function SettingsPanel() {
         <TabButton active={activeTab === 'grid'} onClick={() => setActiveTab('grid')} icon={Grid3x3} label="Grid" />
         <TabButton active={activeTab === 'crosshair'} onClick={() => setActiveTab('crosshair')} icon={Crosshair} label="Crosshair" />
         <TabButton active={activeTab === 'candles'} onClick={() => setActiveTab('candles')} icon={ChartCandlestick} label="Candles" />
+        <TabButton active={activeTab === 'hotkeys'} onClick={() => setActiveTab('hotkeys')} icon={Keyboard} label="Hotkeys" />
       </div>
 
       {/* Scrollable Content */}
@@ -452,6 +476,39 @@ export default function SettingsPanel() {
                 onChange={(v) => updateLocal('candles.borderDownColor', v)}
               />
             </div>
+          </div>
+        )}
+
+        {activeTab === 'hotkeys' && (
+          <div className="space-y-1">
+            <p className="text-[13px] text-muted-foreground pb-2">
+              Press a number key to toggle a drawing tool. Assign a key to each tool below.
+            </p>
+            {(Object.keys(DRAWING_TYPE_META) as DrawingType[]).map((tool) => {
+              const meta = DRAWING_TYPE_META[tool];
+              const Icon = meta.icon;
+              return (
+                <div key={tool} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2.5">
+                    <Icon size={16} className="text-muted-foreground shrink-0" />
+                    <span className="text-sm text-foreground">{meta.label}</span>
+                  </div>
+                  <Select
+                    value={localChartSettings.hotkeys[tool] || 'none'}
+                    onValueChange={(v) => setHotkey(tool, v === 'none' ? '' : v)}
+                  >
+                    <SelectTrigger className="w-[110px]">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOTKEY_OPTIONS.map((o) => (
+                        <SelectItem key={o.value || 'none'} value={o.value || 'none'}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

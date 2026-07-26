@@ -9,9 +9,10 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
 import { useCollabStore } from "./useCollabStore";
 import { restoreDrawing } from "@/core/chart/drawings/registry";
+import { pixelNudgeDeltas, shiftPoints } from "@/core/chart/drawings/clipboard";
 import { enableMapSet, setAutoFreeze, Draft } from "immer";
 import { DrawingType, Point } from "@/core/chart/types";
-import { BaseDrawingHandler } from "@/core/chart/drawings/DrawingHandlerFactory";
+import { BaseDrawingHandler, DrawingHandlerFactory } from "@/core/chart/drawings/DrawingHandlerFactory";
 import { deepMerge } from "./mergeSettings";
 import { IndicatorConfig, IndicatorParams, IndicatorStyle, IndicatorType } from "@/core/chart/indicators/types";
 import { INDICATOR_META, nextIndicatorColor } from "@/core/chart/indicators/registry";
@@ -75,6 +76,17 @@ export const defaultSettings: ChartSettings = {
     borderUpColor: '#26a69a',
     borderDownColor: '#ef5350',
   },
+  // Default number-key hotkeys, following the ToolBox order.
+  hotkeys: {
+    [DrawingType.VERTICAL_LINE]: '1',
+    [DrawingType.HORIZONTAL_LINE]: '2',
+    [DrawingType.TREND_LINE]: '3',
+    [DrawingType.RAY]: '4',
+    [DrawingType.RECTANGLE]: '5',
+    [DrawingType.TRIANGLE]: '6',
+    [DrawingType.FIBONACCI]: '7',
+    [DrawingType.TEXT]: '8',
+  },
 }
 
 
@@ -102,6 +114,7 @@ interface ChartState {
   setInstances: (chartApi: IChartApi | null, seriesApi: ISeriesApi<SeriesType> | null) => void;
   setDataConnectionState: (state: ConnectionState) => void;
   addDrawing: (drawing: BaseDrawing) => void;
+  duplicateDrawing: (drawingId: string) => void;
   deleteDrawing: (drawingId: string) => void;
   deleteSelectedDrawing: () => void;
   selectDrawing: (drawingId: string | null) => void;
@@ -109,6 +122,7 @@ interface ChartState {
   deselectDrawing: () => void;
   modifyDrawing: (newDrawing: BaseDrawing) => void;
   startTool: (tool: DrawingType, handler: BaseDrawingHandler | null) => void;
+  activateTool: (tool: DrawingType) => void;
   cancelTool: () => void;
   undo: () => void;
   redo: () => void;
@@ -142,10 +156,6 @@ const defaultData: DataState = {
 enableMapSet();
 setAutoFreeze(false);
 
-// Detach every drawing from the live series and empty the collection. Used when
-// switching tickers (drawings are per-ticker) and by clearDrawings. delete()
-// detaches from the current series; instances stranded on a disposed series are
-// simply dropped when the map is cleared.
 function detachAndClearDrawings(state: Draft<ChartState>) {
   for (const drawing of state.drawings.collection.values()) {
     if (drawing.isAttached && drawing.series === state.seriesApi) {
@@ -159,12 +169,6 @@ function detachAndClearDrawings(state: Draft<ChartState>) {
   resetHistory();
 }
 
-// ---------------------------------------------------------------------------
-// Undo/redo history (module-scoped, non-reactive). Records ONLY local drawing
-// actions (add/modify/delete); remote `sync*` actions are never recorded so
-// undo can't fight collaborators. `snapshots` holds the last-committed
-// serialized state per drawing id, used to compute a modify's "before".
-// ---------------------------------------------------------------------------
 type DrawCommand =
   | { op: 'add'; after: SerializedDrawing }
   | { op: 'delete'; before: SerializedDrawing }
@@ -175,8 +179,6 @@ const historyRedo: DrawCommand[] = [];
 const snapshots = new Map<string, SerializedDrawing>();
 let applyingHistory = false;
 
-// Suppress recording while inverting a command or restoring from storage, so
-// undo/redo and load don't push new history entries.
 export function suppressHistory<T>(fn: () => T): T {
   const prev = applyingHistory;
   applyingHistory = true;
@@ -214,9 +216,6 @@ function recordDelete(before: SerializedDrawing | undefined) {
   historyRedo.length = 0;
 }
 
-// Relay an indicator change to the collab room when connected; a no-op solo.
-// Indicators are plain config objects, so they go on the wire as-is (no
-// serialize step, unlike drawings).
 function broadcastIndicator(type: CollabAction, payload: Record<string, unknown>) {
   const { socket, status } = useCollabStore.getState();
   if (status === ConnectionStatus.CONNECTED && socket) {
@@ -506,6 +505,22 @@ export const useChartStore = create<ChartState>()(
           });
         }
       },
+      duplicateDrawing: (drawingId: string) => {
+        const state = useChartStore.getState();
+        const src = state.drawings.collection.get(drawingId);
+        const series = state.seriesApi;
+        if (!src || !series) return;
+        const clip = src.serialize();
+        let points = clip.points;
+        if (state.chartApi && clip.points.length > 0) {
+          const deltas = pixelNudgeDeltas(state.chartApi, series, clip.points[0], 16, -16);
+          if (deltas) points = shiftPoints(clip.points, deltas.timeDelta, deltas.priceDelta);
+        }
+        const inst = restoreDrawing({ ...clip, id: randomUUID(), points, isDeleted: false });
+        if (!inst) return;
+        state.addDrawing(inst);
+        state.selectOnly(inst.id);
+      },
       modifyDrawing: (newDrawing: BaseDrawing) => set((state) => {
         recordModify(newDrawing);
         const existingDrawing = state.drawings.collection.get(newDrawing.id);
@@ -524,9 +539,6 @@ export const useChartStore = create<ChartState>()(
         logger.debug("selecting drawing " + drawingId)
         state.drawings.selected = drawingId;
       }),
-      // Make `drawingId` the sole selection: clear every other instance's flag,
-      // flag the target, and record it in the store. Side effects run before the
-      // set (setSelected calls applyOptions), matching deselectDrawing.
       selectOnly: (drawingId: string) => {
         const { collection } = useChartStore.getState().drawings;
         for (const d of collection.values()) {
@@ -538,10 +550,6 @@ export const useChartStore = create<ChartState>()(
       deselectDrawing: () => {
         const selected = useChartStore.getState().drawings.selected;
         if (!selected) return;
-        // Clear the instance's selected flag so its control points stop
-        // rendering. setSelected(false) fires a SELECT notification whose
-        // listener re-selects in the store, so null the store selection right
-        // after (sequential top-level sets — never nested inside one recipe).
         useChartStore.getState().drawings.collection.get(selected)?.setSelected(false);
         set((state) => { state.drawings.selected = null; });
       },
@@ -571,6 +579,19 @@ export const useChartStore = create<ChartState>()(
         state.tools.activeTool = tool;
         state.tools.activeHandler = handler;
       }),
+      activateTool: (tool: DrawingType) => {
+        const s = useChartStore.getState();
+        if (!s.chartApi || !s.seriesApi) return;
+        if (s.tools.activeTool === tool) { s.cancelTool(); return; }
+        if (s.tools.activeHandler) s.cancelTool();
+        try {
+          const handler = new DrawingHandlerFactory(s.chartApi, s.seriesApi).createHandler(tool);
+          if (handler) s.startTool(tool, handler);
+        } catch (e) {
+          logger.error("failed to activate tool: ", e);
+          s.cancelTool();
+        }
+      },
       cancelTool: () => set((state) => {
         try { state.tools.activeHandler?.onCancel(); } catch (e) { logger.error(e); }
         state.tools.activeTool = null;

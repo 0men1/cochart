@@ -45,6 +45,8 @@ export function useChartDrawings() {
 
   const roomId = useCollabStore((s) => s.roomId);
   const openDrawingSettings = useUIStore((s) => s.openDrawingSettings);
+  const openDrawingContextMenu = useUIStore((s) => s.openDrawingContextMenu);
+  const closeDrawingContextMenu = useUIStore((s) => s.closeDrawingContextMenu);
   const isInitializedRef = useRef<string | null>(null);
   const wiredRef = useRef(new WeakSet<BaseDrawing>());
   const hoveredRef = useRef<string | null>(null);
@@ -355,6 +357,32 @@ export function useChartDrawings() {
       element.removeEventListener('pointercancel', onPointerUp, true);
     };
   }, [chartApi, seriesApi, commitDrawing]);
+
+  // Right-click a drawing to open its context menu. The drawing under the cursor
+  // is whatever is currently hovered (hoveredRef, kept fresh by crosshair-move).
+  useEffect(() => {
+    if (!chartApi) return;
+    let element: HTMLElement | null = null;
+    try { element = chartApi.chartElement(); } catch { return; }
+    if (!element) return;
+    const el = element;
+
+    const onContextMenu = (e: MouseEvent) => {
+      // A drawing tool is mid-placement — don't hijack the right-click.
+      if (useChartStore.getState().tools.activeHandler) return;
+      const id = hoveredRef.current;
+      if (!id || !useChartStore.getState().drawings.collection.has(id)) {
+        closeDrawingContextMenu();
+        return; // empty chart → leave the native menu alone
+      }
+      e.preventDefault();
+      selectOnly(id);
+      openDrawingContextMenu({ x: e.clientX, y: e.clientY, drawingId: id });
+    };
+
+    el.addEventListener('contextmenu', onContextMenu);
+    return () => el.removeEventListener('contextmenu', onContextMenu);
+  }, [chartApi, selectOnly, openDrawingContextMenu, closeDrawingContextMenu]);
 
   useEffect(() => {
     chartApi?.subscribeCrosshairMove(mouseMoveHandler);

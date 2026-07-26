@@ -26,6 +26,7 @@ import ChatPanel from './ChatPanel';
 import PeerCursors from './PeerCursors';
 import PeerDragLabels from './PeerDragLabels';
 import ConnectionBanner from './ConnectionBanner';
+import DrawingContextMenu from './DrawingContextMenu';
 import { useCursorBroadcast } from './hooks/useCursorBroadcast';
 import { useCollabStore } from '@/stores/useCollabStore';
 import { useIdentityStore } from '@/stores/useIdentityStore';
@@ -127,6 +128,7 @@ export default function ClientChart() {
         <CollabStatus />
         <Settings />
         <DrawingSettings />
+        <DrawingContextMenu />
         <IndicatorDialog />
         <IndicatorSettings />
         <ChartFooter />
