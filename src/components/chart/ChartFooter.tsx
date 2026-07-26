@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "../ui/button";
-import { MessageSquarePlus, Wifi } from "lucide-react";
+import { HelpCircle, MessageSquarePlus, Wifi } from "lucide-react";
 import SuggestionModal from "./SuggestionModal";
 import { ConnectionStatus } from "@/core/chart/market-data/types";
 import { useCollabStore } from "@/stores/useCollabStore";
@@ -111,12 +111,21 @@ export default function ChartFooter() {
         <TooltipContent side="bottom">Share feedback</TooltipContent>
       </Tooltip>
 
-      <div
-        className="ml-3 flex items-center justify-center w-5 h-5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground cursor-pointer transition-colors"
-        onClick={() => toggleWelcomeTour(true)}
-      >
-        <span className="text-[10px] font-bold">?</span>
-      </div>
+      {/* Help / reopen the guided tour */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            aria-label="Help and guided tour"
+            onClick={() => toggleWelcomeTour(true)}
+          >
+            <HelpCircle size={18} className="text-muted-foreground" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Help &amp; tour</TooltipContent>
+      </Tooltip>
 
       <SuggestionModal />
     </div>
