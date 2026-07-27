@@ -21,7 +21,7 @@ export class RoomManager {
 
   reapIdle(maxAgeMs: number, now: number = Date.now()): void {
     for (const [id, room] of this.rooms) {
-      if (room.clients.size === 0 && now - room.createdAt > maxAgeMs) {
+      if (room.emptySince !== null && now - room.emptySince > maxAgeMs) {
         this.rooms.delete(id);
       }
     }

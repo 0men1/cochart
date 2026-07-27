@@ -27,7 +27,7 @@ export function handleCreateRoom(
   }
 
   const roomId = randomUUID();
-  const room = new Room(roomId, manager);
+  const room = new Room(roomId);
   manager.addRoom(room);
 
   logger.debug(`Created room: ${roomId}`);

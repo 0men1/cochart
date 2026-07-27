@@ -2,13 +2,16 @@ import { describe, it, expect } from "vitest";
 import { RoomManager } from "./roomManager";
 import type { Room } from "./room";
 
-// A room-like with just the fields RoomManager reads: id, its client set (for
-// emptiness), and createdAt (for reaping).
-const room = (id: string, opts: { clients?: number; createdAt?: number } = {}) =>
+// A room-like with just the fields RoomManager reads: id, its client set, and
+// emptySince (null while occupied, else when it went empty — drives reaping).
+const room = (
+  id: string,
+  opts: { clients?: number; emptySince?: number | null } = {},
+) =>
   ({
     id,
     clients: new Set(Array.from({ length: opts.clients ?? 0 })),
-    createdAt: opts.createdAt ?? Date.now(),
+    emptySince: opts.emptySince ?? null,
   }) as unknown as Room;
 
 describe("RoomManager", () => {
@@ -37,23 +40,23 @@ describe("RoomManager.reapIdle", () => {
   const now = 1_000_000;
   const ttl = 5 * 60_000;
 
-  it("reaps empty rooms created before the TTL", () => {
+  it("reaps rooms empty for longer than the TTL", () => {
     const mgr = new RoomManager();
-    mgr.addRoom(room("old", { clients: 0, createdAt: now - ttl - 1 }));
+    mgr.addRoom(room("old", { clients: 0, emptySince: now - ttl - 1 }));
     mgr.reapIdle(ttl, now);
     expect(mgr.getRoom("old")).toBeUndefined();
   });
 
-  it("keeps empty rooms still within the grace period", () => {
+  it("keeps rooms still within the grace period", () => {
     const mgr = new RoomManager();
-    mgr.addRoom(room("fresh", { clients: 0, createdAt: now - 1000 }));
+    mgr.addRoom(room("fresh", { clients: 0, emptySince: now - 1000 }));
     mgr.reapIdle(ttl, now);
     expect(mgr.getRoom("fresh")).toBeDefined();
   });
 
-  it("never reaps a room that still has clients, however old", () => {
+  it("never reaps an occupied room (emptySince null), however old", () => {
     const mgr = new RoomManager();
-    mgr.addRoom(room("busy", { clients: 3, createdAt: now - ttl * 10 }));
+    mgr.addRoom(room("busy", { clients: 3, emptySince: null }));
     mgr.reapIdle(ttl, now);
     expect(mgr.getRoom("busy")).toBeDefined();
   });

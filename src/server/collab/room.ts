@@ -9,7 +9,6 @@ import {
   type Indicator,
   type IncomingAction,
 } from "./protocol";
-import type { RoomManager } from "./roomManager";
 
 interface RoomState {
   seeded: boolean;
@@ -29,6 +28,7 @@ const MAX_INDICATORS = 50;
 export class Room {
   clients = new Set<Client>();
   readonly createdAt = Date.now();
+  emptySince: number | null = Date.now();
 
   // The single source of truth for this room.
   private state: RoomState = {
@@ -39,13 +39,11 @@ export class Room {
     messages: [],
   };
 
-  constructor(
-    public id: string,
-    private manager: RoomManager,
-  ) { }
+  constructor(public id: string) { }
 
   register(client: Client): void {
     this.clients.add(client);
+    this.emptySince = null;
     client.start();
     logger.debug(
       `User joined: ${client.displayName} (Room: ${this.id}, Total: ${this.clients.size})`,
@@ -67,8 +65,8 @@ export class Room {
     }
 
     if (this.clients.size === 0) {
-      logger.debug(`Room ${this.id} empty, cleaning up`);
-      this.manager.removeRoom(this.id);
+      logger.debug(`Room ${this.id} empty, starting grace period`);
+      this.emptySince = Date.now();
       return;
     }
 

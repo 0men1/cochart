@@ -568,14 +568,30 @@ describe("Room chat", () => {
 });
 
 describe("Room lifecycle", () => {
-  it("removes itself from the manager when the last client leaves", () => {
+  it("keeps the room (grace period) instead of deleting it when the last client leaves", () => {
     const manager = fakeManager();
     const room = newRoom(manager);
     const a = fakeClient("a");
     room.register(asClient(a));
+    expect(room.emptySince).toBeNull();
 
     room.unregister(asClient(a));
-    expect(manager.removeRoom).toHaveBeenCalledWith("room-1");
+    // The room survives so an accidental disconnect doesn't wipe its state;
+    // the idle sweep reaps it later if it stays empty.
+    expect(manager.removeRoom).not.toHaveBeenCalled();
+    expect(typeof room.emptySince).toBe("number");
+  });
+
+  it("clears the grace-period timestamp when a client rejoins", () => {
+    const manager = fakeManager();
+    const room = newRoom(manager);
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    room.unregister(asClient(a));
+    expect(typeof room.emptySince).toBe("number");
+
+    room.register(asClient(fakeClient("b")));
+    expect(room.emptySince).toBeNull();
   });
 
   it("keeps the room and rebroadcasts presence when others remain", () => {
