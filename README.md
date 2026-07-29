@@ -32,13 +32,22 @@ optional way to support the project — never a gate on what CoChart already doe
 - **No signup** — anonymous by default. Start drawing instantly and invite others
   with a link.
 - **Live & historical candlesticks** — OHLCV data streamed and backfilled from
-  Coinbase's public market API (no API key required).
+  public exchange APIs — **Coinbase, Kraken, and Binance** — with no API keys
+  required.
 - **Drawing tools** — trendlines, rays, horizontal & vertical lines, rectangles,
-  and Fibonacci retracements, with draggable control points.
+  triangles, Fibonacci retracements, and text labels, with draggable control
+  points, copy/paste, a right-click context menu, keyboard shortcuts, and a
+  drawing manager.
+- **Technical indicators** — moving averages (SMA/EMA), VWAP, RSI, MACD, and
+  volume, each configurable and synced live across the room.
 - **Real-time collaboration** — WebSocket-backed rooms sync chart state, drawings,
-  and peer cursors across participants.
-- **Local persistence** — drawings and settings are saved in your browser via
-  IndexedDB, so sessions survive reloads (opt-in cloud saving is planned).
+  indicators, peer cursors, live presence, and in-room chat. Rooms survive brief
+  disconnects and server restarts (a short grace period plus server-side
+  persistence) and are cleaned up automatically after everyone leaves.
+- **Persistence** — your own chart and settings are saved locally in your browser
+  (IndexedDB); shared rooms are persisted server-side (SQLite) so they survive
+  reconnects and restarts, then reaped after inactivity. Opt-in cloud accounts
+  for a durable personal library are planned.
 
 ## Getting Started
 
@@ -50,7 +59,11 @@ npm run dev
 ```
 
 Then open http://localhost:3000. No API keys or secrets are needed — CoChart uses
-Coinbase's public endpoints for market data.
+public exchange endpoints (Coinbase, Kraken, Binance) for market data.
+
+On first run the server creates a small SQLite file for collaborative-room
+persistence at `./data/rooms.db` (override with `ROOM_DB_PATH`). It's git-ignored,
+and no external database is required.
 
 ### Scripts
 
@@ -67,6 +80,10 @@ Coinbase's public endpoints for market data.
 - **Styling:** Tailwind CSS 4, Radix UI
 - **State:** Zustand + Immer
 - **Realtime:** Custom Node HTTP + WebSocket server (`server.ts`, `ws`)
+- **Market data:** public REST + WebSocket feeds from Coinbase, Kraken, and
+  Binance (no API keys)
+- **Persistence:** SQLite (`better-sqlite3`) for collaborative-room state;
+  IndexedDB + localStorage in the browser for local chart/settings
 - **Charts:** [`cochart-charts`](https://github.com/0men1/cochart-charts) — a fork
   of TradingView Lightweight Charts™ (see [Credits](#credits))
 

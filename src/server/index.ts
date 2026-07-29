@@ -1,4 +1,5 @@
 import { RoomManager } from "./collab/roomManager";
+import { SqliteRoomStore } from "./collab/roomStore";
 import { logger } from "../lib/logger";
 import { createRateLimiter } from "./feedback/rateLimit";
 import { CoinbaseProvider } from "./market/coinbase";
@@ -19,7 +20,13 @@ const providers = new Map<string, ExchangeProvider>([
 
 export const marketService = new MarketService(providers);
 export const searchEngine = new SearchEngine();
-export const roomManager = new RoomManager();
+
+// Rooms are persisted to SQLite so they survive a server restart. server.ts
+// restores them on boot and flushes on shutdown / on an interval.
+export const roomStore = new SqliteRoomStore(
+  process.env.ROOM_DB_PATH ?? "./data/rooms.db",
+);
+export const roomManager = new RoomManager(roomStore);
 
 export const candlesLimiter = createRateLimiter({ limit: 120, windowMs: 60_000 });
 export const searchLimiter = createRateLimiter({ limit: 300, windowMs: 60_000 });

@@ -14,8 +14,10 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-No API keys or secrets are required — CoChart uses Coinbase's public market data
-endpoints.
+No API keys or secrets are required — CoChart uses public exchange market-data
+endpoints (Coinbase, Kraken, Binance). On first run the server creates a
+git-ignored SQLite file at `./data/rooms.db` for room persistence (override with
+`ROOM_DB_PATH`); no external database is needed.
 
 ## Making changes
 

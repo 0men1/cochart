@@ -1,7 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { Room } from "./room";
 import type { Client } from "./client";
-import type { RoomManager } from "./roomManager";
 import { CollabAction } from "./protocol";
 
 interface FakeClient {
@@ -27,16 +26,11 @@ function fakeClient(id: string): FakeClient {
   return c;
 }
 
-// Room only touches removeRoom on the manager (identity is cosmetic; there is
-// no per-user index or eviction any more).
-function fakeManager() {
-  return {
-    removeRoom: vi.fn(),
-  } as unknown as RoomManager;
-}
-
-function newRoom(manager = fakeManager()): Room {
-  return new Room("room-1", manager);
+// Rooms no longer hold a manager reference; emptying a room just starts its
+// grace period (RoomManager.reapIdle does the eviction), so tests inspect
+// room.emptySince rather than a manager mock.
+function newRoom(): Room {
+  return new Room("room-1");
 }
 
 const asClient = (c: FakeClient) => c as unknown as Client;
@@ -568,19 +562,31 @@ describe("Room chat", () => {
 });
 
 describe("Room lifecycle", () => {
-  it("removes itself from the manager when the last client leaves", () => {
-    const manager = fakeManager();
-    const room = newRoom(manager);
+  it("keeps the room (grace period) instead of deleting it when the last client leaves", () => {
+    const room = newRoom();
     const a = fakeClient("a");
     room.register(asClient(a));
+    expect(room.emptySince).toBeNull();
 
     room.unregister(asClient(a));
-    expect(manager.removeRoom).toHaveBeenCalledWith("room-1");
+    // The room survives so an accidental disconnect doesn't wipe its state;
+    // the idle sweep reaps it later if it stays empty.
+    expect(typeof room.emptySince).toBe("number");
+  });
+
+  it("clears the grace-period timestamp when a client rejoins", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    room.unregister(asClient(a));
+    expect(typeof room.emptySince).toBe("number");
+
+    room.register(asClient(fakeClient("b")));
+    expect(room.emptySince).toBeNull();
   });
 
   it("keeps the room and rebroadcasts presence when others remain", () => {
-    const manager = fakeManager();
-    const room = newRoom(manager);
+    const room = newRoom();
     const a = fakeClient("a");
     const b = fakeClient("b");
     room.register(asClient(a));
@@ -588,7 +594,7 @@ describe("Room lifecycle", () => {
     b.sent.length = 0;
 
     room.unregister(asClient(a));
-    expect(manager.removeRoom).not.toHaveBeenCalled();
+    expect(room.emptySince).toBeNull();
     expect(lastMessageOfType(b, CollabAction.PRESENCE).payload.count).toBe(1);
   });
 });
@@ -674,3 +680,78 @@ describe("Room malformed payloads", () => {
     expect(lastMessageOfType(probe, CollabAction.SNAPSHOT).payload.drawings).toEqual([]);
   });
 });
+
+describe("Room serialize / hydrate", () => {
+  it("serialize() captures the full authoritative state", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.INIT_ROOM,
+        payload: {
+          product: "BTC-USD",
+          timeframe: "1H",
+          drawings: [{ id: "d1", kind: "trendline" }],
+          indicators: [{ id: "i1", type: "SMA" }],
+        },
+      }),
+      asClient(a),
+    );
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.CHAT, payload: { text: "hi" } }),
+      asClient(a),
+    );
+
+    const snap = room.serialize();
+    expect(snap.id).toBe("room-1");
+    expect(snap.state.seeded).toBe(true);
+    expect(snap.state.chart).toEqual({ product: "BTC-USD", timeframe: "1H" });
+    expect(snap.state.drawings).toEqual([{ id: "d1", kind: "trendline" }]);
+    expect(snap.state.indicators).toEqual([{ id: "i1", type: "SMA" }]);
+    expect(snap.state.messages).toHaveLength(1);
+    expect(snap.state.messages[0].text).toBe("hi");
+  });
+
+  it("a hydrated room serves the restored state as a SNAPSHOT to a joiner", () => {
+    const room = Room.fromPersisted({
+      id: "room-1",
+      emptySince: 123,
+      state: {
+        seeded: true,
+        chart: { product: "ETH-USD", timeframe: "1D" },
+        drawings: [{ id: "d1" }],
+        indicators: [],
+        messages: [],
+      },
+    });
+    expect(room.emptySince).toBe(123);
+
+    const b = fakeClient("b");
+    room.register(asClient(b));
+    const snap = lastMessageOfType(b, CollabAction.SNAPSHOT);
+    expect(snap.payload.product).toBe("ETH-USD");
+    expect(snap.payload.timeframe).toBe("1D");
+    expect(snap.payload.drawings).toEqual([{ id: "d1" }]);
+  });
+
+  it("marks itself dirty on a state mutation but not on ephemeral messages", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    room.register(asClient(a));
+
+    room.dirty = false;
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.CURSOR, payload: { time: 1, price: 2 } }),
+      asClient(a),
+    );
+    expect(room.dirty).toBe(false);
+
+    room.handleMessage(
+      JSON.stringify({ type: CollabAction.ADD_DRAWING, payload: { drawing: { id: "d1" } } }),
+      asClient(a),
+    );
+    expect(room.dirty).toBe(true);
+  });
+});
+
