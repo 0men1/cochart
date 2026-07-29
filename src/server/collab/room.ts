@@ -9,6 +9,7 @@ import {
   type Indicator,
   type IncomingAction,
 } from "./protocol";
+import type { PersistedRoom, SerializedRoomState } from "./roomStore";
 
 interface RoomState {
   seeded: boolean;
@@ -29,6 +30,7 @@ export class Room {
   clients = new Set<Client>();
   readonly createdAt = Date.now();
   emptySince: number | null = Date.now();
+  dirty = false;
 
   // The single source of truth for this room.
   private state: RoomState = {
@@ -41,9 +43,23 @@ export class Room {
 
   constructor(public id: string) { }
 
+  static fromPersisted(data: PersistedRoom): Room {
+    const room = new Room(data.id);
+    room.emptySince = data.emptySince;
+    room.state = {
+      seeded: data.state.seeded,
+      chart: data.state.chart,
+      drawings: new Map(data.state.drawings.map((d) => [d.id, d])),
+      indicators: new Map(data.state.indicators.map((i) => [i.id, i])),
+      messages: [...data.state.messages],
+    };
+    return room;
+  }
+
   register(client: Client): void {
     this.clients.add(client);
     this.emptySince = null;
+    this.dirty = true;
     client.start();
     logger.debug(
       `User joined: ${client.displayName} (Room: ${this.id}, Total: ${this.clients.size})`,
@@ -67,6 +83,7 @@ export class Room {
     if (this.clients.size === 0) {
       logger.debug(`Room ${this.id} empty, starting grace period`);
       this.emptySince = Date.now();
+      this.dirty = true;
       return;
     }
 
@@ -114,6 +131,7 @@ export class Room {
         this.state.indicators = new Map(
           (action.payload?.indicators ?? []).map((i) => [i.id, i]),
         );
+        this.dirty = true;
         // Covers the rare case where someone joined before the seed arrived.
         this.broadcastToOthers(this.snapshotMessage(), sender);
         return;
@@ -124,6 +142,7 @@ export class Room {
           product: action.payload?.product,
           timeframe: action.payload?.timeframe,
         };
+        this.dirty = true;
         break;
       }
       case CollabAction.ADD_DRAWING:
@@ -134,12 +153,13 @@ export class Room {
           if (isNew && this.state.drawings.size >= MAX_DRAWINGS) return;
           this.state.seeded = true;
           this.state.drawings.set(drawing.id, drawing);
+          this.dirty = true;
         }
         break;
       }
       case CollabAction.DELETE_DRAWING: {
         const drawingId = action.payload?.drawingId;
-        if (drawingId) this.state.drawings.delete(drawingId);
+        if (drawingId && this.state.drawings.delete(drawingId)) this.dirty = true;
         break;
       }
       case CollabAction.ADD_INDICATOR:
@@ -150,12 +170,13 @@ export class Room {
           if (isNew && this.state.indicators.size >= MAX_INDICATORS) return;
           this.state.seeded = true;
           this.state.indicators.set(indicator.id, indicator);
+          this.dirty = true;
         }
         break;
       }
       case CollabAction.REMOVE_INDICATOR: {
         const indicatorId = action.payload?.indicatorId;
-        if (indicatorId) this.state.indicators.delete(indicatorId);
+        if (indicatorId && this.state.indicators.delete(indicatorId)) this.dirty = true;
         break;
       }
       case CollabAction.UPDATE_PRESENCE: {
@@ -192,6 +213,7 @@ export class Room {
         if (this.state.messages.length > MAX_CHAT_HISTORY) {
           this.state.messages = this.state.messages.slice(-MAX_CHAT_HISTORY);
         }
+        this.dirty = true;
         this.broadcastToAll(
           JSON.stringify({ type: CollabAction.CHAT, payload: { message } }),
         );
@@ -204,15 +226,37 @@ export class Room {
     this.broadcastToOthers(raw, sender);
   }
 
+  // Flatten the live state (Maps → arrays) into its JSON-serializable form.
+  // Shared by snapshotMessage() and serialize() so the two can't drift.
+  private serializeState(): SerializedRoomState {
+    return {
+      seeded: this.state.seeded,
+      chart: this.state.chart,
+      drawings: Array.from(this.state.drawings.values()),
+      indicators: Array.from(this.state.indicators.values()),
+      messages: this.state.messages,
+    };
+  }
+
+  // A persistable snapshot of the whole room, for a RoomStore.
+  serialize(): PersistedRoom {
+    return {
+      id: this.id,
+      emptySince: this.emptySince,
+      state: this.serializeState(),
+    };
+  }
+
   private snapshotMessage(): string {
+    const state = this.serializeState();
     return JSON.stringify({
       type: CollabAction.SNAPSHOT,
       payload: {
-        product: this.state.chart?.product ?? null,
-        timeframe: this.state.chart?.timeframe ?? null,
-        drawings: Array.from(this.state.drawings.values()),
-        indicators: Array.from(this.state.indicators.values()),
-        messages: this.state.messages,
+        product: state.chart?.product ?? null,
+        timeframe: state.chart?.timeframe ?? null,
+        drawings: state.drawings,
+        indicators: state.indicators,
+        messages: state.messages,
       },
     });
   }

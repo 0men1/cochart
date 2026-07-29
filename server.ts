@@ -8,6 +8,7 @@ import {
   ensureSearchIndex,
   marketService,
   roomManager,
+  roomStore,
   searchEngine,
 } from "./src/server";
 import { logger } from "./src/lib/logger";
@@ -20,6 +21,7 @@ const ROOM_JOIN_PATH = "/api/rooms/join";
 const MAX_WS_PAYLOAD = 256 * 1024;
 const ROOM_SWEEP_INTERVAL_MS = 60_000;
 const ROOM_IDLE_TTL_MS = 5 * 60_000;
+const ROOM_FLUSH_INTERVAL_MS = 5_000;
 
 type AliveSocket = WebSocket & { isAlive?: boolean };
 
@@ -28,6 +30,7 @@ const handle = app.getRequestHandler();
 
 async function main(): Promise<void> {
   await app.prepare();
+  roomManager.hydrate(ROOM_IDLE_TTL_MS);
   const upgradeHandler = app.getUpgradeHandler();
 
   const server = createServer(async (req, res) => {
@@ -101,9 +104,31 @@ async function main(): Promise<void> {
   }, ROOM_SWEEP_INTERVAL_MS);
   roomSweep.unref?.();
 
+  const roomFlush = setInterval(() => {
+    roomManager.flushDirty();
+  }, ROOM_FLUSH_INTERVAL_MS);
+  roomFlush.unref?.();
+
   server.listen(port, hostname, () => {
     logger.info(`> Ready on http://${hostname}:${port} (dev=${dev})`);
   });
+
+  // Graceful shutdown
+  let shuttingDown = false;
+  const shutdown = (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info(`Received ${signal}, flushing rooms and shutting down...`);
+    clearInterval(heartbeat);
+    clearInterval(roomSweep);
+    clearInterval(roomFlush);
+    roomManager.flushDirty();
+    roomStore.close();
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 5_000).unref?.();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
 process.on("uncaughtException", (err) => {

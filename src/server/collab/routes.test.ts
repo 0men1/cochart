@@ -3,6 +3,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { handleCreateRoom, handleJoinRoom } from "./routes";
 import { RoomManager } from "./roomManager";
 import { Room } from "./room";
+import { SqliteRoomStore } from "./roomStore";
+
+const newManager = () => new RoomManager(new SqliteRoomStore(":memory:"));
 
 function fakeReq(ip: string, url = "/"): IncomingMessage {
   return {
@@ -40,7 +43,7 @@ function fakeWs() {
 
 describe("handleCreateRoom", () => {
   it("creates a room and returns its id/url", () => {
-    const mgr = new RoomManager();
+    const mgr = newManager();
     const res = fakeRes();
     handleCreateRoom(fakeReq("10.0.0.1"), res, mgr);
 
@@ -52,7 +55,7 @@ describe("handleCreateRoom", () => {
   });
 
   it("rate-limits room creation per client (429 after the burst)", () => {
-    const mgr = new RoomManager();
+    const mgr = newManager();
     // Unique IP so this test's window is independent of the shared limiter's
     // other keys. Limit is 30/min.
     const ip = "203.0.113.77";
@@ -71,8 +74,8 @@ describe("handleCreateRoom", () => {
 
 describe("handleJoinRoom", () => {
   it("registers the client and ignores a spoofed userId (no eviction)", () => {
-    const mgr = new RoomManager();
-    const room = new Room("room-1", mgr);
+    const mgr = newManager();
+    const room = new Room("room-1");
     mgr.addRoom(room);
 
     const ws = fakeWs();
@@ -89,7 +92,7 @@ describe("handleJoinRoom", () => {
   });
 
   it("closes the socket when the room does not exist", () => {
-    const mgr = new RoomManager();
+    const mgr = newManager();
     const ws = fakeWs();
     handleJoinRoom(ws as never, fakeReq("1.2.3.4", "/api/rooms/join?roomId=nope"), mgr);
     expect(ws.close).toHaveBeenCalledWith(1008, "Room not found");

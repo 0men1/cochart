@@ -17,6 +17,9 @@ coverage/
 # production
 build/
 
+# sqlite room persistence
+data/
+
 # misc
 .DS_Store
 *.pem

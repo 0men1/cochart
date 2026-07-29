@@ -3,7 +3,6 @@ import { logger } from "../../lib/logger";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { WebSocket } from "ws";
 import { Client } from "./client";
-import { Room } from "./room";
 import type { RoomManager } from "./roomManager";
 import { createRoomLimiter } from "../index";
 import { clientIp, sendJson } from "../http";
@@ -27,8 +26,7 @@ export function handleCreateRoom(
   }
 
   const roomId = randomUUID();
-  const room = new Room(roomId);
-  manager.addRoom(room);
+  manager.createRoom(roomId);
 
   logger.debug(`Created room: ${roomId}`);
 
