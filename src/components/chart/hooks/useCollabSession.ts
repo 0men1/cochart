@@ -31,7 +31,7 @@ export function useCollabSession() {
       window.history.pushState({}, '', result.url);
     } catch (error) {
       logger.error("error: failed to create session, ", error);
-      setError(error as string);
+      setError(error instanceof Error ? error.message : "Failed to create session");
     } finally {
       setIsCreating(false);
     }

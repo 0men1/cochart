@@ -37,11 +37,13 @@ function getStatusDiv(status: ConnectionStatus) {
     case ConnectionStatus.DISCONNECTED:
       return (<span className="text-destructive">●</span>)
     case ConnectionStatus.CONNECTING:
-      break;
+      return (<span className="text-muted-foreground animate-pulse">●</span>)
     case ConnectionStatus.ERROR:
-      break;
+      return (<span className="text-destructive">●</span>)
     case ConnectionStatus.RECONNECTING:
       return (<span className="text-yellow-500">●</span>)
+    default:
+      return (<span className="text-muted-foreground">●</span>)
   }
 }
 export default function ChartFooter() {

@@ -11,6 +11,7 @@ import {
   roomStore,
   searchEngine,
 } from "./src/server";
+import { isAllowedWsOrigin } from "./src/server/http";
 import { logger } from "./src/lib/logger";
 
 const dev = process.env.NODE_ENV !== "production";
@@ -27,6 +28,10 @@ type AliveSocket = WebSocket & { isAlive?: boolean };
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
+
+let shutdown: (signal: string, code?: number) => void = (_signal, code = 0) => {
+  process.exit(code);
+};
 
 async function main(): Promise<void> {
   await app.prepare();
@@ -78,6 +83,13 @@ async function main(): Promise<void> {
   server.on("upgrade", (req, socket, head) => {
     const pathname = new URL(req.url ?? "", "http://localhost").pathname;
     if (pathname === ROOM_JOIN_PATH) {
+      // Reject cross-site socket hijacking (CSWSH) before upgrading.
+      if (!isAllowedWsOrigin(req.headers.origin, { dev })) {
+        logger.warn(`Rejected WS upgrade from disallowed origin: ${req.headers.origin}`);
+        socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+        socket.destroy();
+        return;
+      }
       wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit("connection", ws, req);
       });
@@ -115,7 +127,7 @@ async function main(): Promise<void> {
 
   // Graceful shutdown
   let shuttingDown = false;
-  const shutdown = (signal: string) => {
+  shutdown = (signal: string, code = 0) => {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.info(`Received ${signal}, flushing rooms and shutting down...`);
@@ -124,15 +136,18 @@ async function main(): Promise<void> {
     clearInterval(roomFlush);
     roomManager.flushDirty();
     roomStore.close();
-    server.close(() => process.exit(0));
-    setTimeout(() => process.exit(0), 5_000).unref?.();
+    server.close(() => process.exit(code));
+    setTimeout(() => process.exit(code), 5_000).unref?.();
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
+// An uncaught exception leaves the process in an undefined state; flush what we
+// can and exit non-zero so a process manager restarts a clean instance.
 process.on("uncaughtException", (err) => {
   logger.error("Uncaught exception:", err);
+  shutdown("uncaughtException", 1);
 });
 process.on("unhandledRejection", (reason) => {
   logger.error("Unhandled rejection:", reason);
