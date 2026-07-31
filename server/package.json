@@ -1,0 +1,24 @@
+{
+  "name": "@cochart/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CoChart backend: /api routes + collaboration WebSocket hub + SQLite room persistence.",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development PORT=4000 tsx watch src/index.ts",
+    "start": "cross-env NODE_ENV=production tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cochart/protocol": "*",
+    "better-sqlite3": "^13.0.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/ws": "^8.5.12",
+    "cross-env": "^7.0.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
+}
