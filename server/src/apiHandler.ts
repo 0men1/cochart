@@ -4,6 +4,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { handleCreateRoom, handleJoinRoom } from "./collab/routes";
 import { handleCandles, handleSearch } from "./market/routes";
 import { handleCreateSuggestion } from "./feedback/routes";
+import { applyCors } from "./http";
 import {
   ensureSearchIndex,
   marketService,
@@ -32,6 +33,15 @@ export async function handleApiRequest(
   res: ServerResponse,
 ): Promise<boolean> {
   const pathname = new URL(req.url ?? "", "http://localhost").pathname;
+
+  if (pathname.startsWith("/api/")) {
+    applyCors(req, res);
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return true;
+    }
+  }
 
   if (pathname === "/api/candles") {
     await handleCandles(req, res, marketService);
