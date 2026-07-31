@@ -16,7 +16,7 @@ import {
   Time,
 } from "cochart-charts";
 import { Candlestick } from "@/core/chart/market-data/types";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import * as calc from "./calculations";
 import { IndicatorConfig, IndicatorParams, IndicatorStyle, IndicatorType } from "./types";
 

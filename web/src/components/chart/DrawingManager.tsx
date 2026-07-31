@@ -7,7 +7,7 @@ import { useChartStore } from '@/stores/useChartStore';
 import { BaseDrawing } from '@/core/chart/drawings/primitives/BaseDrawing';
 import { DrawingType } from '@/core/chart/types';
 import { DRAWING_TYPE_META } from './drawingMeta';
-import { logger } from '@/lib/logger';
+import { logger } from '@cochart/protocol';
 
 // Scroll the time scale so the drawing sits in the middle of the current view,
 // preserving the existing zoom. Best-effort: only runs when the chart exposes a

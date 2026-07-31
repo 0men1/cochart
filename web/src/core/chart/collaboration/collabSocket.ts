@@ -1,5 +1,5 @@
 import { getBaseSocketUrl } from "@/lib/utils";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import type { Identity } from "@/lib/identity";
 
 export class CollabSocket {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import TickerSearchItem from "./TickerSearchItem";
 import { Modal } from "@/components/ui/modal";
 import { useUIStore } from "@/stores/useUIStore";

@@ -1,5 +1,5 @@
 import { CanvasRenderingTarget2D } from "fancy-canvas";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { Coordinate, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitiveAxisView } from "cochart-charts";
 import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";

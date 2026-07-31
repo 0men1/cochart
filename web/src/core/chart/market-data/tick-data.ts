@@ -1,5 +1,5 @@
 import { ExchangeAdapter } from "@/core/chart/market-data/ExchangeAdapter";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { ConnectionState, TickData } from "@/core/chart/market-data/types";
 
 // CACHE

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { logger } from '@/lib/logger';
+import { logger } from '@cochart/protocol';
 
 export default function GlobalError({
   error,

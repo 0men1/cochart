@@ -4,7 +4,7 @@ import { useChartStore } from "@/stores/useChartStore";
 import { useCollabStore } from "@/stores/useCollabStore";
 import { coordinateToTimeExtrapolated } from "@/core/chart/interval";
 import { throttle } from "@/lib/throttle";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 
 // Cap cursor broadcasts to ~25/s: frequent enough to feel live, light enough
 // not to flood the room socket.

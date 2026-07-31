@@ -3,7 +3,7 @@ import { useChartStore } from "@/stores/useChartStore";
 import { getCandleData, subscribeCandleData } from "@/core/chart/indicators/candleData";
 import { createIndicator, destroyIndicator, LiveIndicator } from "@/core/chart/indicators/factory";
 import { throttle } from "@/lib/throttle";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 
 // Reconciles the store's indicator configs with live chart series, mirroring how
 // useChartDrawings reconciles drawings. Enabling a config creates its series and

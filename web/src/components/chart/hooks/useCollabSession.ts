@@ -1,7 +1,7 @@
 'use client'
 
 import { useCollabStore } from "@/stores/useCollabStore";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { useState } from "react";
 
 export function useCollabSession() {

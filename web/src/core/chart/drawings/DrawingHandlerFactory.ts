@@ -1,5 +1,5 @@
 import { Coordinate, IChartApi, ISeriesApi, SeriesType } from 'cochart-charts';
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { coordinateToTimeExtrapolated } from '../interval';
 import { isSnapEnabled, snapPriceToCandle, snapYToCandle } from '../snap';
 import { DrawingConstructor, DrawingType, Point } from '../types';

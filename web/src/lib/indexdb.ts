@@ -1,5 +1,5 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { SerializedDrawing } from "@/core/chart/drawings/types";
 
 const DATABASE_NAME = "COCHART";

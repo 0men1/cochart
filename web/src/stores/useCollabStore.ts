@@ -1,5 +1,4 @@
 import { CollabSocket } from "@/core/chart/collaboration/collabSocket";
-import { logger } from "@/lib/logger";
 import { ConnectionStatus } from "@/core/chart/market-data/types";
 import { create } from "zustand";
 import { useChartStore } from "./useChartStore";
@@ -7,6 +6,7 @@ import { useIdentityStore } from "./useIdentityStore";
 import { useChatStore } from "./useChatStore";
 import { CollabAction, PresenceUser } from "./types";
 import { Point } from "@/core/chart/types";
+import { logger } from "@cochart/protocol";
 
 export interface PeerCursor {
   time: number;

@@ -1,5 +1,5 @@
 import { BaseDrawing } from "@/core/chart/drawings/primitives/BaseDrawing";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { restoreDrawing } from "@/core/chart/drawings/registry";
 import { DrawingOperation, SerializedDrawing } from "@/core/chart/drawings/types";
 import { Point } from "@/core/chart/types";

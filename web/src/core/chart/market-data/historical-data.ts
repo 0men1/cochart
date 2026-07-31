@@ -1,5 +1,5 @@
 import { UTCTimestamp } from "cochart-charts";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { Candlestick } from "./types";
 
 export async function fetchHistoricalCandles(ticker: string, provider: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {

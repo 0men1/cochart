@@ -1,5 +1,5 @@
 import { SerializedDrawing } from "@/core/chart/drawings/types";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { CollabAction, ChartSettings, Product } from "./types";
 import { ConnectionState, ConnectionStatus, IntervalKey } from "@/core/chart/market-data/types";
 import { CrosshairMode, LineStyle, IChartApi, ISeriesApi, SeriesType } from "cochart-charts";

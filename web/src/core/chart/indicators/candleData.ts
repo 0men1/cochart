@@ -5,7 +5,7 @@
 // through the store (which would clone a large array on every tick under immer).
 
 import { Candlestick } from "@/core/chart/market-data/types";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 
 let candles: Candlestick[] = [];
 const subscribers = new Set<(candles: Candlestick[]) => void>();

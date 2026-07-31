@@ -1,4 +1,4 @@
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 export class LocalStorage {
 	static getItem<T>(key: string): T | null {
 		if (typeof window === 'undefined') {

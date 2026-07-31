@@ -1,4 +1,4 @@
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import { DrawingConstructor, DrawingType, Point } from "@/core/chart/types";
 import { BaseDrawing } from "./primitives/BaseDrawing";
 import { BaseOptions, SerializedDrawing } from "./types";

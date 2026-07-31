@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 import {
   createChart,
   CandlestickSeries,

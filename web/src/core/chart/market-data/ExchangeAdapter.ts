@@ -1,5 +1,5 @@
 import { ExchangeConfig, ConnectionStatus, TickData, ConnectionState } from "./types";
-import { logger } from "@/lib/logger";
+import { logger } from "@cochart/protocol";
 
 export abstract class ExchangeAdapter {
 	private ws: WebSocket | null = null;
