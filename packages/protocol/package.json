@@ -1,0 +1,15 @@
+{
+  "name": "@cochart/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Collaboration wire protocol + isomorphic logger shared by the CoChart app and server.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
