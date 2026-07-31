@@ -26,14 +26,12 @@ export function randomUUID(): string {
   );
 }
 
-// The collab server is a separate process (the `server` workspace). Point the
-// socket at it via NEXT_PUBLIC_WS_URL (e.g. ws://localhost:4000) when the app
-// and server run on different origins — dev, or a split deployment. When unset
-// (same-origin behind a proxy, or the combined case) it falls back to the
-// current origin, working in both http/ws and https/wss.
+export const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL ?? '';
 export const getBaseSocketUrl = () => {
   const configured = process.env.NEXT_PUBLIC_WS_URL;
   if (configured) return configured;
+  const api = process.env.NEXT_PUBLIC_API_URL;
+  if (api) return api.replace(/^http/, 'ws'); // https->wss, http->ws
   if (typeof window === 'undefined') return '';
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   return `${protocol}://${window.location.host}`;

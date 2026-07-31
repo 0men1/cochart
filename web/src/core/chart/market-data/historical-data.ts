@@ -1,5 +1,6 @@
 import { UTCTimestamp } from "cochart-charts";
 import { logger } from "@cochart/protocol";
+import { getApiBaseUrl } from "@/lib/utils";
 import { Candlestick } from "./types";
 
 export async function fetchHistoricalCandles(ticker: string, provider: string, timeframe: string, start: number, end: number): Promise<Candlestick[]> {
@@ -11,7 +12,7 @@ export async function fetchHistoricalCandles(ticker: string, provider: string, t
     return [];
   }
 
-  const res = await fetch(`/api/candles?symbol=${ticker}&timeframe=${timeframe}&provider=${provider}&start=${s}&end=${e}`);
+  const res = await fetch(`${getApiBaseUrl()}/api/candles?symbol=${ticker}&timeframe=${timeframe}&provider=${provider}&start=${s}&end=${e}`);
 
   if (!res.ok) {
     logger.error("Failed to fetch candles: ", res.status, res.statusText);

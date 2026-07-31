@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useUIStore } from "@/stores/useUIStore";
+import { getApiBaseUrl } from "@/lib/utils";
 
 const MESSAGE_MIN = 10;
 const MESSAGE_MAX = 4000;
@@ -56,7 +57,7 @@ export default function SuggestionModal() {
     if (!canSubmit) return;
     setState({ status: "submitting" });
     try {
-      const res = await fetch("/api/suggestions", {
+      const res = await fetch(`${getApiBaseUrl()}/api/suggestions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, message, contact: contact || undefined, website }),

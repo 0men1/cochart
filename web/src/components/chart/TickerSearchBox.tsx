@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { logger } from "@cochart/protocol";
+import { getApiBaseUrl } from "@/lib/utils";
 import TickerSearchItem from "./TickerSearchItem";
 import { Modal } from "@/components/ui/modal";
 import { useUIStore } from "@/stores/useUIStore";
@@ -130,7 +131,7 @@ export default function TickerSearchBox({ onClose }: TickerSearchBoxProps) {
 			}
 			setLoading(true);
 			try {
-				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&l=20`, { signal });
+				const res = await fetch(`${getApiBaseUrl()}/api/search?q=${encodeURIComponent(query)}&l=20`, { signal });
 				if (res.ok) {
 					const data = await res.json();
 					setResults(data || []);

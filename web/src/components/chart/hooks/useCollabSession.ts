@@ -2,6 +2,7 @@
 
 import { useCollabStore } from "@/stores/useCollabStore";
 import { logger } from "@cochart/protocol";
+import { getApiBaseUrl } from "@/lib/utils";
 import { useState } from "react";
 
 export function useCollabSession() {
@@ -15,7 +16,7 @@ export function useCollabSession() {
     setError(null);
 
     try {
-      const response = await fetch('/api/rooms/create', {
+      const response = await fetch(`${getApiBaseUrl()}/api/rooms/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
