@@ -23,20 +23,4 @@ export class LocalStorage {
 			logger.error("error: failed to set item in localStorage", error);
 		}
 	}
-
-	removeItem(key: string) {
-		try {
-			localStorage.removeItem(key);
-		} catch (error) {
-			logger.error("error: failed to remove item from localStorage, ", error)
-		}
-	}
-
-	clear() {
-		try {
-			localStorage.clear();
-		} catch (error) {
-			logger.error("error: failed to clear localStorage, ", error)
-		}
-	}
 }
