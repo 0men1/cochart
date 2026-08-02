@@ -65,8 +65,8 @@ npm run test:watch
 ```
 
 **Convention:** when you add or change core logic, add or update a colocated
-`*.test.ts` next to it (see `src/server/collab/room.test.ts` or
-`src/server/market/service.test.ts` for the mock/stub patterns). Keep tests
+`*.test.ts` next to it (see `server/src/collab/room.test.ts` or
+`server/src/market/service.test.ts` for the mock/stub patterns). Keep tests
 deterministic — mock providers/clients rather than hitting the network, real
 WebSockets, or the DOM. React/UI components are intentionally **not** unit-tested;
 verify those manually and note what you checked in your PR.
