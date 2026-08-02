@@ -1,13 +1,6 @@
 // Input validation for the market endpoints
 
-export const INTERVALS: Record<string, number> = {
-  "1m": 60,
-  "5m": 300,
-  "15m": 900,
-  "1H": 3600,
-  "6H": 21600,
-  "1D": 86400,
-};
+import { INTERVAL_SECONDS } from "@cochart/protocol";
 
 export const MAX_CANDLES_PER_QUERY = 12_000;
 export const MAX_SYMBOL_LENGTH = 25;
@@ -53,7 +46,7 @@ export function validateCandleParams(
     return { ok: false, error: "Invalid symbol" };
   }
 
-  const granularity = INTERVALS[timeframe];
+  const granularity = INTERVAL_SECONDS[timeframe];
   if (!granularity) {
     return { ok: false, error: "Unsupported timeframe" };
   }

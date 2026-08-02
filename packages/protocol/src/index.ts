@@ -22,6 +22,28 @@ export const logger = {
 };
 
 // ---------------------------------------------------------------------------
+// Market data
+// ---------------------------------------------------------------------------
+
+export interface Candlestick {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}
+
+export const INTERVAL_SECONDS: Record<string, number> = {
+  "1m": 60,
+  "5m": 300,
+  "15m": 900,
+  "1H": 3600,
+  "6H": 21600,
+  "1D": 86400,
+};
+
+// ---------------------------------------------------------------------------
 // Collaboration wire protocol
 // ---------------------------------------------------------------------------
 export const CollabAction = {

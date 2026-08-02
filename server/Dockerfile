@@ -17,7 +17,7 @@ RUN npm ci --workspace @cochart/server \
 FROM node:22-trixie-slim AS runtime
 ENV NODE_ENV=production \
   HOSTNAME=0.0.0.0 \
-  PORT=4000 \
+  PORT=3000 \
   ROOM_DB_PATH=/data/rooms.db
 WORKDIR /app
 
@@ -32,7 +32,7 @@ COPY server ./server
 RUN chown -R node:node /app
 USER node
 
-EXPOSE 4000
+EXPOSE 3000
 
 # `npm run start -w @cochart/server` -> cross-env NODE_ENV=production tsx src/index.ts
 CMD ["npm", "run", "start", "--workspace", "@cochart/server"]

@@ -58,8 +58,10 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000. No API keys or secrets are needed — CoChart uses
-public exchange endpoints (Coinbase, Kraken, Binance) for market data.
+`npm run dev` runs both workspaces together (via `concurrently`): the Next.js web
+app on **:3000** and the API + WebSocket server on **:4000**. Then open
+http://localhost:3000. No API keys or secrets are needed — CoChart uses public
+exchange endpoints (Coinbase, Kraken, Binance) for market data.
 
 On first run the server creates a small SQLite file for collaborative-room
 persistence at `./data/rooms.db` (override with `ROOM_DB_PATH`). It's git-ignored,
@@ -67,19 +69,21 @@ and no external database is required.
 
 ### Scripts
 
-| Command         | Description                                        |
-| --------------- | -------------------------------------------------- |
-| `npm run dev`   | Start the dev server (Next.js + WebSocket) on :3000 |
-| `npm run build` | Production build                                   |
-| `npm run start` | Run the production server                          |
-| `npm run lint`  | Lint the codebase                                  |
+| Command             | Description                                          |
+| ------------------- | ---------------------------------------------------- |
+| `npm run dev`       | Start web (:3000) + API/WebSocket server (:4000)     |
+| `npm run build`     | Production build (web static export)                 |
+| `npm run start:api` | Run the API/WebSocket server                         |
+| `npm run lint`      | Lint the web codebase                                |
+| `npm run typecheck` | Type-check every workspace                           |
+| `npm run test`      | Run the test suite (Vitest)                          |
 
 ## Tech Stack
 
 - **Framework:** Next.js 16, React 19, TypeScript
 - **Styling:** Tailwind CSS 4, Radix UI
 - **State:** Zustand + Immer
-- **Realtime:** Custom Node HTTP + WebSocket server (`server.ts`, `ws`)
+- **Realtime:** Custom Node HTTP + WebSocket server (`server/src/index.ts`, `ws`)
 - **Market data:** public REST + WebSocket feeds from Coinbase, Kraken, and
   Binance (no API keys)
 - **Persistence:** SQLite (`better-sqlite3`) for collaborative-room state;
@@ -89,16 +93,23 @@ and no external database is required.
 
 ## Project Layout
 
+CoChart is an npm-workspaces monorepo:
+
 ```
-├── server.ts              # Custom HTTP + WebSocket server (entry point)
-├── next.config.ts         # Next.js config
-└── src/
-    ├── app/               # Next.js routes (/, /chart, /chart/room/:id)
-    ├── components/        # UI (chart, onboarding, ui primitives)
-    ├── core/              # Non-React chart logic (drawings, market data)
-    ├── server/            # Backend handlers (market/, collab/)
-    ├── stores/            # Zustand stores
-    └── lib/               # Utilities (IndexedDB, identity, localStorage)
+├── web/                   # Next.js frontend (static export)
+│   └── src/
+│       ├── app/           # Next.js routes (/, /chart, /chart/room/:id)
+│       ├── components/    # UI (chart, onboarding, ui primitives)
+│       ├── core/          # Non-React chart logic (drawings, market data)
+│       ├── stores/        # Zustand stores
+│       └── lib/           # Utilities (IndexedDB, identity, localStorage)
+├── server/                # Node HTTP + WebSocket API server
+│   └── src/
+│       ├── index.ts       # Entry point
+│       ├── market/        # /api market endpoints (candles, search)
+│       └── collab/        # Rooms, presence, SQLite persistence
+└── packages/
+    └── protocol/          # Wire types + logger shared by web and server
 ```
 
 See [`docs/`](./docs) for an architecture overview.
