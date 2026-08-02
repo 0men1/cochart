@@ -1,4 +1,5 @@
 import type { Candlestick } from "@cochart/protocol";
+export type { Candlestick } from "@cochart/protocol"
 
 export interface Product {
   id: string;
