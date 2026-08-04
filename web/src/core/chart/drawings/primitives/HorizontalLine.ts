@@ -4,9 +4,8 @@ import { Coordinate, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitiv
 import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";
 import { DrawingType, Point, ViewPoint } from "@/core/chart/types";
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from "@/core/chart/drawings/types";
+import { BaseOptions, DrawingOptionKey, EditableOption } from "@/core/chart/drawings/types";
 import { applyLineDash, lineStyleOption } from "./lineStyle";
-import { HIT_TOLERANCE_PX } from '../hit';
 
 const defaultOptions: BaseOptions = {
   color: '#2962FF',
@@ -106,8 +105,7 @@ class HorizontalLinePriceAxisView implements ISeriesPrimitiveAxisView {
 export class HorizontalLine extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 1;
-
-  private _priceAxisViews: ISeriesPrimitiveAxisView[] = [];
+  static readonly drawingType = DrawingType.HORIZONTAL_LINE;
 
   constructor(
     points: Point[],
@@ -121,19 +119,12 @@ export class HorizontalLine extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
   }
 
   get _p1(): Point { return this._points[0]; }
 
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.HORIZONTAL_LINE,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    };
+  protected override get hasControlPoints(): boolean {
+    return false;
   }
 
   protected initialize(): void {
@@ -175,29 +166,8 @@ export class HorizontalLine extends BaseDrawing {
     if (coord1.x === null || coord1.y === null) { return false; }
 
     const distance = GeometryUtils.distanceToHorizontalLine(x, y, coord1.y, 0, chartWidth);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
-    return distance <= hitThreshold;
+    return distance <= this.hitThreshold;
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pv => {
-      if ('update' in pv && typeof (pv as any).update === 'function') {
-        (pv as any).update();
-      }
-    });
-    this._priceAxisViews.forEach(av => {
-      if ('update' in av && typeof (av as any).update === 'function') {
-        (av as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
-
-  priceAxisViews() {
-    return this._options.visible === false ? [] : this._priceAxisViews;
-  }
 }

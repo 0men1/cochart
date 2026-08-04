@@ -1,11 +1,13 @@
 import { IChartApi, ISeriesApi, SeriesType, ISeriesPrimitive, Time, Coordinate, IPrimitivePaneView, SeriesAttachedParameter, ISeriesPrimitiveAxisView, PrimitiveHoveredItem, PrimitivePaneViewZOrder } from 'cochart-charts';
-import { Point } from '@/core/chart/types';
+import { DrawingType, Point } from '@/core/chart/types';
 import { coordinateToTimeExtrapolated, timeToCoordinateExtrapolated } from '@/core/chart/interval';
 import { isSnapEnabled, snapYToCandle } from '@/core/chart/snap';
 import { BaseOptions, DrawingListener, DrawingOperation, EditableOption, SerializedDrawing } from '../types';
 import { randomUUID } from '@/lib/utils';
-import { CONTROL_POINT_GRAB_PX } from '../hit';
+import { CONTROL_POINT_GRAB_PX, HIT_STROKE_PADDING_PX, HIT_TOLERANCE_PX } from '../hit';
 import { getSelectedDrawing } from '../selectionPriority';
+
+type UpdatableView = { update?: () => void };
 
 export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHoveredItem {
   protected readonly _id: string;
@@ -28,6 +30,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
 
   public _paneViews: IPrimitivePaneView[];
   public _timeAxisViews: ISeriesPrimitiveAxisView[];
+  public _priceAxisViews: ISeriesPrimitiveAxisView[];
 
   protected _previewPoints: { x: Coordinate, y: Coordinate }[] | null = null;
 
@@ -50,6 +53,7 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
     this.externalId = this._id;
     this._paneViews = paneViews;
     this._timeAxisViews = axisViews;
+    this._priceAxisViews = [];
     this.initialize();
   }
 
@@ -229,8 +233,28 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
     this.updateOptions({ locked });
   }
 
+  paneViews(): IPrimitivePaneView[] {
+    return this.isVisible ? this._paneViews : [];
+  }
+
+  priceAxisViews(): ISeriesPrimitiveAxisView[] {
+    return this.isVisible ? this._priceAxisViews : [];
+  }
+
+  timeAxisViews(): ISeriesPrimitiveAxisView[] {
+    return this.isVisible ? this._timeAxisViews : [];
+  }
+
+  protected get hitThreshold(): number {
+    return Math.max(this._options.width / 2 + HIT_STROKE_PADDING_PX, HIT_TOLERANCE_PX);
+  }
+
+  protected get hasControlPoints(): boolean {
+    return true;
+  }
+
   getControlPointsAt(x: Coordinate, y: Coordinate): number | null {
-    // Control points are grabbable whenever they're visible (selected OR hovered).
+    if (!this.hasControlPoints) return null;
     if (!this.showControlPoints()) return null;
     const threshold = CONTROL_POINT_GRAB_PX;
     for (let i = 0; i < this._points.length; ++i) {
@@ -285,9 +309,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
     this._series.applyOptions(this._series.options());
   }
 
-  // Apply a remote/authoritative state (points + options) without emitting a
-  // MODIFY notification — the change originated elsewhere, so re-notifying would
-  // rebroadcast it in a loop. Used by collab sync and undo/redo.
   syncFrom(newPoints: Point[], newOptions: Record<string, any>): void {
     this._points = newPoints;
     this._options = { ...this._options, ...newOptions };
@@ -308,13 +329,20 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
     return { x, y };
   }
 
+  serialize(): SerializedDrawing {
+    return {
+      id: this._id,
+      type: (this.constructor as unknown as { drawingType: DrawingType }).drawingType,
+      points: this._points,
+      options: { ...this._options },
+      isDeleted: false,
+    };
+  }
+
   updateAllViews(): void {
-    const updateData = { selected: this._isSelected, points: this._points, options: this._options };
-    this._paneViews.forEach(view => {
-      if ('update' in view && typeof (view as any).update === 'function') {
-        (view as any).update(updateData);
-      }
-    });
+    for (const view of [...this._paneViews, ...this._priceAxisViews, ...this._timeAxisViews]) {
+      (view as UpdatableView).update?.();
+    }
   }
 
   get id(): string {
@@ -342,8 +370,6 @@ export abstract class BaseDrawing implements ISeriesPrimitive<Time>, PrimitiveHo
   }
 
   abstract isPointOnDrawing(x: number, y: number): boolean;
-  abstract serialize(): SerializedDrawing;
-  abstract paneViews(): IPrimitivePaneView[];
   abstract getEditableOptions(): EditableOption[];
   protected abstract initialize(): void;
 }

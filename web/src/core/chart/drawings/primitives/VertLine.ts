@@ -4,9 +4,8 @@ import { Coordinate, IPrimitivePaneRenderer, IPrimitivePaneView, ISeriesPrimitiv
 import { BaseDrawing } from "./BaseDrawing";
 import { GeometryUtils } from "./GeometryUtils";
 import { DrawingType, Point, ViewPoint } from "@/core/chart/types";
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from "@/core/chart/drawings/types";
+import { BaseOptions, DrawingOptionKey, EditableOption } from "@/core/chart/drawings/types";
 import { applyLineDash, lineStyleOption } from "./lineStyle";
-import { HIT_TOLERANCE_PX } from '../hit';
 
 const defaultOptions: BaseOptions = {
   color: '#00FF00',
@@ -17,12 +16,10 @@ const defaultOptions: BaseOptions = {
 class VertLinePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
   _options: BaseOptions;
-  _isSelected: boolean;
 
-  constructor(p1: ViewPoint, options: BaseOptions, isSelected: boolean) {
+  constructor(p1: ViewPoint, options: BaseOptions) {
     this._p1 = p1;
     this._options = options
-    this._isSelected = isSelected
   }
 
   draw(target: CanvasRenderingTarget2D) {
@@ -50,7 +47,7 @@ class VertLinePaneView implements IPrimitivePaneView {
 
   constructor(source: VertLine) {
     this._source = source;
-    this._renderer = new VertLinePaneRenderer(this._p1, this._source.options, this._source.isSelected());
+    this._renderer = new VertLinePaneRenderer(this._p1, this._source.options);
   }
 
   update() {
@@ -64,7 +61,6 @@ class VertLinePaneView implements IPrimitivePaneView {
       this._p1.x = this._source.timeToX(this._source._p1.time);
       this._p1.y = series.priceToCoordinate(this._source._p1.price);
     }
-    this._renderer._isSelected = this._source.isSelected();
     this._renderer._options = this._source.options;
   }
 
@@ -110,6 +106,7 @@ class VertLineTimeAxisView implements ISeriesPrimitiveAxisView {
 export class VertLine extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 1;
+  static readonly drawingType = DrawingType.VERTICAL_LINE;
 
   constructor(
     points: Point[],
@@ -123,19 +120,12 @@ export class VertLine extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
   }
 
   get _p1(): Point { return this._points[0] }
 
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.VERTICAL_LINE,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    }
+  protected override get hasControlPoints(): boolean {
+    return false;
   }
 
   protected initialize(): void {
@@ -143,7 +133,7 @@ export class VertLine extends BaseDrawing {
       this._paneViews = [new VertLinePaneView(this)];
       this._timeAxisViews = [new VertLineTimeAxisView(this)]
     } catch (error) {
-      logger.error("Failed to initialized Vertline: ", error)
+      logger.error("Failed to initialize VertLine: ", error)
     }
   }
 
@@ -177,29 +167,8 @@ export class VertLine extends BaseDrawing {
     if (coord1.x === null || coord1.y === null) { return false; }
 
     const distance = GeometryUtils.distanceToVerticalLine(x, y, coord1.x, 0, chartHeight);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
-    return distance <= hitThreshold;
+    return distance <= this.hitThreshold;
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pw => {
-      if ('update' in pw && typeof (pw as any).update === 'function') {
-        (pw as any).update();
-      }
-    });
-    this._timeAxisViews.forEach(tw => {
-      if ('update' in tw && typeof (tw as any).update === 'function') {
-        (tw as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
-
-  timeAxisViews() {
-    return this._options.visible === false ? [] : this._timeAxisViews;
-  }
 }

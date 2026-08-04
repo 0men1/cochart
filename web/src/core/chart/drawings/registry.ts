@@ -11,11 +11,7 @@ import { Triangle } from "./primitives/Triangle";
 import { FibonacciRetracement } from "./primitives/FibonacciRetracement";
 import { TextLabel } from "./primitives/TextLabel";
 
-// Single source of truth mapping each drawing type to its class, used for both
-// creation (tool handlers) and restore (deserialize from storage/collab/undo).
-// Typed as a *total* record so adding a DrawingType without a class here is a
-// compile error.
-export const DRAWING_REGISTRY: Record<DrawingType, DrawingConstructor> = {
+export const DRAWING_REGISTRY: { [K in DrawingType]: DrawingConstructor & { drawingType: K } } = {
   [DrawingType.TREND_LINE]: TrendLine,
   [DrawingType.VERTICAL_LINE]: VertLine,
   [DrawingType.HORIZONTAL_LINE]: HorizontalLine,

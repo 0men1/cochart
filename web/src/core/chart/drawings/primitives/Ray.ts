@@ -5,13 +5,9 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
-import { applyLineDash } from './lineStyle';
-import { HIT_TOLERANCE_PX } from '../hit';
+import { BaseOptions, DrawingOptionKey, EditableOption } from '../types';
+import { applyLineDash, lineStyleOption } from './lineStyle';
 
-// Extend the p1 -> p2 direction until it leaves the [0, width] x-range, so the
-// ray visually continues to the canvas edge. Returns the far endpoint in the
-// same (media) coordinate space as the inputs.
 function extendToEdge(
   x1: number,
   y1: number,
@@ -22,7 +18,6 @@ function extendToEdge(
   const dx = x2 - x1;
   const dy = y2 - y1;
 
-  // Vertical ray: extend straight down/up far past the canvas.
   if (dx === 0) {
     return { x: x2, y: dy >= 0 ? 1e6 : -1e6 };
   }
@@ -130,6 +125,7 @@ const defaultOptions: BaseOptions = {
 export class Ray extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 2;
+  static readonly drawingType = DrawingType.RAY;
 
   constructor(
     points: Point[],
@@ -143,17 +139,6 @@ export class Ray extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
-  }
-
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.RAY,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    };
   }
 
   get _p1(): Point { return this._points[0]; }
@@ -184,13 +169,7 @@ export class Ray extends BaseDrawing {
         step: 1,
         currentValue: this._options.width
       },
-      {
-        key: DrawingOptionKey.LINE_STYLE,
-        label: "Line Style",
-        type: "lineStyle",
-        group: "Style",
-        currentValue: this._options.lineStyle ?? "solid",
-      }
+      lineStyleOption(this._options.lineStyle),
     ];
   }
 
@@ -206,20 +185,8 @@ export class Ray extends BaseDrawing {
     const far = extendToEdge(coord1.x, coord1.y, coord2.x, coord2.y, chartWidth);
 
     const distance = GeometryUtils.distanceToLineSegment(x, y, coord1.x, coord1.y, far.x, far.y);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
-    return distance <= hitThreshold;
+    return distance <= this.hitThreshold;
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pv => {
-      if ('update' in pv && typeof (pv as any).update === 'function') {
-        (pv as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
 }

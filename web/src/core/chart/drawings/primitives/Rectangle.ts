@@ -5,9 +5,8 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingOptionKey, EditableOption } from '../types';
 import { applyLineDash } from './lineStyle';
-import { HIT_TOLERANCE_PX } from '../hit';
 
 class RectanglePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
@@ -44,7 +43,6 @@ class RectanglePaneRenderer implements IPrimitivePaneRenderer {
       const top = Math.min(y1, y2);
       const w = right - left;
       const h = Math.abs(y2 - y1);
-
 
       // Semi-transparent fill.
       ctx.globalAlpha = this._options.fillOpacity ?? 0.2;
@@ -120,6 +118,7 @@ const defaultOptions: BaseOptions = {
 export class Rectangle extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 2;
+  static readonly drawingType = DrawingType.RECTANGLE;
 
   constructor(
     points: Point[],
@@ -133,17 +132,6 @@ export class Rectangle extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
-  }
-
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.RECTANGLE,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    };
   }
 
   get _p1(): Point { return this._points[0]; }
@@ -236,20 +224,8 @@ export class Rectangle extends BaseDrawing {
     if (GeometryUtils.isPointInRectangle(x, y, left, top, w, h)) return true;
 
     const distance = GeometryUtils.distanceToRectangle(x, y, left, top, w, h);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
-    return distance <= hitThreshold;
+    return distance <= this.hitThreshold;
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pv => {
-      if ('update' in pv && typeof (pv as any).update === 'function') {
-        (pv as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
 }
