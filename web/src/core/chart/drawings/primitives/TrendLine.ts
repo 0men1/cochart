@@ -5,9 +5,8 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingOptionKey, EditableOption } from '../types';
 import { applyLineDash, lineStyleOption } from './lineStyle';
-import { HIT_TOLERANCE_PX } from '../hit';
 
 class TrendLinePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
@@ -57,13 +56,11 @@ class TrendLinePaneRenderer implements IPrimitivePaneRenderer {
   }
 }
 
-
 class TrendLinePaneView implements IPrimitivePaneView {
   _source: TrendLine;
   _p1: ViewPoint = { x: null, y: null };
   _p2: ViewPoint = { x: null, y: null };
   private _renderer: TrendLinePaneRenderer;
-
 
   constructor(source: TrendLine) {
     this._source = source;
@@ -96,7 +93,6 @@ class TrendLinePaneView implements IPrimitivePaneView {
   }
 }
 
-
 const defaultOptions: BaseOptions = {
   color: "#ffffff" as string,
   width: 2,
@@ -105,6 +101,7 @@ const defaultOptions: BaseOptions = {
 export class TrendLine extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 2;
+  static readonly drawingType = DrawingType.TREND_LINE;
 
   constructor(
     points: Point[],
@@ -118,18 +115,6 @@ export class TrendLine extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
-  }
-
-
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.TREND_LINE,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    }
   }
 
   get _p1(): Point { return this._points[0]; }
@@ -139,7 +124,7 @@ export class TrendLine extends BaseDrawing {
     try {
       this._paneViews = [new TrendLinePaneView(this)];
     } catch (error) {
-      logger.error(`Failed to initialize trenline ${this._id}: `, error)
+      logger.error(`Failed to initialize trendline ${this._id}: `, error)
     }
   }
 
@@ -174,20 +159,8 @@ export class TrendLine extends BaseDrawing {
     }
 
     const distance = GeometryUtils.distanceToLineSegment(x, y, coord1.x, coord1.y, coord2.x, coord2.y);
-    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
-    return distance <= hitThreshold;
+    return distance <= this.hitThreshold;
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pv => {
-      if ('update' in pv && typeof (pv as any).update === 'function') {
-        (pv as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
 }

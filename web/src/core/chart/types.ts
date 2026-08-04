@@ -5,6 +5,7 @@ import type { BaseOptions } from "./drawings/types";
 export interface DrawingConstructor {
   new(points: Point[], options?: Partial<BaseOptions>, id?: string): BaseDrawing;
   requiredPoints: number;
+  drawingType: DrawingType;
 }
 
 export enum DrawingType {

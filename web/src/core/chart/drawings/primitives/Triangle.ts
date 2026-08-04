@@ -5,9 +5,8 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingOptionKey, EditableOption } from '../types';
 import { applyLineDash } from './lineStyle';
-import { HIT_TOLERANCE_PX } from '../hit';
 
 class TrianglePaneRenderer implements IPrimitivePaneRenderer {
   _p1: ViewPoint;
@@ -125,6 +124,7 @@ const defaultOptions: BaseOptions = {
 export class Triangle extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 3;
+  static readonly drawingType = DrawingType.TRIANGLE;
 
   constructor(
     points: Point[],
@@ -138,17 +138,6 @@ export class Triangle extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
-  }
-
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.TRIANGLE,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    };
   }
 
   get _p1(): Point { return this._points[0]; }
@@ -224,25 +213,13 @@ export class Triangle extends BaseDrawing {
     // Anywhere inside the (filled) triangle, or near any of its edges, is a hit.
     if (GeometryUtils.isPointInTriangle(x, y, c1.x, c1.y, c2.x, c2.y, c3.x, c3.y)) return true;
 
-    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
     const distance = Math.min(
       GeometryUtils.distanceToLineSegment(x, y, c1.x, c1.y, c2.x, c2.y),
       GeometryUtils.distanceToLineSegment(x, y, c2.x, c2.y, c3.x, c3.y),
       GeometryUtils.distanceToLineSegment(x, y, c3.x, c3.y, c1.x, c1.y),
     );
 
-    return distance <= hitThreshold;
+    return distance <= this.hitThreshold;
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pv => {
-      if ('update' in pv && typeof (pv as any).update === 'function') {
-        (pv as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
 }

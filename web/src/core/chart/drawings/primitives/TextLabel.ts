@@ -5,15 +5,11 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingOptionKey, EditableOption } from '../types';
 
-// Default font size (media px). Overridable per label via options.fontSize.
 const FONT_SIZE = 14;
-// Rough per-character advance as a fraction of font size, used for hit-testing
-// without a canvas context to measure against.
 const CHAR_ADVANCE = 0.6;
 
-// Anchor -> bounding box (media px), the label growing right/down from the point.
 function textBounds(x: number, y: number, text: string, fontSize: number) {
   return {
     left: x,
@@ -96,6 +92,7 @@ const defaultOptions: BaseOptions = {
 export class TextLabel extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 1;
+  static readonly drawingType = DrawingType.TEXT;
 
   constructor(
     points: Point[],
@@ -109,17 +106,6 @@ export class TextLabel extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
-  }
-
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.TEXT,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    };
   }
 
   get _p1(): Point { return this._points[0]; }
@@ -169,15 +155,4 @@ export class TextLabel extends BaseDrawing {
     return GeometryUtils.isPointInRectangle(x, y, b.left, b.top, b.width, b.height);
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pv => {
-      if ('update' in pv && typeof (pv as any).update === 'function') {
-        (pv as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
 }

@@ -5,9 +5,8 @@ import { BaseDrawing } from './BaseDrawing';
 import { GeometryUtils } from './GeometryUtils';
 import { drawControlPoints } from './ControlPoints';
 import { DrawingType, Point, ViewPoint } from '@/core/chart/types';
-import { BaseOptions, DrawingOptionKey, EditableOption, SerializedDrawing } from '../types';
+import { BaseOptions, DrawingOptionKey, EditableOption } from '../types';
 import { applyLineDash } from './lineStyle';
-import { HIT_TOLERANCE_PX } from '../hit';
 
 const DEFAULT_LEVELS = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0];
 
@@ -189,6 +188,7 @@ const defaultOptions: BaseOptions = {
 export class FibonacciRetracement extends BaseDrawing {
   declare _options: BaseOptions;
   static requiredPoints: number = 2;
+  static readonly drawingType = DrawingType.FIBONACCI;
 
   constructor(
     points: Point[],
@@ -202,17 +202,6 @@ export class FibonacciRetracement extends BaseDrawing {
       [],
       id
     );
-    this.initialize();
-  }
-
-  serialize(): SerializedDrawing {
-    return {
-      id: this._id,
-      type: DrawingType.FIBONACCI,
-      points: this._points,
-      options: { ...this._options },
-      isDeleted: false,
-    };
   }
 
   get _p1(): Point { return this._points[0]; }
@@ -291,27 +280,15 @@ export class FibonacciRetracement extends BaseDrawing {
     const xLeft = this._options.extendLeft ? 0 : Math.min(coord1.x, coord2.x);
     const xRight = this._options.extendRight ? chartWidth : Math.max(coord1.x, coord2.x);
     const levels = this._options.levels ?? DEFAULT_LEVELS;
-    const hitThreshold = Math.max(this._options.width / 2 + 5, HIT_TOLERANCE_PX);
 
     for (const level of levels) {
-      const price = this._p1.price + (this._p2.price - this._p1.price) * level;
+      const price = this._p2.price + (this._p1.price - this._p2.price) * level;
       const levelY = this._series.priceToCoordinate(price);
       if (levelY === null) continue;
       const distance = GeometryUtils.distanceToHorizontalLine(x, y, levelY, xLeft, xRight);
-      if (distance <= hitThreshold) return true;
+      if (distance <= this.hitThreshold) return true;
     }
     return false;
   }
 
-  updateAllViews() {
-    this._paneViews.forEach(pv => {
-      if ('update' in pv && typeof (pv as any).update === 'function') {
-        (pv as any).update();
-      }
-    });
-  }
-
-  paneViews() {
-    return this._options.visible === false ? [] : this._paneViews;
-  }
 }
