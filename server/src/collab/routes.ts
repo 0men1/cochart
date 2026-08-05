@@ -5,6 +5,7 @@ import type { WebSocket } from "ws";
 import { Client } from "./client";
 import type { RoomManager } from "./roomManager";
 import { createRoomLimiter } from "../services";
+import { counters } from "../metrics";
 import { clientIp, sendJson } from "../http";
 
 let i = 1;
@@ -51,6 +52,7 @@ export function handleJoinRoom(
   const room = manager.getRoom(roomId);
   if (!room) {
     logger.debug(`Room not found: ${roomId}`);
+    counters.wsRejected += 1;
     ws.close(1008, "Room not found");
     return;
   }

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Client } from "./client";
 import { logger } from "@cochart/protocol";
+import { counters } from "../metrics";
 import {
   type ChartSelection,
   type ChatMessage,
@@ -60,12 +61,14 @@ export class Room {
     this.clients.add(client);
     this.emptySince = null;
     this.dirty = true;
+    counters.wsJoins += 1;
     client.start();
     logger.debug(
       `User joined: ${client.displayName} (Room: ${this.id}, Total: ${this.clients.size})`,
     );
     if (this.state.seeded) {
-      client.send(this.snapshotMessage());
+      const snap = this.snapshotMessage();
+      if (client.send(snap)) counters.bytesOut += Buffer.byteLength(snap);
     }
     this.broadcastToAll(this.presenceMessage());
   }
@@ -73,6 +76,7 @@ export class Room {
   unregister(client: Client): void {
     if (!this.clients.has(client)) return;
     this.clients.delete(client);
+    counters.wsLeaves += 1;
 
     try {
       client.conn.close();
@@ -261,16 +265,20 @@ export class Room {
     });
   }
 
+  // `Buffer.byteLength` is computed once per broadcast rather than per
+  // recipient: in a large room this loop is the hottest path on the server.
   broadcastToAll(message: string): void {
+    const bytes = Buffer.byteLength(message);
     for (const client of this.clients) {
-      client.send(message);
+      if (client.send(message)) counters.bytesOut += bytes;
     }
   }
 
   broadcastToOthers(message: string, sender: Client): void {
+    const bytes = Buffer.byteLength(message);
     for (const client of this.clients) {
       if (client === sender) continue;
-      client.send(message);
+      if (client.send(message)) counters.bytesOut += bytes;
     }
   }
 }

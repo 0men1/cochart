@@ -4,7 +4,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { handleCreateRoom, handleJoinRoom } from "./collab/routes";
 import { handleCandles, handleSearch } from "./market/routes";
 import { handleCreateSuggestion } from "./feedback/routes";
-import { applyCors } from "./http";
+import { applyCors, sendJson } from "./http";
 import {
   ensureSearchIndex,
   marketService,
@@ -12,6 +12,7 @@ import {
   roomStore,
   searchEngine,
 } from "./services";
+import * as metrics from "./metrics";
 import { logger } from "@cochart/protocol";
 
 const ROOM_JOIN_PATH = "/api/rooms/join";
@@ -60,8 +61,29 @@ export async function handleApiRequest(
     await handleCreateSuggestion(req, res);
     return true;
   }
+  if (pathname === "/api/metrics") {
+    handleMetrics(req, res);
+    return true;
+  }
 
   return false;
+}
+
+function handleMetrics(req: IncomingMessage, res: ServerResponse): void {
+  if (!metrics.metricsEnabled) {
+    sendJson(res, 404, { error: "Not found" });
+    return;
+  }
+
+  const url = new URL(req.url ?? "", "http://localhost");
+  if (!metrics.authorize(req.headers.authorization, url.searchParams.get("token"))) {
+    sendJson(res, 401, { error: "Unauthorized" });
+    return;
+  }
+
+  const snapshot = metrics.snapshot(roomManager.size, roomManager.clientCount);
+  if (url.searchParams.get("reset") === "1") metrics.reset();
+  sendJson(res, 200, snapshot);
 }
 
 /**
@@ -75,9 +97,7 @@ export function attachRoomWss(
   } = {},
 ): void {
   const { onOtherUpgrade } = opts;
-
   roomManager.hydrate(ROOM_IDLE_TTL_MS);
-
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_WS_PAYLOAD });
 
   wss.on("connection", (ws: AliveSocket, req: IncomingMessage) => {

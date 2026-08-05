@@ -21,7 +21,8 @@
   "workspaces": [
     "packages/*",
     "web",
-    "server"
+    "server",
+    "bench"
   ],
   "scripts": {
     "dev": "concurrently -n web,server -c blue,green \"npm:dev:web\" \"npm:dev:server\"",
@@ -30,7 +31,8 @@
     "build": "npm run build -w @cochart/web",
     "start:api": "npm run start -w @cochart/server",
     "lint": "npm run lint -w @cochart/web",
-    "typecheck": "npm run typecheck -w @cochart/protocol && npm run typecheck -w @cochart/web && npm run typecheck -w @cochart/server",
+    "typecheck": "npm run typecheck -w @cochart/protocol && npm run typecheck -w @cochart/web && npm run typecheck -w @cochart/server && npm run typecheck -w @cochart/bench",
+    "bench": "npm run bench -w @cochart/bench --",
     "test": "vitest run",
     "test:watch": "vitest"
   },

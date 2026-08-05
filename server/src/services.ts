@@ -28,9 +28,25 @@ export const roomStore = new SqliteRoomStore(
 );
 export const roomManager = new RoomManager(roomStore);
 
-export const candlesLimiter = createRateLimiter({ limit: 120, windowMs: 60_000 });
-export const searchLimiter = createRateLimiter({ limit: 300, windowMs: 60_000 });
-export const createRoomLimiter = createRateLimiter({ limit: 30, windowMs: 60_000 });
+function limitFromEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export const candlesLimiter = createRateLimiter({
+  limit: limitFromEnv("RATE_LIMIT_CANDLES", 120),
+  windowMs: 60_000,
+});
+export const searchLimiter = createRateLimiter({
+  limit: limitFromEnv("RATE_LIMIT_SEARCH", 300),
+  windowMs: 60_000,
+});
+export const createRoomLimiter = createRateLimiter({
+  limit: limitFromEnv("RATE_LIMIT_ROOM_CREATE", 30),
+  windowMs: 60_000,
+});
 
 let indexReady: Promise<void> | null = null;
 
