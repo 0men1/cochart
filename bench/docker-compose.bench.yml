@@ -1,0 +1,52 @@
+# Server under test, pinned to production-like resources.
+#
+# Capacity numbers only transfer if the box you measured resembles the box you
+# deploy to. An unrestricted run on a dev laptop reports figures far above what
+# a small VM delivers, so set the limits below to match your actual host before
+# quoting any number from a run against this.
+#
+#   docker compose -f bench/docker-compose.bench.yml up --build -d
+#   npm run bench -- single-room --ramp --target http://localhost:4100
+#   docker compose -f bench/docker-compose.bench.yml down -v
+#
+# Note the server is single-threaded, so raising BENCH_CPUS past ~2 will not
+# move the collaboration numbers much. That is a property of the architecture,
+# not of the harness.
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: cochart-server:bench
+    ports:
+      - "4100:3000"
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      ROOM_DB_PATH: /data/rooms.db
+
+      # Required for the harness to read event-loop and fan-out data.
+      METRICS_ENABLED: "1"
+      METRICS_TOKEN: "${BENCH_METRICS_TOKEN:-}"
+
+      # All load arrives from one address, so the per-IP limiters would reject
+      # it within seconds. Raised here only; production keeps its defaults.
+      RATE_LIMIT_ROOM_CREATE: "1000000"
+      RATE_LIMIT_CANDLES: "1000000"
+      RATE_LIMIT_SEARCH: "1000000"
+
+    deploy:
+      resources:
+        limits:
+          cpus: "${BENCH_CPUS:-1}"
+          memory: "${BENCH_MEMORY:-512m}"
+
+    # A room store on a named volume, wiped between runs via `down -v` so one
+    # run's leftover rooms are not hydrated into the next.
+    volumes:
+      - bench-data:/data
+
+volumes:
+  bench-data:

@@ -1,0 +1,21 @@
+{
+  "name": "@cochart/bench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Load-test harness that measures how many users and rooms the CoChart server can carry before latency degrades.",
+  "scripts": {
+    "bench": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cochart/protocol": "*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
+}
