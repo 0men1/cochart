@@ -65,6 +65,8 @@ export const CollabAction = {
 
 export type CollabAction = (typeof CollabAction)[keyof typeof CollabAction];
 
+export const WS_CLOSE_REPLACED = 4000;
+
 // Anonymous per-connection identity, echoed to peers for presence display.
 export interface PresenceUser {
   userId: string;

@@ -1,12 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { Room } from "./room";
 import type { Client } from "./client";
-import { CollabAction } from "./protocol";
+import { CollabAction, WS_CLOSE_REPLACED } from "./protocol";
 
 interface FakeClient {
   sent: string[];
+  // Close codes this client was closed with, in order.
+  closed: number[];
   start: () => void;
   send: (m: string) => void;
+  close: (code?: number, reason?: string) => void;
   conn: { close: () => void };
   userId: string;
   displayName: string;
@@ -16,8 +19,10 @@ interface FakeClient {
 function fakeClient(id: string): FakeClient {
   const c: FakeClient = {
     sent: [],
+    closed: [],
     start: () => { },
     send: (m: string) => c.sent.push(m),
+    close: (code?: number) => c.closed.push(code ?? 1000),
     conn: { close: () => { } },
     userId: id,
     displayName: `user-${id}`,
@@ -596,6 +601,54 @@ describe("Room lifecycle", () => {
     room.unregister(asClient(a));
     expect(room.emptySince).toBeNull();
     expect(lastMessageOfType(b, CollabAction.PRESENCE).payload.count).toBe(1);
+  });
+});
+
+// One userId holds exactly one seat. A tab that navigates away without closing
+// its socket must not keep a seat once that user rejoins — the bug being that
+// rejoining showed the same person twice in the roster.
+describe("Room duplicate sessions", () => {
+  it("evicts and closes the previous connection when the same userId rejoins", () => {
+    const room = newRoom();
+    const stale = fakeClient("a");
+    room.register(asClient(stale));
+
+    const fresh = fakeClient("a");
+    room.register(asClient(fresh));
+
+    expect(room.clients.size).toBe(1);
+    expect(room.clients.get("a")).toBe(asClient(fresh));
+    // Closed with the "replaced" code, so the evicted tab knows not to retry.
+    expect(stale.closed).toEqual([WS_CLOSE_REPLACED]);
+  });
+
+  it("does not unseat the replacement when the evicted socket's close arrives late", () => {
+    const room = newRoom();
+    const stale = fakeClient("a");
+    const fresh = fakeClient("a");
+    room.register(asClient(stale));
+    room.register(asClient(fresh));
+
+    // `ws.close()` emits 'close' asynchronously, so the stale connection's
+    // unregister lands *after* the replacement is seated. A Map delete is by
+    // key, so without the identity guard this would evict the live session.
+    room.unregister(asClient(stale));
+
+    expect(room.clients.get("a")).toBe(asClient(fresh));
+    expect(room.emptySince).toBeNull();
+  });
+
+  it("reports each user once, however many times they reconnect", () => {
+    const room = newRoom();
+    const b = fakeClient("b");
+    room.register(asClient(b));
+    room.register(asClient(fakeClient("a")));
+    room.register(asClient(fakeClient("a")));
+
+    const presence = lastMessageOfType(b, CollabAction.PRESENCE).payload;
+    expect(presence.count).toBe(2);
+    expect(presence.users.map((u: { userId: string }) => u.userId).sort())
+      .toEqual(["a", "b"]);
   });
 });
 

@@ -8,6 +8,7 @@ import {
   type Drawing,
   type Indicator,
   type IncomingAction,
+  WS_CLOSE_REPLACED,
 } from "./protocol";
 import type { PersistedRoom, SerializedRoomState } from "./roomStore";
 
@@ -27,7 +28,7 @@ const MAX_DRAWINGS = 500;
 const MAX_INDICATORS = 50;
 
 export class Room {
-  clients = new Set<Client>();
+  clients = new Map<string, Client>();
   readonly createdAt = Date.now();
   emptySince: number | null = Date.now();
   dirty = false;
@@ -57,7 +58,12 @@ export class Room {
   }
 
   register(client: Client): void {
-    this.clients.add(client);
+    const prev = this.clients.get(client.userId);
+    if (prev && prev !== client) {
+      this.clients.delete(prev.userId)
+      prev.close(WS_CLOSE_REPLACED, "Replaced by a newer session");
+    }
+    this.clients.set(client.userId, client)
     this.emptySince = null;
     this.dirty = true;
     client.start();
@@ -71,15 +77,10 @@ export class Room {
   }
 
   unregister(client: Client): void {
-    if (!this.clients.has(client)) return;
-    this.clients.delete(client);
-
-    try {
-      client.conn.close();
-    } catch {
-      // already closed
-    }
-
+    if (this.clients.get(client.userId) !== client) return;
+    this.clients.delete(client.userId);
+    try { client.conn.close(); }
+    catch { /* already closed*/ }
     if (this.clients.size === 0) {
       logger.debug(`Room ${this.id} empty, starting grace period`);
       this.emptySince = Date.now();
@@ -94,7 +95,7 @@ export class Room {
     return JSON.stringify({
       type: CollabAction.PRESENCE,
       payload: {
-        users: Array.from(this.clients, (c) => ({
+        users: Array.from(this.clients.values(), (c) => ({
           userId: c.userId,
           displayName: c.displayName,
           color: c.color,
@@ -117,8 +118,6 @@ export class Room {
 
     switch (action.type) {
       case CollabAction.INIT_ROOM: {
-        // First seed wins; ignore later seeds so a late joiner can't
-        // overwrite the truth.
         if (this.state.seeded) return;
         this.state.seeded = true;
         this.state.chart = {
@@ -262,13 +261,13 @@ export class Room {
   }
 
   broadcastToAll(message: string): void {
-    for (const client of this.clients) {
+    for (const client of this.clients.values()) {
       client.send(message);
     }
   }
 
   broadcastToOthers(message: string, sender: Client): void {
-    for (const client of this.clients) {
+    for (const client of this.clients.values()) {
       if (client === sender) continue;
       client.send(message);
     }
