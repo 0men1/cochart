@@ -103,10 +103,8 @@ export function useChartIndicators() {
   // Recompute when candle data changes (historical loads + live ticks). The live
   // path fires per tick, so throttle to avoid recomputing every frame.
   useEffect(() => {
-    const throttled = throttle(() => applyAll(), 250);
-    const unsub = subscribeCandleData(() => throttled());
+    const unsub = subscribeCandleData(() => applyAll());
     return () => {
-      throttled.cancel();
       unsub();
     };
   }, [applyAll]);
