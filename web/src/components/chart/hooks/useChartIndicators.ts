@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from "react";
 import { useChartStore } from "@/stores/useChartStore";
 import { getCandleData, subscribeCandleData } from "@/core/chart/indicators/candleData";
 import { createIndicator, destroyIndicator, LiveIndicator } from "@/core/chart/indicators/factory";
-import { throttle } from "@/lib/throttle";
 import { logger } from "@cochart/protocol";
 
 // Reconciles the store's indicator configs with live chart series, mirroring how
@@ -103,10 +102,8 @@ export function useChartIndicators() {
   // Recompute when candle data changes (historical loads + live ticks). The live
   // path fires per tick, so throttle to avoid recomputing every frame.
   useEffect(() => {
-    const throttled = throttle(() => applyAll(), 250);
-    const unsub = subscribeCandleData(() => throttled());
+    const unsub = subscribeCandleData(() => applyAll());
     return () => {
-      throttled.cancel();
       unsub();
     };
   }, [applyAll]);

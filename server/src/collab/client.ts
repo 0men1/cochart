@@ -20,9 +20,20 @@ export class Client {
       }
     });
 
-    const onGone = () => this.room.unregister(this);
+    const onGone = () => {
+      this.room.unregister(this);
+    };
     this.conn.on("close", onGone);
     this.conn.on("error", onGone);
+  }
+
+  close(code?: number, reason?: string): void {
+    if (this.conn.readyState === this.conn.CLOSED) return;
+    try {
+      this.conn.close(code, reason);
+    } catch {
+      // already closing
+    }
   }
 
   send(message: string): void {

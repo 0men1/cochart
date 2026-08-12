@@ -1,10 +1,3 @@
-// Turns an IndicatorConfig into live chart series. Each indicator type builds
-// one or more built-in series (LineSeries / HistogramSeries) — overlays on the
-// price pane, oscillators/volume in a dedicated pane — and returns an `apply`
-// closure that recomputes and re-feeds those series from candle data. Keeping
-// creation and update colocated per type means the reconcile hook only has to
-// call create/apply/destroy without knowing each indicator's series layout.
-
 import {
   HistogramSeries,
   IChartApi,

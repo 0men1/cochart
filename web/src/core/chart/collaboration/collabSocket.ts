@@ -1,5 +1,5 @@
 import { getBaseSocketUrl } from "@/lib/utils";
-import { logger } from "@cochart/protocol";
+import { logger, WS_CLOSE_REPLACED } from "@cochart/protocol";
 import type { Identity } from "@/lib/identity";
 
 export class CollabSocket {
@@ -54,14 +54,11 @@ export class CollabSocket {
 
     this.ws.onclose = (event: CloseEvent) => {
       callbacks.onClose();
-
-      // Don't reconnect after an intentional disconnect, a normal close (1000),
-      // or a server policy close such as "room not found" (1008) — retrying
-      // those just loops into the same result.
-      const terminal = this.intentionalClose || event.code === 1000 || event.code === 1008;
+      const terminal = this.intentionalClose
+        || event.code === 1000
+        || event.code === 1008
+        || event.code === WS_CLOSE_REPLACED;
       if (!terminal && this.reconnectAttempts < this.maxReconnectAttempts) {
-        // Signal that a retry is pending so the UI can distinguish a transient
-        // drop from a terminal failure.
         callbacks.onReconnecting?.();
         const delay = Math.pow(2, this.reconnectAttempts) * 1000;
         setTimeout(() => {

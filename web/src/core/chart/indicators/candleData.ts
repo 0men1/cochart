@@ -1,9 +1,3 @@
-// Module-level singleton exposing the chart's current (sorted) candle array to
-// the indicator layer, mirroring the active-interval singleton in interval.ts.
-// The candle data itself lives in useCandleChart's refs; it publishes here on
-// every setData/update so indicators can recompute without threading the array
-// through the store (which would clone a large array on every tick under immer).
-
 import { Candlestick } from "@/core/chart/market-data/types";
 import { logger } from "@cochart/protocol";
 
