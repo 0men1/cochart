@@ -47,8 +47,8 @@ export const INTERVAL_SECONDS: Record<string, number> = {
 // Collaboration wire protocol
 // ---------------------------------------------------------------------------
 export const CollabAction = {
-  INIT_ROOM: "INIT_ROOM", // client -> server: seed the room's initial truth
-  SNAPSHOT: "SNAPSHOT", // server -> client: full authoritative state
+  INIT_ROOM: "INIT_ROOM",             // client -> server: seed the room's initial truth
+  SNAPSHOT: "SNAPSHOT",               // server -> client: full authoritative state
   SELECT_CHART: "SELECT_CHART",
   ADD_DRAWING: "ADD_DRAWING",
   MODIFY_DRAWING: "MODIFY_DRAWING",
@@ -56,16 +56,30 @@ export const CollabAction = {
   ADD_INDICATOR: "ADD_INDICATOR",
   MODIFY_INDICATOR: "MODIFY_INDICATOR",
   REMOVE_INDICATOR: "REMOVE_INDICATOR",
-  PRESENCE: "PRESENCE", // server -> clients: the room's active-user roster
+  PRESENCE: "PRESENCE",               // server -> clients: the room's active-user roster
   UPDATE_PRESENCE: "UPDATE_PRESENCE", // client -> server: change my displayName/color
-  CURSOR: "CURSOR", // client -> peers: ephemeral live cursor position (never stored)
-  CHAT: "CHAT", // client -> server (text); server -> clients (full message)
-  DRAWING_DRAG: "DRAWING_DRAG", // client -> peers: ephemeral in-progress drag points (never stored)
+  CURSOR: "CURSOR",                   // client -> peers: ephemeral live cursor position (never stored)
+  CHAT: "CHAT",                       // client -> server (text); server -> clients (full message)
+  DRAWING_DRAG: "DRAWING_DRAG",       // client -> peers: ephemeral in-progress drag points (never stored)
 } as const;
 
 export type CollabAction = (typeof CollabAction)[keyof typeof CollabAction];
 
-export const WS_CLOSE_REPLACED = 4000;
+// Only these may arrive *from* a client.
+export const CLIENT_ORIGINATED_ACTIONS: ReadonlySet<string> = new Set([
+  CollabAction.INIT_ROOM,
+  CollabAction.SELECT_CHART,
+  CollabAction.ADD_DRAWING,
+  CollabAction.MODIFY_DRAWING,
+  CollabAction.DELETE_DRAWING,
+  CollabAction.ADD_INDICATOR,
+  CollabAction.MODIFY_INDICATOR,
+  CollabAction.REMOVE_INDICATOR,
+  CollabAction.UPDATE_PRESENCE,
+  CollabAction.CURSOR,
+  CollabAction.CHAT,
+  CollabAction.DRAWING_DRAG,
+]);
 
 // Anonymous per-connection identity, echoed to peers for presence display.
 export interface PresenceUser {

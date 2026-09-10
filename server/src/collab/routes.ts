@@ -6,6 +6,9 @@ import { Client } from "./client";
 import type { RoomManager } from "./roomManager";
 import { createRoomLimiter } from "../services";
 import { clientIp, sendJson } from "../http";
+import { MAX_COLOR_LENGTH, MAX_DISPLAY_NAME_LENGTH } from "./room";
+
+const MAX_USER_ID_LENGTH = 64;
 
 let i = 1;
 
@@ -44,9 +47,15 @@ export function handleJoinRoom(
   const url = new URL(req.url ?? "", "http://localhost");
   const roomId = url.searchParams.get("roomId") ?? "";
   const seq = i++;
-  const displayName = url.searchParams.get("displayName") || `Guest ${seq}`;
-  const userId = url.searchParams.get("userId") || randomUUID();
-  const color = url.searchParams.get("color") || FALLBACK_COLORS[seq % FALLBACK_COLORS.length];
+
+  const displayName = clamp(url.searchParams.get("displayName"), MAX_DISPLAY_NAME_LENGTH)
+    || `Guest ${seq}`;
+
+  const color = clamp(url.searchParams.get("color"), MAX_COLOR_LENGTH)
+    || FALLBACK_COLORS[seq % FALLBACK_COLORS.length];
+
+  const userId = clamp(url.searchParams.get("userId"), MAX_USER_ID_LENGTH)
+    || randomUUID();
 
   const room = manager.getRoom(roomId);
   if (!room) {
@@ -57,4 +66,8 @@ export function handleJoinRoom(
 
   const client = new Client(ws, displayName, room, userId, color);
   room.register(client);
+}
+
+function clamp(value: string | null, max: number): string {
+  return (value ?? "").trim().slice(0, max);
 }
