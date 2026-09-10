@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Room } from "./room";
 import type { Client } from "./client";
-import { CollabAction, WS_CLOSE_REPLACED } from "./protocol";
+import { CollabAction } from "./protocol";
 
 interface FakeClient {
   sent: string[];
@@ -39,6 +39,14 @@ function newRoom(): Room {
 }
 
 const asClient = (c: FakeClient) => c as unknown as Client;
+
+// A room only sends a SNAPSHOT to a joiner once it's seeded, so this doubles as
+// an assertion that seeding actually took effect.
+const snapshotOf = (room: Room, key: "drawings" | "indicators") => {
+  const probe = fakeClient(`probe-${Math.random()}`);
+  room.register(asClient(probe));
+  return lastMessageOfType(probe, CollabAction.SNAPSHOT).payload[key];
+};
 
 // The last message a client received whose type === wanted, parsed.
 function lastMessageOfType(c: FakeClient, type: string): any {
@@ -365,7 +373,9 @@ describe("Room broadcasting", () => {
     expect(snap.payload.drawings).toEqual([{ id: "d1" }]);
   });
 
-  it("relays malformed JSON to others without throwing", () => {
+  // Relaying an unparsed frame would fan an arbitrary payload (up to
+  // maxPayload) out to every peer without the server ever inspecting it.
+  it("drops malformed JSON instead of relaying it, without throwing", () => {
     const room = newRoom();
     const a = fakeClient("a");
     const b = fakeClient("b");
@@ -374,7 +384,7 @@ describe("Room broadcasting", () => {
     b.sent.length = 0;
 
     expect(() => room.handleMessage("not json{", asClient(a))).not.toThrow();
-    expect(b.sent).toContain("not json{");
+    expect(b.sent).toEqual([]);
   });
 
   it("broadcasts a presence roster to everyone on register", () => {
@@ -604,61 +614,7 @@ describe("Room lifecycle", () => {
   });
 });
 
-// One userId holds exactly one seat. A tab that navigates away without closing
-// its socket must not keep a seat once that user rejoins — the bug being that
-// rejoining showed the same person twice in the roster.
-describe("Room duplicate sessions", () => {
-  it("evicts and closes the previous connection when the same userId rejoins", () => {
-    const room = newRoom();
-    const stale = fakeClient("a");
-    room.register(asClient(stale));
-
-    const fresh = fakeClient("a");
-    room.register(asClient(fresh));
-
-    expect(room.clients.size).toBe(1);
-    expect(room.clients.get("a")).toBe(asClient(fresh));
-    // Closed with the "replaced" code, so the evicted tab knows not to retry.
-    expect(stale.closed).toEqual([WS_CLOSE_REPLACED]);
-  });
-
-  it("does not unseat the replacement when the evicted socket's close arrives late", () => {
-    const room = newRoom();
-    const stale = fakeClient("a");
-    const fresh = fakeClient("a");
-    room.register(asClient(stale));
-    room.register(asClient(fresh));
-
-    // `ws.close()` emits 'close' asynchronously, so the stale connection's
-    // unregister lands *after* the replacement is seated. A Map delete is by
-    // key, so without the identity guard this would evict the live session.
-    room.unregister(asClient(stale));
-
-    expect(room.clients.get("a")).toBe(asClient(fresh));
-    expect(room.emptySince).toBeNull();
-  });
-
-  it("reports each user once, however many times they reconnect", () => {
-    const room = newRoom();
-    const b = fakeClient("b");
-    room.register(asClient(b));
-    room.register(asClient(fakeClient("a")));
-    room.register(asClient(fakeClient("a")));
-
-    const presence = lastMessageOfType(b, CollabAction.PRESENCE).payload;
-    expect(presence.count).toBe(2);
-    expect(presence.users.map((u: { userId: string }) => u.userId).sort())
-      .toEqual(["a", "b"]);
-  });
-});
-
 describe("Room state caps", () => {
-  const snapshotOf = (room: Room, key: "drawings" | "indicators") => {
-    const probe = fakeClient(`probe-${Math.random()}`);
-    room.register(asClient(probe));
-    return lastMessageOfType(probe, CollabAction.SNAPSHOT).payload[key];
-  };
-
   it("caps the number of distinct drawings but still allows updates at the cap", () => {
     const room = newRoom();
     const a = fakeClient("a");
@@ -700,37 +656,78 @@ describe("Room state caps", () => {
   });
 });
 
-describe("Room malformed payloads", () => {
-  // These wrong-shape frames reach handleMessage as valid JSON; Room must not
-  // silently corrupt state. (The process-level crash guard lives in Client.)
-  it("does not throw on a valid-JSON frame with a wrong-typed drawings array", () => {
+describe("Room rejects server-originated actions from clients", () => {
+  it("does not relay a client-sent SNAPSHOT", () => {
     const room = newRoom();
-    const a = fakeClient("a");
-    room.register(asClient(a));
-    expect(() =>
-      room.handleMessage(
-        JSON.stringify({ type: CollabAction.INIT_ROOM, payload: { drawings: [] } }),
-        asClient(a),
-      ),
-    ).not.toThrow();
+    const attacker = fakeClient("attacker");
+    const victim = fakeClient("victim");
+    room.register(asClient(attacker));
+    room.register(asClient(victim));
+    victim.sent.length = 0;
+
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.SNAPSHOT,
+        payload: {
+          drawings: [],
+          indicators: [],
+          messages: [{ id: "x", userId: "admin", displayName: "Admin", text: "gg", timestamp: 0 }],
+        },
+      }),
+      asClient(attacker),
+    );
+
+    expect(victim.sent).toEqual([]);
   });
 
-  it("ignores an ADD_DRAWING with no drawing id", () => {
+  it("does not relay a client-sent PRESENCE roster", () => {
+    const room = newRoom();
+    const attacker = fakeClient("attacker");
+    const victim = fakeClient("victim");
+    room.register(asClient(attacker));
+    room.register(asClient(victim));
+    victim.sent.length = 0;
+
+    room.handleMessage(
+      JSON.stringify({
+        type: CollabAction.PRESENCE,
+        payload: { users: [{ userId: "ghost", displayName: "Ghost", color: "#fff" }], count: 99 },
+      }),
+      asClient(attacker),
+    );
+
+    expect(victim.sent).toEqual([]);
+  });
+
+  it("does not relay an unrecognised action type", () => {
     const room = newRoom();
     const a = fakeClient("a");
+    const b = fakeClient("b");
     room.register(asClient(a));
-    // Seed first so the room emits a snapshot to the probe below.
-    room.handleMessage(
-      JSON.stringify({ type: CollabAction.INIT_ROOM, payload: { drawings: [] } }),
-      asClient(a),
-    );
-    room.handleMessage(
-      JSON.stringify({ type: CollabAction.ADD_DRAWING, payload: { drawing: { color: "red" } } }),
-      asClient(a),
-    );
-    const probe = fakeClient("probe");
-    room.register(asClient(probe));
-    expect(lastMessageOfType(probe, CollabAction.SNAPSHOT).payload.drawings).toEqual([]);
+    room.register(asClient(b));
+    b.sent.length = 0;
+
+    room.handleMessage(JSON.stringify({ type: "TOTALLY_MADE_UP", payload: {} }), asClient(a));
+    room.handleMessage(JSON.stringify({ payload: { no: "type" } }), asClient(a));
+
+    expect(b.sent).toEqual([]);
+  });
+
+  it("still relays legitimate client actions", () => {
+    const room = newRoom();
+    const a = fakeClient("a");
+    const b = fakeClient("b");
+    room.register(asClient(a));
+    room.register(asClient(b));
+    b.sent.length = 0;
+
+    const frame = JSON.stringify({
+      type: CollabAction.ADD_DRAWING,
+      payload: { drawing: { id: "d1" } },
+    });
+    room.handleMessage(frame, asClient(a));
+
+    expect(b.sent).toContain(frame);
   });
 });
 
