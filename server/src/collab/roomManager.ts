@@ -1,4 +1,4 @@
-import { Room } from "./room";
+import { Room, type RoomStats } from "./room";
 import type { SqliteRoomStore } from "./roomStore";
 
 export class RoomManager {
@@ -27,6 +27,10 @@ export class RoomManager {
 
   get size(): number {
     return this.rooms.size;
+  }
+
+  stats(): RoomStats[] {
+    return Array.from(this.rooms.values(), (room) => room.stats());
   }
 
   reapIdle(maxAgeMs: number, now: number = Date.now()): void {

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { Client } from "./client";
-import { WS_CLOSE_REPLACED } from "./protocol";
 import type { Room } from "./room";
 
 // Capture the socket's event handlers so we can drive "message" ourselves.
@@ -57,14 +56,6 @@ function fakeClosableConn(readyState = 1) {
 
 describe("Client close", () => {
   const room = { unregister: vi.fn() } as unknown as Room;
-
-  it("passes the code and reason through so the peer learns why it was dropped", () => {
-    const conn = fakeClosableConn();
-    const client = new Client(conn as never, "Guest", room, "u1", "#fff");
-
-    client.close(WS_CLOSE_REPLACED, "Replaced by a newer session");
-    expect(conn.close).toHaveBeenCalledWith(WS_CLOSE_REPLACED, "Replaced by a newer session");
-  });
 
   it("is a no-op on an already-closed socket", () => {
     const conn = fakeClosableConn(3);

@@ -72,23 +72,56 @@ describe("handleCreateRoom", () => {
   });
 });
 
+function join(mgr: RoomManager, query: string) {
+  const ws = fakeWs();
+  handleJoinRoom(ws as never, fakeReq("1.2.3.4", `/api/rooms/join?${query}`), mgr);
+  return ws;
+}
+
 describe("handleJoinRoom", () => {
-  it("registers the client and ignores a spoofed userId (no eviction)", () => {
+  it("honours the userId the client asks for when it is free", () => {
     const mgr = newManager();
     const room = new Room("room-1");
     mgr.addRoom(room);
 
-    const ws = fakeWs();
-    // A caller supplying someone else's userId + force must still just join —
-    // there is no per-user cap or eviction to abuse any more.
-    handleJoinRoom(
-      ws as never,
-      fakeReq("1.2.3.4", "/api/rooms/join?roomId=room-1&userId=victim&force=1"),
-      mgr,
-    );
+    const ws = join(mgr, "roomId=room-1&userId=mine");
 
     expect(room.clients.size).toBe(1);
+    expect(room.clients.get("mine")).toBeDefined();
     expect(ws.close).not.toHaveBeenCalled();
+  });
+
+  it("mints an id when the client supplies none", () => {
+    const mgr = newManager();
+    const room = new Room("room-1");
+    mgr.addRoom(room);
+
+    join(mgr, "roomId=room-1");
+
+    expect(room.clients.size).toBe(1);
+    expect([...room.clients.keys()][0]).toBeTruthy();
+  });
+
+  it("caps an oversized userId supplied on the join URL", () => {
+    const mgr = newManager();
+    const room = new Room("room-1");
+    mgr.addRoom(room);
+
+    join(mgr, `roomId=room-1&userId=${"u".repeat(500)}`);
+
+    const id = [...room.clients.keys()][0];
+    expect(id.length).toBeLessThanOrEqual(64);
+  });
+
+  it("caps an oversized displayName supplied on the join URL", () => {
+    const mgr = newManager();
+    const room = new Room("room-1");
+    mgr.addRoom(room);
+
+    join(mgr, `roomId=room-1&displayName=${"A".repeat(5000)}`);
+
+    const client = [...room.clients.values()][0];
+    expect(client.displayName.length).toBe(32);
   });
 
   it("closes the socket when the room does not exist", () => {

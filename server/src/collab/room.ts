@@ -8,7 +8,6 @@ import {
   type Drawing,
   type Indicator,
   type IncomingAction,
-  WS_CLOSE_REPLACED,
 } from "./protocol";
 import type { PersistedRoom, SerializedRoomState } from "./roomStore";
 
@@ -20,8 +19,19 @@ interface RoomState {
   messages: ChatMessage[];
 }
 
-const MAX_DISPLAY_NAME_LENGTH = 32;
-const MAX_COLOR_LENGTH = 32;
+// Counts describing how busy a room is, for the admin panel. See Room.stats().
+export interface RoomStats {
+  id: string;
+  peers: number;
+  drawings: number;
+  indicators: number;
+  messages: number;
+  createdAt: number;
+  emptySince: number | null;
+}
+
+export const MAX_DISPLAY_NAME_LENGTH = 32;
+export const MAX_COLOR_LENGTH = 32;
 const MAX_CHAT_LENGTH = 500;
 const MAX_CHAT_HISTORY = 200;
 const MAX_DRAWINGS = 500;
@@ -60,8 +70,7 @@ export class Room {
   register(client: Client): void {
     const prev = this.clients.get(client.userId);
     if (prev && prev !== client) {
-      this.clients.delete(prev.userId)
-      prev.close(WS_CLOSE_REPLACED, "Replaced by a newer session");
+      client.userId = randomUUID();
     }
     this.clients.set(client.userId, client)
     this.emptySince = null;
@@ -105,30 +114,35 @@ export class Room {
     });
   }
 
-  // Applies an incoming message to the room's truth, then relays it to the
-  // other clients. Unparseable messages are relayed as-is.
+  // Applies an incoming message to the room's truth, then relays it to the other clients.
   handleMessage(raw: string, sender: Client): void {
     let action: IncomingAction;
     try {
       action = JSON.parse(raw);
     } catch {
-      this.broadcastToOthers(raw, sender);
+      logger.debug(`Dropped non-JSON frame in room ${this.id}`);
       return;
     }
 
     switch (action.type) {
       case CollabAction.INIT_ROOM: {
         if (this.state.seeded) return;
+        const drawings = action.payload?.drawings ?? [];
+        const indicators = action.payload?.indicators ?? [];
+        if (!Array.isArray(drawings) || !Array.isArray(indicators)) {
+          logger.warn(`Dropped INIT_ROOM with non-array payload in room ${this.id}`);
+          return;
+        }
         this.state.seeded = true;
         this.state.chart = {
           product: action.payload?.product,
           timeframe: action.payload?.timeframe,
         };
         this.state.drawings = new Map(
-          (action.payload?.drawings ?? []).map((d) => [d.id, d]),
+          drawings.slice(0, MAX_DRAWINGS).map((d) => [d.id, d]),
         );
         this.state.indicators = new Map(
-          (action.payload?.indicators ?? []).map((i) => [i.id, i]),
+          indicators.slice(0, MAX_INDICATORS).map((i) => [i.id, i]),
         );
         this.dirty = true;
         // Covers the rare case where someone joined before the seed arrived.
@@ -147,7 +161,7 @@ export class Room {
       case CollabAction.ADD_DRAWING:
       case CollabAction.MODIFY_DRAWING: {
         const drawing = action.payload?.drawing;
-        if (drawing?.id) {
+        if (drawing) {
           const isNew = !this.state.drawings.has(drawing.id);
           if (isNew && this.state.drawings.size >= MAX_DRAWINGS) return;
           this.state.seeded = true;
@@ -164,7 +178,7 @@ export class Room {
       case CollabAction.ADD_INDICATOR:
       case CollabAction.MODIFY_INDICATOR: {
         const indicator = action.payload?.indicator;
-        if (indicator?.id) {
+        if (indicator) {
           const isNew = !this.state.indicators.has(indicator.id);
           if (isNew && this.state.indicators.size >= MAX_INDICATORS) return;
           this.state.seeded = true;
@@ -219,7 +233,7 @@ export class Room {
         return;
       }
       default:
-        break;
+        return;
     }
 
     this.broadcastToOthers(raw, sender);
@@ -243,6 +257,18 @@ export class Room {
       id: this.id,
       emptySince: this.emptySince,
       state: this.serializeState(),
+    };
+  }
+
+  stats(): RoomStats {
+    return {
+      id: this.id,
+      peers: this.clients.size,
+      drawings: this.state.drawings.size,
+      indicators: this.state.indicators.size,
+      messages: this.state.messages.length,
+      createdAt: this.createdAt,
+      emptySince: this.emptySince,
     };
   }
 

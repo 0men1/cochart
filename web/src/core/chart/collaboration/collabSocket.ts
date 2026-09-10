@@ -1,5 +1,5 @@
 import { getBaseSocketUrl } from "@/lib/utils";
-import { logger, WS_CLOSE_REPLACED } from "@cochart/protocol";
+import { logger } from "@cochart/protocol";
 import type { Identity } from "@/lib/identity";
 
 export class CollabSocket {
@@ -56,8 +56,7 @@ export class CollabSocket {
       callbacks.onClose();
       const terminal = this.intentionalClose
         || event.code === 1000
-        || event.code === 1008
-        || event.code === WS_CLOSE_REPLACED;
+        || event.code === 1008;
       if (!terminal && this.reconnectAttempts < this.maxReconnectAttempts) {
         callbacks.onReconnecting?.();
         const delay = Math.pow(2, this.reconnectAttempts) * 1000;
@@ -69,6 +68,10 @@ export class CollabSocket {
         }, delay);
       }
     }
+  }
+
+  updateIdentity(identity: Identity) {
+    this.identity = identity;
   }
 
   send(data: unknown) {
