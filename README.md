@@ -15,39 +15,21 @@
 
 > **Project status:** early-stage and actively developed (pre-1.0). Contributions and feedback welcome.
 
-## What is CoChart?
-
-CoChart is an open-source, Excalidraw-style tool for markets: open a chart and
-start drawing instantly — no account required — then share a link and everyone
-in the room sees the same candlesticks, drawings, and cursors update live.
-
-You're anonymous by default and nothing gets in your way before the first
-drawing. **The core is free and open forever;** cloud saving is a planned,
-optional way to support the project — never a gate on what CoChart already does.
-
 ## Features
 
 - **Free & open source (MIT)** — self-host it, fork it, or just use it; the core
   has no paywalls.
 - **No signup** — anonymous by default. Start drawing instantly and invite others
   with a link.
-- **Live & historical candlesticks** — OHLCV data streamed and backfilled from
-  public exchange APIs — **Coinbase, Kraken, and Binance** — with no API keys
-  required.
-- **Drawing tools** — trendlines, rays, horizontal & vertical lines, rectangles,
-  triangles, Fibonacci retracements, and text labels, with draggable control
-  points, copy/paste, a right-click context menu, keyboard shortcuts, and a
-  drawing manager.
+- **Live & historical data** — Data streamed and backfilled from public exchange APIs
+- **Drawing tools** — Choose from a multitude of drawings, with draggable control
+  points, copy/paste, a right-click context menu, and keyboard shortcuts
 - **Technical indicators** — moving averages (SMA/EMA), VWAP, RSI, MACD, and
   volume, each configurable and synced live across the room.
 - **Real-time collaboration** — WebSocket-backed rooms sync chart state, drawings,
   indicators, peer cursors, live presence, and in-room chat. Rooms survive brief
   disconnects and server restarts (a short grace period plus server-side
   persistence) and are cleaned up automatically after everyone leaves.
-- **Persistence** — your own chart and settings are saved locally in your browser
-  (IndexedDB); shared rooms are persisted server-side (SQLite) so they survive
-  reconnects and restarts, then reaped after inactivity. Opt-in cloud accounts
-  for a durable personal library are planned.
 
 ## Getting Started
 
@@ -60,8 +42,7 @@ npm run dev
 
 `npm run dev` runs both workspaces together (via `concurrently`): the Next.js web
 app on **:3000** and the API + WebSocket server on **:4000**. Then open
-http://localhost:3000. No API keys or secrets are needed — CoChart uses public
-exchange endpoints (Coinbase, Kraken, Binance) for market data.
+http://localhost:3000
 
 On first run the server creates a small SQLite file for collaborative-room
 persistence at `./data/rooms.db` (override with `ROOM_DB_PATH`). It's git-ignored,
@@ -81,12 +62,12 @@ and no external database is required.
 ## Tech Stack
 
 - **Framework:** Next.js 16, React 19, TypeScript
-- **Styling:** Tailwind CSS 4, Radix UI
+- **Styling:** Tailwind, Radix UI
 - **State:** Zustand + Immer
-- **Realtime:** Custom Node HTTP + WebSocket server (`server/src/index.ts`, `ws`)
+- **Realtime:** Custom Node HTTP + WebSocket server
 - **Market data:** public REST + WebSocket feeds from Coinbase, Kraken, and
-  Binance (no API keys)
-- **Persistence:** SQLite (`better-sqlite3`) for collaborative-room state;
+  Binance
+- **Persistence:** SQLite for collaborative-room state;
   IndexedDB + localStorage in the browser for local chart/settings
 - **Charts:** [`cochart-charts`](https://github.com/0men1/cochart-charts) — a fork
   of TradingView Lightweight Charts™ (see [Credits](#credits))
