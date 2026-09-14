@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "../ui/button";
-import { HelpCircle, MessageSquarePlus, Wifi } from "lucide-react";
+import { Github, HelpCircle, MessageSquarePlus, Wifi } from "lucide-react";
 import SuggestionModal from "./SuggestionModal";
 import { ConnectionStatus } from "@/core/chart/market-data/types";
 import { useCollabStore } from "@/stores/useCollabStore";
@@ -53,79 +53,103 @@ export default function ChartFooter() {
   const currentTimezone = chartSettings.timezone || "UTC";
 
   return (
-    <div className="w-full h-8 bg-card border-t border-border flex items-center justify-end px-4 z-30 select-none">
-      <Select value={currentTimezone} onValueChange={setTimezone}>
-        <SelectTrigger
-          size="sm"
-          className="h-6 gap-1 border-0 bg-transparent px-2 text-xs font-medium text-muted-foreground shadow-none hover:text-foreground focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent align="end">
-          {TIMEZONES.map((tz) => (
-            <SelectItem key={tz.value} value={tz.value} className="text-xs">
-              {tz.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-
-      {/* Connection Status Icon with Tooltip */}
+    <div className="w-full h-8 bg-card border-t border-border flex items-center justify-between px-4 z-30 select-none">
+      {/* Source repository */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Wifi size={18} className="text-muted-foreground" />
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            aria-label="View source on GitHub"
+          >
+            <a
+              href="https://github.com/0men1/cochart"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Github size={18} className="text-muted-foreground" />
+            </a>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="p-3 max-w-xs">
-          <div className="space-y-2">
-            <h4 className="font-semibold text-sm">Connection Status</h4>
-            <div className="space-y-1 text-xs">
-              <div className="flex items-center justify-between">
-                <span>Collab Connection:</span>
-                {getStatusDiv(status)}
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Candle Data:</span>
-                {getStatusDiv(data.connectionState.status)}
+        <TooltipContent side="bottom">View source on GitHub</TooltipContent>
+      </Tooltip>
+
+      <div className="flex items-center">
+        <Select value={currentTimezone} onValueChange={setTimezone}>
+          <SelectTrigger
+            size="sm"
+            className="h-6 gap-1 border-0 bg-transparent px-2 text-xs font-medium text-muted-foreground shadow-none hover:text-foreground focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {TIMEZONES.map((tz) => (
+              <SelectItem key={tz.value} value={tz.value} className="text-xs">
+                {tz.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+
+        {/* Connection Status Icon with Tooltip */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <Wifi size={18} className="text-muted-foreground" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="p-3 max-w-xs">
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm">Connection Status</h4>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center justify-between">
+                  <span>Collab Connection:</span>
+                  {getStatusDiv(status)}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Candle Data:</span>
+                  {getStatusDiv(data.connectionState.status)}
+                </div>
               </div>
             </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
+          </TooltipContent>
+        </Tooltip>
 
-      {/* Suggestion / feedback */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            aria-label="Send feedback"
-            onClick={() => toggleSuggestion(true)}
-          >
-            <MessageSquarePlus size={18} className="text-muted-foreground" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Share feedback</TooltipContent>
-      </Tooltip>
+        {/* Suggestion / feedback */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              aria-label="Send feedback"
+              onClick={() => toggleSuggestion(true)}
+            >
+              <MessageSquarePlus size={18} className="text-muted-foreground" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Share feedback</TooltipContent>
+        </Tooltip>
 
-      {/* Help / reopen the guided tour */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            aria-label="Help and guided tour"
-            onClick={() => toggleWelcomeTour(true)}
-          >
-            <HelpCircle size={18} className="text-muted-foreground" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Help &amp; tour</TooltipContent>
-      </Tooltip>
+        {/* Help / reopen the guided tour */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              aria-label="Help and guided tour"
+              onClick={() => toggleWelcomeTour(true)}
+            >
+              <HelpCircle size={18} className="text-muted-foreground" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Help &amp; tour</TooltipContent>
+        </Tooltip>
+      </div>
 
       <SuggestionModal />
     </div>
