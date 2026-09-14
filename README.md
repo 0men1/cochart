@@ -15,6 +15,12 @@
 
 > **Project status:** early-stage and actively developed (pre-1.0). Contributions and feedback welcome.
 
+
+
+https://github.com/user-attachments/assets/60c4c70c-0189-4ac6-9e1a-4cad36a284bc
+
+
+
 ## Features
 
 - **Free & open source (MIT)** — self-host it, fork it, or just use it; the core
@@ -30,6 +36,9 @@
   indicators, peer cursors, live presence, and in-room chat. Rooms survive brief
   disconnects and server restarts (a short grace period plus server-side
   persistence) and are cleaned up automatically after everyone leaves.
+
+
+
 
 ## Getting Started
 
